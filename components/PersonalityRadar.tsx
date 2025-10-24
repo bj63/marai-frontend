@@ -1,7 +1,16 @@
 'use client'
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts'
 
-export default function PersonalityRadar({ traits }: { traits: any[] }) {
+export interface PersonalityTrait {
+    trait: string
+    value: number
+}
+
+interface PersonalityRadarProps {
+    traits: PersonalityTrait[]
+}
+
+export default function PersonalityRadar({ traits }: PersonalityRadarProps) {
     return (
         <div className="w-full h-64">
             <ResponsiveContainer>

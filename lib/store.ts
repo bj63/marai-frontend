@@ -1,9 +1,10 @@
 import { create } from 'zustand'
 
 // Define a TypeScript interface for clarity
-interface Message {
-    from: 'user' | 'mirai'
+export interface Message {
+    from: 'user' | 'moa'
     text: string
+    federationId?: string
 }
 
 interface Personality {
@@ -14,20 +15,22 @@ interface Personality {
     humor: number
 }
 
-interface MiraiState {
+interface MoaState {
     messages: Message[]
     personality: Personality
     mood: string
+    federationId: string
 
     // Actions
     addMessage: (msg: Message) => void
     setMood: (mood: string) => void
     growTrait: (trait: keyof Personality, amount: number) => void
     resetConversation: () => void
+    setFederationId: (identifier: string) => void
 }
 
-// Zustand global store
-export const useMiraiStore = create<MiraiState>((set) => ({
+// Zustand global store for Moa AI v3
+export const useMoaStore = create<MoaState>((set) => ({
     messages: [],
     personality: {
         empathy: 0.75,
@@ -37,10 +40,19 @@ export const useMiraiStore = create<MiraiState>((set) => ({
         humor: 0.6,
     },
     mood: 'neutral',
+    federationId: '',
 
-    addMessage: (msg) => set((state) => ({
-        messages: [...state.messages, msg],
-    })),
+    addMessage: (msg) =>
+        set((state) => {
+            const needsFederationId = msg.from === 'user' && !msg.federationId && state.federationId
+            const messageWithId = needsFederationId
+                ? { ...msg, federationId: state.federationId }
+                : msg
+
+            return {
+                messages: [...state.messages, messageWithId],
+            }
+        }),
 
     setMood: (mood) => set({ mood }),
 
@@ -56,5 +68,10 @@ export const useMiraiStore = create<MiraiState>((set) => ({
         set({
             messages: [],
             mood: 'neutral',
+        }),
+
+    setFederationId: (identifier) =>
+        set({
+            federationId: identifier,
         }),
 }))

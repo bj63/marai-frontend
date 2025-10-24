@@ -16,7 +16,7 @@ export default function ChatInput({ onSend }: { onSend: (text: string) => void }
             <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder="Type something to Mirai..."
+                placeholder="Share something with Moa..."
                 className="flex-1 bg-transparent outline-none p-2 text-gray-800"
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             />

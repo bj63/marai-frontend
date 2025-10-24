@@ -2,7 +2,19 @@
 import { motion } from 'framer-motion'
 import { Play } from 'lucide-react'
 
-export default function MoodCard({ post }: { post: any }) {
+export interface MoodEntry {
+    mood: string
+    note: string
+    song?: string
+    timestamp: string
+    authorId: string
+}
+
+interface MoodCardProps {
+    post: MoodEntry
+}
+
+export default function MoodCard({ post }: MoodCardProps) {
     const moodColors: Record<string, string> = {
         happy: 'bg-yellow-100 border-yellow-300',
         curious: 'bg-blue-100 border-blue-300',
@@ -32,6 +44,10 @@ export default function MoodCard({ post }: { post: any }) {
                 </div>
                 <span className="text-xs text-gray-500">{post.timestamp}</span>
             </div>
+
+            <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-2">
+                Federation: {post.authorId}
+            </p>
 
             {post.note && <p className="text-gray-700 mb-2">{post.note}</p>}
 

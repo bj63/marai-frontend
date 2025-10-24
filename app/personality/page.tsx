@@ -1,14 +1,14 @@
 'use client'
 import TraitBar from '@/components/TraitBar'
-import PersonalityRadar from '@/components/PersonalityRadar'
-import { useMiraiStore } from '@/lib/store'
+import PersonalityRadar, { PersonalityTrait } from '@/components/PersonalityRadar'
+import { useMoaStore } from '@/lib/store'
 import { motion } from 'framer-motion'
 
 export default function PersonalityPage() {
-    const { personality } = useMiraiStore()
+    const { personality } = useMoaStore()
 
     // Fallback sample data for now
-    const traits = [
+    const traits: PersonalityTrait[] = [
         { trait: 'Empathy', value: personality.empathy ?? 0.75 },
         { trait: 'Creativity', value: personality.creativity ?? 0.65 },
         { trait: 'Confidence', value: personality.confidence ?? 0.8 },
@@ -23,7 +23,7 @@ export default function PersonalityPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
             >
-                Mirai’s Personality
+                Moa AI v3 Personality
             </motion.h1>
 
             <div className="w-full max-w-xl bg-white/80 p-6 rounded-xl shadow-lg backdrop-blur-md">
@@ -41,7 +41,7 @@ export default function PersonalityPage() {
             </motion.div>
 
             <p className="mt-6 text-gray-500 text-sm">
-                💡 Tip: Mirai’s personality evolves as you chat, listen to music, or share your moods.
+                💡 Tip: Moa’s personality evolves as you chat, listen to music, or share your moods.
             </p>
         </div>
     )

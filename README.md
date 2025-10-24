@@ -1,36 +1,28 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Moa AI v3 Frontend
 
-## Getting Started
+This repository contains the Next.js experience for **Moa AI v3**, our adaptive companion that blends conversational memory, mood tracking, and personality growth.
 
-First, run the development server:
+### Features
+
+- **Chat** — exchange real-time messages with Moa and watch the typing indicator animate while she crafts responses.
+- **Mood Feed** — capture daily mood notes and curated tracks that influence Moa’s emotional state.
+- **Personality Dashboard** — visualise trait growth through animated bars and a radar chart powered by Framer Motion.
+- **Profile Customisation** — configure avatars, accent colours, and fine-tune trait balances using the global Zustand store.
+
+### Getting Started
+
+Install dependencies and launch the development server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open [http://localhost:3000](http://localhost:3000) to explore the experience locally.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Next.js App Router](https://nextjs.org/docs/app) with TypeScript
+- [Tailwind CSS](https://tailwindcss.com) for styling
+- [Framer Motion](https://www.framer.com/motion/) for subtle animations
+- [Zustand](https://docs.pmnd.rs/zustand/getting-started/introduction) for state management across chat, feed, and profile surfaces

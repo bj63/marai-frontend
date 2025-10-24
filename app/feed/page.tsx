@@ -1,23 +1,18 @@
 'use client'
 import { useState } from 'react'
-import MoodCard from '@/components/MoodCard'
-import { useMiraiStore } from '@/lib/store'
+import MoodCard, { MoodEntry } from '@/components/MoodCard'
+import { useMoaStore } from '@/lib/store'
 import { motion } from 'framer-motion'
-import { Music, Smile } from 'lucide-react'
+import { Music } from 'lucide-react'
 
-interface FeedItem {
-    mood: string
-    note: string
-    song?: string
-    timestamp: string
-}
+type FeedItem = MoodEntry
 
 export default function FeedPage() {
     const [feed, setFeed] = useState<FeedItem[]>([])
     const [mood, setMood] = useState('happy')
     const [note, setNote] = useState('')
     const [song, setSong] = useState('')
-    const { setMood: setGlobalMood } = useMiraiStore()
+    const { setMood: setGlobalMood, federationId } = useMoaStore()
 
     const handlePost = () => {
         if (!note.trim() && !song.trim()) return
@@ -27,6 +22,7 @@ export default function FeedPage() {
             note,
             song,
             timestamp: new Date().toLocaleString(),
+            authorId: federationId || 'pending-id',
         }
         setFeed([newPost, ...feed])
         setGlobalMood(mood)
@@ -41,7 +37,7 @@ export default function FeedPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
             >
-                Mirai Feed
+                Moa AI Feed
             </motion.h1>
 
             <div className="bg-white/80 p-4 rounded-xl shadow-md w-full max-w-xl mb-6">
@@ -60,7 +56,7 @@ export default function FeedPage() {
                 </div>
 
                 <textarea
-                    placeholder="What’s Mirai feeling or doing?"
+                    placeholder="What’s Moa feeling or doing?"
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     className="w-full p-3 border border-gray-200 rounded-md focus:outline-indigo-400 mb-3 resize-none"
@@ -89,7 +85,7 @@ export default function FeedPage() {
             {/* Feed List */}
             <div className="w-full max-w-xl space-y-4">
                 {feed.length === 0 && (
-                    <p className="text-gray-500 text-center">No posts yet — share how Mirai feels!</p>
+                    <p className="text-gray-500 text-center">No posts yet — share how Moa feels!</p>
                 )}
                 {feed.map((post, i) => (
                     <MoodCard key={i} post={post} />
