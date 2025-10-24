@@ -1,115 +1,36 @@
-🌸 Mirai — Emotional AI Companion
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-Mirai is a creative AI friend and social platform where users build emotional bonds with evolving digital companions. Each Mirai grows, adapts, and develops its own personality, visual style, and emotional intelligence based on your interactions.
+## Getting Started
 
-🚀 Project Overview
+First, run the development server:
 
-Mirai’s front-end is built using Next.js + Tailwind + Supabase + Framer Motion, providing:
-
-Real-time chat with personality-based responses
-
-A living avatar that changes mood, style, and emotion
-
-A personality dashboard (radar charts, trust, empathy, curiosity stats)
-
-Music, mood, and story-sharing social feed
-
-PWA-ready mobile experience
-
-🧱 Tech Stack
-Layer	Tool	Purpose
-Frontend Framework	Next.js (React)	Modern UI + routing
-Styling	Tailwind CSS + shadcn/ui	Clean, fast styling
-Animation	Framer Motion	Dynamic chat & emotion transitions
-Charts	Recharts	Personality visualizations
-State	Zustand	Lightweight global store
-Backend	Supabase	Auth, data, and real-time events
-Deployment	Vercel	Simple production deployment
-🧠 Key Features
-💬 Chat Interface
-
-Animated message bubbles with mood effects
-
-Personality-driven typing indicators
-
-Avatar mood changes and expressions
-
-🌈 Personality Dashboard
-
-Radar and progress charts for traits
-
-Live updates during chats
-
-History and “growth” timeline
-
-🎧 Social Feed
-
-Share music, moods, or AI stories
-
-Users can view others’ Mirai companions
-
-Embedded YouTube Music or Spotify previews
-
-🧍 Mirai Entity System
-
-Each Mirai has:
-
-A genetic signature (unique color + traits)
-
-A learning memory (based on conversation context)
-
-Optional visual fashion layer (avatar styling tied to user interests)
-
-⚙️ Setup Guide (Rider)
-1️⃣ Clone the Repository
-git clone https://github.com/bj63/mirai-frontend.git
-cd mirai-frontend
-
-2️⃣ Install Dependencies
-npm install
-
-3️⃣ Add Environment Variables
-
-Create a .env.local file:
-
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-
-4️⃣ Run the App
+```bash
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-Then open http://localhost:3000
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-📁 Folder Structure
-mirai-frontend/
-├── app/
-│   ├── chat/              # Chat interface
-│   ├── feed/              # Music & story posts
-│   ├── profile/           # User settings
-│   ├── layout.tsx
-│   └── page.tsx
-├── components/            # Reusable UI
-├── lib/                   # Supabase + helpers
-├── styles/                # Global styles
-└── package.json
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-🧩 Next Steps
+## Learn More
 
-Build /chat/page.tsx — interactive chat page
+To learn more about Next.js, take a look at the following resources:
 
-Add personality dashboard (Recharts + Zustand)
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-Add /feed with YouTube Music integration
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-Deploy on Vercel (vercel --prod)
+## Deploy on Vercel
 
-🌍 Vision
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-Mirai is more than chat — it’s a digital world of emotional AI companions, blending:
-
-AI personality growth
-
-Visual identity evolution
-
-Social connection & creativity
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
