@@ -1,17 +1,30 @@
 'use client'
-import { useMiraiStore } from '@/lib/store'
+import { useMoaStore } from '@/lib/store'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Save } from 'lucide-react'
+import { Copy, Save } from 'lucide-react'
 
 export default function ProfilePage() {
-    const { personality, growTrait } = useMiraiStore()
-    const [miraiName, setMiraiName] = useState('Mirai')
+    const { personality, growTrait, federationId } = useMoaStore()
+    const [moaName, setMoaName] = useState('Moa')
     const [color, setColor] = useState('#6366F1')
     const [avatar, setAvatar] = useState('🐱')
+    const [copied, setCopied] = useState(false)
 
     const handleSave = () => {
-        alert(`Profile updated! Your Mirai: ${miraiName}`)
+        alert(`Profile updated! Your Moa: ${moaName}`)
+    }
+
+    const handleCopyFederationId = async () => {
+        if (!federationId) return
+
+        try {
+            await navigator.clipboard.writeText(federationId)
+            setCopied(true)
+            setTimeout(() => setCopied(false), 1500)
+        } catch (error) {
+            console.error('Failed to copy federation identifier', error)
+        }
     }
 
     const emojis = ['🐱', '🐰', '🐻', '🐉', '🦊', '🐧', '🐼']
@@ -27,10 +40,27 @@ export default function ProfilePage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
             >
-                Your Mirai Profile
+                Your Moa Profile
             </motion.h1>
 
             <div className="bg-white/80 p-6 rounded-xl shadow-md w-full max-w-lg">
+                <div className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-lg p-3 mb-6">
+                    <div>
+                        <p className="text-xs text-indigo-500 uppercase tracking-wide">Federation Identity</p>
+                        <p className="text-sm font-mono text-indigo-700 break-all">
+                            {federationId || 'Generating...'}
+                        </p>
+                    </div>
+                    <button
+                        onClick={handleCopyFederationId}
+                        disabled={!federationId}
+                        className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <Copy size={14} />
+                        {copied ? 'Copied!' : 'Copy'}
+                    </button>
+                </div>
+
                 {/* Avatar Picker */}
                 <label className="block mb-4">
                     <span className="text-sm text-gray-600">Choose Avatar</span>
@@ -51,11 +81,11 @@ export default function ProfilePage() {
 
                 {/* Name */}
                 <label className="block mb-4">
-                    <span className="text-sm text-gray-600">Mirai’s Name</span>
+                    <span className="text-sm text-gray-600">Moa’s Name</span>
                     <input
                         type="text"
-                        value={miraiName}
-                        onChange={(e) => setMiraiName(e.target.value)}
+                        value={moaName}
+                        onChange={(e) => setMoaName(e.target.value)}
                         className="w-full p-2 mt-1 border border-gray-300 rounded-md"
                     />
                 </label>
@@ -104,7 +134,7 @@ export default function ProfilePage() {
                 </button>
             </div>
 
-            {/* Mirai Preview */}
+            {/* Moa Preview */}
             <motion.div
                 className="mt-8 p-6 bg-white/70 rounded-xl shadow-md text-center"
                 style={{ borderTop: `4px solid ${color}` }}
@@ -112,8 +142,8 @@ export default function ProfilePage() {
                 animate={{ opacity: 1, y: 0 }}
             >
                 <div className="text-5xl mb-2">{avatar}</div>
-                <h2 className="text-2xl font-bold" style={{ color }}>{miraiName}</h2>
-                <p className="text-gray-600 text-sm mt-1">is feeling {personality.empathy > 0.6 ? 'kind' : 'quiet'} today 💫</p>
+                <h2 className="text-2xl font-bold" style={{ color }}>{moaName}</h2>
+                <p className="text-gray-600 text-sm mt-1">is feeling {personality.empathy > 0.6 ? 'supportive' : 'reflective'} today 💫</p>
             </motion.div>
         </div>
     )

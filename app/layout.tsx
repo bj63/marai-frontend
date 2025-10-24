@@ -1,41 +1,44 @@
 import './globals.css'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { Providers } from './providers'
 
 export const metadata = {
-    title: 'Mirai — Your AI Companion',
-    description: 'A digital friend who learns and grows with you.',
+    title: 'Moa AI v3 — Your Adaptive Companion',
+    description: 'The third-generation Moa AI that learns and grows with you.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="en">
         <body className="bg-gradient-to-br from-indigo-100 via-pink-100 to-white min-h-screen text-gray-900 font-sans">
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4 }}
-            className="max-w-4xl mx-auto px-4 py-6"
-        >
-            {/* 🧭 Global Navigation */}
-            <nav className="flex justify-center gap-6 mb-8 text-sm text-indigo-700 font-medium">
-                <Link href="/" className="hover:text-indigo-900 transition">Home</Link>
-                <Link href="/chat" className="hover:text-indigo-900 transition">Chat</Link>
-                <Link href="/personality" className="hover:text-indigo-900 transition">Personality</Link>
-                <Link href="/feed" className="hover:text-indigo-900 transition">Feed</Link>
-                <Link href="/profile" className="hover:text-indigo-900 transition">Profile</Link>
-            </nav>
+        <Providers>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4 }}
+                className="max-w-4xl mx-auto px-4 py-6"
+            >
+                {/* 🧭 Global Navigation */}
+                <nav className="flex justify-center gap-6 mb-8 text-sm text-indigo-700 font-medium">
+                    <Link href="/" className="hover:text-indigo-900 transition">Home</Link>
+                    <Link href="/chat" className="hover:text-indigo-900 transition">Chat</Link>
+                    <Link href="/personality" className="hover:text-indigo-900 transition">Personality</Link>
+                    <Link href="/feed" className="hover:text-indigo-900 transition">Feed</Link>
+                    <Link href="/profile" className="hover:text-indigo-900 transition">Profile</Link>
+                </nav>
 
-            {/* 🌸 Page Content */}
-            <main className="bg-white/70 backdrop-blur-md rounded-2xl shadow-md p-6">
-                {children}
-            </main>
+                {/* 🌸 Page Content */}
+                <main className="bg-white/70 backdrop-blur-md rounded-2xl shadow-md p-6">
+                    {children}
+                </main>
 
-            {/* 🪞 Footer */}
-            <footer className="mt-10 text-center text-xs text-gray-500">
-                © {new Date().getFullYear()} Mirai — Growing Together 🌸
-            </footer>
-        </motion.div>
+                {/* 🪞 Footer */}
+                <footer className="mt-10 text-center text-xs text-gray-500">
+                    © {new Date().getFullYear()} Moa AI v3 — Growing Together 🌸
+                </footer>
+            </motion.div>
+        </Providers>
         </body>
         </html>
     )

@@ -1,65 +1,89 @@
-import Image from "next/image";
+import Link from 'next/link'
+
+const highlights = [
+    {
+        title: 'Conversational Intelligence',
+        description:
+            'Chat with Moa in real time and watch her responses evolve with every insight you share.',
+        href: '/chat',
+    },
+    {
+        title: 'Adaptive Personality',
+        description:
+            'Track trait growth across empathy, creativity, curiosity, and more with vivid visualisations.',
+        href: '/personality',
+    },
+    {
+        title: 'Shared Moodboard',
+        description:
+            'Log daily moods, inspirations, and tracks that set the tone for Moa’s emotional landscape.',
+        href: '/feed',
+    },
+    {
+        title: 'Custom Profiles',
+        description:
+            'Tailor Moa’s avatar, palette, and strengths so the experience feels unmistakably yours.',
+        href: '/profile',
+    },
+]
 
 export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+    return (
+        <section className="flex flex-col gap-12">
+            <header className="rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-fuchsia-500 px-8 py-12 text-white shadow-xl">
+                <p className="mb-3 text-sm uppercase tracking-[0.3em] text-white/80">Introducing</p>
+                <h1 className="text-4xl font-semibold sm:text-5xl">Moa AI v3</h1>
+                <p className="mt-4 max-w-2xl text-lg text-white/90">
+                    Moa is our third-generation adaptive companion — a creative collaborator who remembers your moods,
+                    refines her personality with every conversation, and brings a touch of calm delight to the day.
+                </p>
+                <div className="mt-8 flex flex-wrap items-center gap-3">
+                    <Link
+                        href="/chat"
+                        className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-indigo-600 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
+                    >
+                        Start chatting
+                    </Link>
+                    <Link
+                        href="/personality"
+                        className="rounded-full border border-white/60 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                    >
+                        Explore the traits
+                    </Link>
+                </div>
+            </header>
+
+            <div className="grid gap-6 sm:grid-cols-2">
+                {highlights.map((item) => (
+                    <Link
+                        key={item.title}
+                        href={item.href}
+                        className="flex flex-col gap-3 rounded-2xl border border-indigo-100 bg-white/80 p-6 shadow-sm backdrop-blur transition hover:-translate-y-1 hover:border-indigo-200 hover:shadow-md"
+                    >
+                        <h2 className="text-xl font-semibold text-indigo-700">{item.title}</h2>
+                        <p className="text-sm text-slate-600">{item.description}</p>
+                        <span className="mt-auto text-sm font-medium text-indigo-600">Open →</span>
+                    </Link>
+                ))}
+            </div>
+
+            <div className="rounded-2xl bg-white/70 p-6 shadow-sm backdrop-blur">
+                <h3 className="text-lg font-semibold text-indigo-700">What&apos;s new in v3?</h3>
+                <ul className="mt-4 grid gap-3 text-sm text-slate-600 sm:grid-cols-2">
+                    <li className="rounded-xl bg-indigo-50/80 p-4">
+                        🌱 Progressive trait growth tuned to your conversations and shared playlists.
+                    </li>
+                    <li className="rounded-xl bg-indigo-50/80 p-4">
+                        🎨 Personalised theming with avatars, accent colours, and mood tracking hooks.
+                    </li>
+                    <li className="rounded-xl bg-indigo-50/80 p-4">
+                        🔄 Seamless syncing between chat, feed, and personality dashboards.
+                    </li>
+                    <li className="rounded-xl bg-indigo-50/80 p-4">
+                        🔐 Built with modern Next.js patterns so Moa stays fast, responsive, and secure.
+                    </li>
+                </ul>
+            </div>
+        </section>
+    )
 }

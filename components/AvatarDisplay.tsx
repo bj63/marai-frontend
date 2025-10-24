@@ -25,7 +25,7 @@ export default function AvatarDisplay({ mood }: { mood: string }) {
             transition={{ duration: 0.5 }}
         >
             <div className="text-7xl">{currentEmoji}</div>
-            <p className="mt-2 text-gray-600 capitalize">Currently feeling {mood}</p>
+            <p className="mt-2 text-gray-600 capitalize">Moa is feeling {mood}</p>
         </motion.div>
     )
 }

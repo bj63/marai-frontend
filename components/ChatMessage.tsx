@@ -1,7 +1,12 @@
 'use client'
 import { motion } from 'framer-motion'
+import type { Message } from '@/lib/store'
 
-export default function ChatMessage({ message }: { message: any }) {
+interface ChatMessageProps {
+    message: Message
+}
+
+export default function ChatMessage({ message }: ChatMessageProps) {
     const isUser = message.from === 'user'
     return (
         <motion.div
@@ -17,6 +22,13 @@ export default function ChatMessage({ message }: { message: any }) {
                 }`}
             >
                 {message.text}
+                {message.federationId && (
+                    <span className={`block mt-1 text-[10px] uppercase tracking-wide ${
+                        isUser ? 'text-indigo-200' : 'text-indigo-400'
+                    }`}>
+                        {message.federationId}
+                    </span>
+                )}
             </div>
         </motion.div>
     )
