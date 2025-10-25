@@ -134,21 +134,23 @@ export default function MiraiCharacter({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
+    const normalizedPersonality = normalizePersonality(personality)
+
     let animationFrame: number | null = null
     let startTime: number | null = null
-    const style = getCharacterStyle(personality, emotionColor)
+    const style = getCharacterStyle(normalizedPersonality, emotionColor)
 
     const render = (timestamp: number) => {
       if (startTime === null) startTime = timestamp
       const elapsed = (timestamp - startTime) / 1000
-      drawCharacter(ctx, size, personality, style, intensity, elapsed)
+      drawCharacter(ctx, size, normalizedPersonality, style, intensity, elapsed)
       animationFrame = window.requestAnimationFrame(render)
     }
 
     if (animated) {
       animationFrame = window.requestAnimationFrame(render)
     } else {
-      drawCharacter(ctx, size, personality, style, intensity, 0)
+      drawCharacter(ctx, size, normalizedPersonality, style, intensity, 0)
     }
 
     return () => {
@@ -813,4 +815,24 @@ function hexToRgba(hex: string, alpha: number): string {
     return `rgba(0,0,0,${alpha})`
   }
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`
+}
+
+function normalizePersonality(personality: Partial<Personality>): Personality {
+  return {
+    empathy: clampTrait(personality.empathy),
+    creativity: clampTrait(personality.creativity),
+    confidence: clampTrait(personality.confidence),
+    curiosity: clampTrait(personality.curiosity),
+    humor: clampTrait(personality.humor),
+    energy: clampTrait(personality.energy),
+  }
+}
+
+function clampTrait(value: unknown, fallback = 0.5): number {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return fallback
+  }
+  if (value < 0) return 0
+  if (value > 1) return 1
+  return value
 }
