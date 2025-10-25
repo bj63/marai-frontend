@@ -10,22 +10,29 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.76.1",
+    "@thirdweb-dev/chains": "^5.1.0",
+    "@thirdweb-dev/react": "^4.6.1",
     "framer-motion": "^12.23.24",
+    "ethers": "^6.13.4",
     "lucide-react": "^0.548.0",
     "next": "16.0.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "recharts": "^3.3.0",
+    "thirdweb": "^5.28.2",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.0.0",
+    "hardhat": "^2.22.17",
     "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

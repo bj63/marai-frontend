@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="320" height="320" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(160 160) rotate(90) scale(160)">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9" />
+      <stop offset="60%" stop-color="#7f9cff" stop-opacity="0.55" />
+      <stop offset="100%" stop-color="#1c1a3f" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="hair" x1="70" y1="80" x2="250" y2="250" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6a5df5" />
+      <stop offset="100%" stop-color="#b68dff" />
+    </linearGradient>
+    <linearGradient id="robe" x1="40" y1="240" x2="280" y2="280" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#02d7d9" />
+      <stop offset="100%" stop-color="#5ff2a1" />
+    </linearGradient>
+    <linearGradient id="skin" x1="120" y1="140" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fde7ff" />
+      <stop offset="100%" stop-color="#ffb2d4" />
+    </linearGradient>
+  </defs>
+  <rect width="320" height="320" rx="32" fill="#090b1a" />
+  <circle cx="160" cy="160" r="150" fill="url(#glow)" />
+  <path d="M80 120C90 70 140 50 180 70C220 90 250 150 240 200C220 170 190 150 160 150C130 150 100 165 80 200C70 170 70 140 80 120Z" fill="url(#hair)" />
+  <path d="M120 265C130 230 140 210 160 210C180 210 190 230 200 265C170 285 150 285 120 265Z" fill="url(#robe)" />
+  <ellipse cx="160" cy="160" rx="60" ry="70" fill="url(#skin)" />
+  <ellipse cx="140" cy="155" rx="10" ry="12" fill="#2f2f5c" />
+  <ellipse cx="180" cy="155" rx="10" ry="12" fill="#2f2f5c" />
+  <circle cx="137" cy="152" r="4" fill="#ffffff" />
+  <circle cx="177" cy="152" r="4" fill="#ffffff" />
+  <path d="M135 190C145 200 175 200 185 190" stroke="#ff6fb7" stroke-width="6" stroke-linecap="round" />
+  <path d="M160 210C150 210 135 220 132 235C128 255 150 260 160 240" fill="#0e7be7" opacity="0.6" />
+  <path d="M160 210C170 210 185 220 188 235C192 255 170 260 160 240" fill="#1fc6c9" opacity="0.6" />
+  <path d="M105 120C120 100 145 95 160 102" stroke="#ffffff" stroke-opacity="0.4" stroke-width="8" stroke-linecap="round" />
+  <path d="M215 120C200 100 175 95 160 102" stroke="#ffffff" stroke-opacity="0.4" stroke-width="8" stroke-linecap="round" />
+  <circle cx="90" cy="230" r="14" fill="#69f5ff" opacity="0.45" />
+  <circle cx="240" cy="120" r="10" fill="#ffb6f2" opacity="0.55" />
+  <circle cx="110" cy="90" r="8" fill="#61ffc3" opacity="0.6" />
+  <circle cx="220" cy="250" r="12" fill="#ffb86c" opacity="0.6" />
+</svg>

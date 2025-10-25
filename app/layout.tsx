@@ -17,6 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <nav className="flex justify-center gap-6 mb-8 text-sm text-indigo-700 font-medium">
                     <Link href="/" className="hover:text-indigo-900 transition">Home</Link>
                     <Link href="/chat" className="hover:text-indigo-900 transition">Chat</Link>
+                    <Link href="/marketplace" className="hover:text-indigo-900 transition">Marketplace</Link>
                     <Link href="/personality" className="hover:text-indigo-900 transition">Personality</Link>
                     <Link href="/feed" className="hover:text-indigo-900 transition">Feed</Link>
                     <Link href="/profile" className="hover:text-indigo-900 transition">Profile</Link>
