@@ -1,36 +1,18 @@
-export interface AnalyzeTimelineEntry {
-  emotion: string
-  color: string
-  personality: {
-    energy: number
-    creativity: number
-    [key: string]: number
-  }
-  timestamp?: string
-  [key: string]: unknown
-}
-
-export interface AnalyzeResponse {
-  emotion: string
-  color: string
-  scores: Record<string, number>
-  timeline?: AnalyzeTimelineEntry[]
-  [key: string]: unknown
-}
-
-export async function analyzeMessage(message: string): Promise<AnalyzeResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE || ''
-  const endpoint = `${baseUrl}/api/analyze`
-
-  const res = await fetch(endpoint, {
+export async function analyzeMessage(message: string) {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/analyze`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message }),
   })
 
-  if (!res.ok) {
-    throw new Error(`Failed to analyze message: ${res.statusText}`)
-  }
+  if (!res.ok) throw new Error('Analyze failed')
 
-  return res.json()
+  return res.json() as Promise<{
+    emotion: string
+    scores: Record<string, number>
+    personality: Record<string, number>
+    color: string
+    aura: string
+    timeline?: { emotion: string; color: string; personality?: Record<string, number> }[]
+  }>
 }
