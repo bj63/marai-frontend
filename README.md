@@ -35,6 +35,7 @@ Mirai extends beyond a single chat interface toward an emotional AI ecosystem. T
 - **Mood Feed** — capture daily mood notes and curated tracks that influence Mirai’s emotional state.
 - **Personality Dashboard** — visualise trait growth through animated bars and a radar chart powered by Framer Motion.
 - **Profile Customisation** — configure avatars, accent colours, and fine-tune trait balances using the global Zustand store.
+- **Marketplace** — connect a wallet, mint dynamic Mirai NFTs, and trade them for MiraiCoin (MRC) with on-chain royalties.
 
 ### Getting Started
 
@@ -53,3 +54,29 @@ Then open [http://localhost:3000](http://localhost:3000) to explore the experien
 - [Tailwind CSS](https://tailwindcss.com) for styling
 - [Framer Motion](https://www.framer.com/motion/) for subtle animations
 - [Zustand](https://docs.pmnd.rs/zustand/getting-started/introduction) for state management across chat, feed, and profile surfaces
+- [Thirdweb React](https://portal.thirdweb.com/react) for wallet connectivity and contract interactions
+- [Hardhat](https://hardhat.org/) + [OpenZeppelin](https://openzeppelin.com/contracts/) for the Polygon smart contract toolchain
+
+### Polygon NFT + Marketplace Deployment
+
+The `contracts/` directory contains Solidity implementations for the MiraiCoin ERC-20 token, MiraiCard ERC-721 collection, and
+MiraiMarketplace trading hub. Hardhat powers compilation, testing, and deployment.
+
+1. Duplicate `.env.local.example` into `.env.local` and set the deployed contract addresses alongside the Thirdweb client ID.
+2. Create a `.env` file for Hardhat containing `POLYGON_RPC_URL`, `PRIVATE_KEY`, and optionally `POLYGONSCAN_API_KEY` for
+   verification.
+3. Install dependencies (thirdweb + hardhat peers) and compile:
+
+   ```bash
+   npm install
+   npx hardhat compile
+   ```
+
+4. Deploy contracts to Polygon (or a testnet) with:
+
+   ```bash
+   npx hardhat run scripts/deploy.ts --network polygon
+   ```
+
+5. Paste the resulting addresses into `.env.local` so the Next.js marketplace can resolve live listings, buying, and listing
+   actions. Users must approve MiraiCoin spending and NFT transfers for the marketplace contract prior to listing or buying.
