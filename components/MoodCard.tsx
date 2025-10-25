@@ -14,6 +14,19 @@ interface MoodCardProps {
     post: MoodEntry
 }
 
+const isSafeExternalUrl = (url: string | undefined): url is string => {
+    if (!url) {
+        return false
+    }
+
+    try {
+        const parsed = new URL(url)
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+    } catch {
+        return false
+    }
+}
+
 export default function MoodCard({ post }: MoodCardProps) {
     const moodColors: Record<string, string> = {
         happy: 'bg-yellow-100 border-yellow-300',
@@ -51,7 +64,7 @@ export default function MoodCard({ post }: MoodCardProps) {
 
             {post.note && <p className="text-gray-700 mb-2">{post.note}</p>}
 
-            {post.song && (
+            {isSafeExternalUrl(post.song) && (
                 <a
                     href={post.song}
                     target="_blank"
