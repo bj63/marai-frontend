@@ -1,6 +1,5 @@
 import './globals.css'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
 import { Providers } from './providers'
 
 export const metadata = {
@@ -13,12 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <html lang="en">
         <body className="bg-gradient-to-br from-indigo-100 via-pink-100 to-white min-h-screen text-gray-900 font-sans">
         <Providers>
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4 }}
-                className="max-w-4xl mx-auto px-4 py-6"
-            >
+            <div className="max-w-4xl mx-auto px-4 py-6">
                 {/* 🧭 Global Navigation */}
                 <nav className="flex justify-center gap-6 mb-8 text-sm text-indigo-700 font-medium">
                     <Link href="/" className="hover:text-indigo-900 transition">Home</Link>
@@ -37,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <footer className="mt-10 text-center text-xs text-gray-500">
                     © {new Date().getFullYear()} Moa AI v3 — Growing Together 🌸
                 </footer>
-            </motion.div>
+            </div>
         </Providers>
         </body>
         </html>
