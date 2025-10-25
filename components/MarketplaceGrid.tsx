@@ -11,6 +11,10 @@ import { playEmotion, type EmotionKey } from './AudioEngine'
 const emotionKeys: EmotionKey[] = ['joy', 'calm', 'anger', 'sadness', 'curiosity']
 const DEFAULT_TOKEN_ID = 1n
 
+import { MIRAI_CARD, MIRAI_MARKETPLACE } from '@/lib/contracts'
+import ThreeCard from './ThreeCard'
+import { playEmotion, type EmotionKey } from './AudioEngine'
+
 type MarketplaceGridProps = {
   emotion?: string
   color?: string
@@ -66,6 +70,7 @@ function parseEntityStruct(data: unknown): EntityListing | null {
 
   return null
 }
+const emotionKeys: EmotionKey[] = ['joy', 'calm', 'anger', 'sadness', 'curiosity']
 
 export default function MarketplaceGrid({ emotion = 'joy', color = 'hsl(60,90%,60%)', intensity = 0.6 }: MarketplaceGridProps) {
   const { contract: nft } = useContract(MIRAI_CARD, 'nft-collection')
@@ -96,6 +101,8 @@ export default function MarketplaceGrid({ emotion = 'joy', color = 'hsl(60,90%,6
 
   return (
     <div className="grid grid-cols-1 gap-6">
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       <div onMouseEnter={() => playEmotion(emotionKey, Math.min(1, intensity + 0.1))}>
         <ThreeCard color={color} emotion={emotion} intensity={intensity} stats={stats} />
         <div className="flex items-center justify-between mt-3">
@@ -136,6 +143,12 @@ export default function MarketplaceGrid({ emotion = 'joy', color = 'hsl(60,90%,6
           {entityListing?.currentOwner
             ? `Current owner: ${entityListing.currentOwner}`
             : 'Entity not registered on-chain yet. Use registerEntity from the contract owner account to bootstrap the listing.'}
+        </div>
+            action={(contract) => contract.call('buyCard', [1])}
+            className="px-3 py-1 rounded-md glass hover:opacity-90"
+          >
+            Buy
+          </Web3Button>
         </div>
       </div>
     </div>
