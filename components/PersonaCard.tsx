@@ -94,6 +94,9 @@ interface PersonaCardProps {
   address?: string | null
   loading?: boolean
   error?: string | null
+  aura: string
+  personality: Record<string, number>
+  address?: string | null
 }
 
 const PLACEHOLDER_TRAITS: Array<[string, number]> = [
@@ -104,6 +107,7 @@ const PLACEHOLDER_TRAITS: Array<[string, number]> = [
 
 export default function PersonaCard({ aura, personality, address, loading, error }: PersonaCardProps) {
   const safeAura = aura && aura.trim().length > 0 ? aura : 'hsl(188, 82%, 62%)'
+export default function PersonaCard({ aura, personality, address }: PersonaCardProps) {
   const traits = useMemo(() => {
     const entries = Object.entries(personality)
       .filter(([, value]) => typeof value === 'number' && !Number.isNaN(value))
@@ -133,6 +137,17 @@ export default function PersonaCard({ aura, personality, address, loading, error
       size: 0.75 + random() * 1.25,
     }))
   }, [sparkleSeed])
+  const sparkles = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, index) => ({
+        id: index,
+        top: `${Math.random() * 100}%`,
+        left: `${Math.random() * 100}%`,
+        opacity: 0.25 + Math.random() * 0.35,
+        size: 0.75 + Math.random() * 1.25,
+      })),
+    [aura]
+  )
 
   const promptBlueprint = useMemo(() => {
     const topTraits = traits.slice(0, 3).map(([trait]) => trait)
@@ -181,6 +196,16 @@ export default function PersonaCard({ aura, personality, address, loading, error
       tags: [
         'midjourney v6',
         dominantSlug,
+    const palette = cues.map((cue) => cue?.palette).filter(Boolean).join(', ')
+    const vibe = cues.map((cue) => cue?.vibe).filter(Boolean).join(' · ')
+    const motif = cues.map((cue) => cue?.motif).filter(Boolean).join(' + ')
+    const camera = cues.map((cue) => cue?.camera).filter(Boolean).join(' | ')
+
+    return {
+      prompt: `anime illustration of the ${dominantTitle.toLowerCase()} persona, ${vibe}. ${motif}. palette: ${palette}. ${camera}. rendered in ultra-detailed midjourney style, iridescent lighting, 4k concept art`,
+      tags: [
+        'midjourney v6',
+        dominantTitle.toLowerCase(),
         ...topTraits.map((trait) => `${trait} core`),
       ],
       negative:
@@ -222,17 +247,27 @@ export default function PersonaCard({ aura, personality, address, loading, error
             className="absolute inset-0"
             style={{
               background: `radial-gradient(circle at 40% 15%, ${safeAura} 0%, rgba(12, 15, 24, 0.3) 40%, rgba(6, 8, 18, 0.92) 100%)`,
+              background: `radial-gradient(circle at 40% 15%, ${aura} 0%, rgba(12, 15, 24, 0.3) 40%, rgba(6, 8, 18, 0.92) 100%)`,
             }}
           />
           <div className="absolute inset-0 border border-white/15 rounded-xl" />
           <div className="absolute inset-6 rounded-full border border-white/10" />
           <div className="persona-card__art-gloss" />
+        <div className="relative mt-4 h-40 w-full overflow-hidden rounded-xl">
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `radial-gradient(circle at 50% 20%, ${aura} 0%, rgba(12, 15, 24, 0.4) 55%, rgba(8, 10, 16, 0.95) 100%)`,
+            }}
+          />
+          <div className="absolute inset-0 border border-white/10 rounded-xl" />
           {sparkles.map((sparkle) => (
             <div
               key={sparkle.id}
               className="absolute rounded-full"
               style={{
                 background: safeAura,
+                background: aura,
                 opacity: sparkle.opacity,
                 top: sparkle.top,
                 left: sparkle.left,
@@ -244,6 +279,7 @@ export default function PersonaCard({ aura, personality, address, loading, error
           ))}
           <div className="absolute inset-x-4 bottom-4 text-center text-[0.65rem] uppercase tracking-[0.5em] text-white/80">
             Aura Flux Render
+            Aura Flux
           </div>
         </div>
 
@@ -270,6 +306,8 @@ export default function PersonaCard({ aura, personality, address, loading, error
                     width: `${Math.min(100, Math.max(0, Math.round(value * 100)))}%`,
                     background: safeAura,
                     boxShadow: `0 0 12px ${safeAura}`,
+                    background: aura,
+                    boxShadow: `0 0 12px ${aura}`,
                   }}
                 />
               </div>

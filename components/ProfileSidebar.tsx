@@ -57,6 +57,7 @@ export default function ProfileSidebar() {
         loading={loadingPersona}
         error={personaError}
       />
+      <PersonaCard aura={aura} personality={personality} address={address} />
     </aside>
   )
 }
