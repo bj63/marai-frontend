@@ -163,6 +163,14 @@ export default function PersonaCard({ aura, personality, address }: PersonaCardP
           <div className="absolute inset-0 border border-white/15 rounded-xl" />
           <div className="absolute inset-6 rounded-full border border-white/10" />
           <div className="persona-card__art-gloss" />
+        <div className="relative mt-4 h-40 w-full overflow-hidden rounded-xl">
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `radial-gradient(circle at 50% 20%, ${aura} 0%, rgba(12, 15, 24, 0.4) 55%, rgba(8, 10, 16, 0.95) 100%)`,
+            }}
+          />
+          <div className="absolute inset-0 border border-white/10 rounded-xl" />
           {sparkles.map((sparkle) => (
             <div
               key={sparkle.id}
@@ -180,6 +188,7 @@ export default function PersonaCard({ aura, personality, address }: PersonaCardP
           ))}
           <div className="absolute inset-x-4 bottom-4 text-center text-[0.65rem] uppercase tracking-[0.5em] text-white/80">
             Aura Flux Render
+            Aura Flux
           </div>
         </div>
 
