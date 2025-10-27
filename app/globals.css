@@ -63,6 +63,19 @@ body {
   box-shadow: inset 0 0 30px rgba(14, 22, 36, 0.6);
 }
 
+.persona-card__art {
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.4));
+  box-shadow: inset 0 0 40px rgba(12, 20, 40, 0.8);
+}
+
+.persona-card__art-gloss {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.12), transparent 55%);
+  mix-blend-mode: screen;
+  opacity: 0.75;
+}
+
 .persona-card__badge {
   display: flex;
   flex-direction: column;
@@ -82,6 +95,59 @@ body {
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.3em;
+}
+
+.persona-card__prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(13, 18, 32, 0.95), rgba(21, 30, 50, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 20px rgba(10, 16, 28, 0.6);
+}
+
+.persona-card__prompt-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4em;
+  opacity: 0.65;
+}
+
+.persona-card__prompt-body {
+  font-family: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  font-size: 0.7rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.persona-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.persona-card__tag {
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(12, 18, 32, 0.75);
+  font-size: 0.6rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.persona-card__negative {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(8, 10, 18, 0.85);
 }
 
 @keyframes personaCardShimmer {

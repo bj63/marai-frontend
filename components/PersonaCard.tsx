@@ -20,6 +20,53 @@ const TRAIT_ROLES: Record<string, string> = {
   energy: 'Pulse Dancer',
 }
 
+const TRAIT_PROMPT_CUES: Record<
+  string,
+  {
+    palette: string
+    vibe: string
+    motif: string
+    camera: string
+  }
+> = {
+  empathy: {
+    palette: 'soft pastel teal & opal glow',
+    vibe: 'gentle expression, compassionate eyes',
+    motif: 'floating light petals',
+    camera: 'portrait bust, slight tilt, diffused light',
+  },
+  creativity: {
+    palette: 'neon magenta & sunlit peach rim light',
+    vibe: 'imaginative aura, playful smirk',
+    motif: 'trailing ink ribbons and holographic glyphs',
+    camera: 'three-quarter view, dynamic composition',
+  },
+  confidence: {
+    palette: 'molten gold & midnight violet highlights',
+    vibe: 'heroic posture, unwavering gaze',
+    motif: 'rising pillar of light fragments',
+    camera: 'low angle, cinematic lighting',
+  },
+  curiosity: {
+    palette: 'cerulean & ultraviolet bloom',
+    vibe: 'wide-eyed wonder, inquisitive tilt',
+    motif: 'orbiting data sprites',
+    camera: 'over-the-shoulder with depth of field',
+  },
+  humor: {
+    palette: 'vibrant tangerine & electric cyan glints',
+    vibe: 'mischievous grin, lighthearted energy',
+    motif: 'floating chibi masks',
+    camera: 'close-up, playful lens flare',
+  },
+  energy: {
+    palette: 'scarlet neon & cobalt trails',
+    vibe: 'kinetic motion, windswept hair',
+    motif: 'speedline auroras',
+    camera: 'dynamic dutch angle, motion blur',
+  },
+}
+
 interface PersonaCardProps {
   aura: string
   personality: Record<string, number>
@@ -60,6 +107,37 @@ export default function PersonaCard({ aura, personality, address }: PersonaCardP
     [aura]
   )
 
+  const promptBlueprint = useMemo(() => {
+    const topTraits = traits.slice(0, 3).map(([trait]) => trait)
+    if (topTraits.length === 0) {
+      return {
+        prompt:
+          'anime portrait of a future-mystic navigator bathed in cyan aura, volumetric lighting, ultra-detailed illustration, studio quality',
+        tags: ['anime portrait', 'volumetric light', 'ultra detail'],
+        negative:
+          'low detail, dull lighting, muted colors, distorted anatomy, text overlay',
+      }
+    }
+
+    const cues = topTraits.map((trait) => TRAIT_PROMPT_CUES[trait]).filter(Boolean)
+
+    const palette = cues.map((cue) => cue?.palette).filter(Boolean).join(', ')
+    const vibe = cues.map((cue) => cue?.vibe).filter(Boolean).join(' · ')
+    const motif = cues.map((cue) => cue?.motif).filter(Boolean).join(' + ')
+    const camera = cues.map((cue) => cue?.camera).filter(Boolean).join(' | ')
+
+    return {
+      prompt: `anime illustration of the ${dominantTitle.toLowerCase()} persona, ${vibe}. ${motif}. palette: ${palette}. ${camera}. rendered in ultra-detailed midjourney style, iridescent lighting, 4k concept art`,
+      tags: [
+        'midjourney v6',
+        dominantTitle.toLowerCase(),
+        ...topTraits.map((trait) => `${trait} core`),
+      ],
+      negative:
+        'lowres, blurred details, flat shading, deformed proportions, watermark, text, duplicated limbs',
+    }
+  }, [dominantTitle, traits])
+
   return (
     <div className="persona-card">
       <div className="persona-card__inner">
@@ -75,6 +153,16 @@ export default function PersonaCard({ aura, personality, address }: PersonaCardP
           </div>
         </div>
 
+        <div className="relative mt-4 h-44 w-full overflow-hidden rounded-xl persona-card__art">
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `radial-gradient(circle at 40% 15%, ${aura} 0%, rgba(12, 15, 24, 0.3) 40%, rgba(6, 8, 18, 0.92) 100%)`,
+            }}
+          />
+          <div className="absolute inset-0 border border-white/15 rounded-xl" />
+          <div className="absolute inset-6 rounded-full border border-white/10" />
+          <div className="persona-card__art-gloss" />
         <div className="relative mt-4 h-40 w-full overflow-hidden rounded-xl">
           <div
             className="absolute inset-0"
@@ -99,6 +187,7 @@ export default function PersonaCard({ aura, personality, address }: PersonaCardP
             />
           ))}
           <div className="absolute inset-x-4 bottom-4 text-center text-[0.65rem] uppercase tracking-[0.5em] text-white/80">
+            Aura Flux Render
             Aura Flux
           </div>
         </div>
@@ -131,6 +220,24 @@ export default function PersonaCard({ aura, personality, address }: PersonaCardP
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="mt-6 space-y-2">
+          <div className="persona-card__prompt">
+            <div className="persona-card__prompt-label">Dream Prompt</div>
+            <div className="persona-card__prompt-body">{promptBlueprint.prompt}</div>
+          </div>
+          <div className="persona-card__tags">
+            {promptBlueprint.tags.map((tag) => (
+              <span key={tag} className="persona-card__tag">
+                {tag}
+              </span>
+            ))}
+          </div>
+          <div className="persona-card__negative">
+            <span className="persona-card__prompt-label">Negative Prompt</span>
+            <span className="persona-card__prompt-body">{promptBlueprint.negative}</span>
+          </div>
         </div>
       </div>
     </div>
