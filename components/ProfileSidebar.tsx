@@ -5,6 +5,7 @@ import { useAddress, useContract, useTokenBalance } from '@thirdweb-dev/react'
 import WalletBar from './WalletBar'
 import { analyzeMessage } from '@/lib/api'
 import { MIRAI_COIN } from '@/lib/contracts'
+import { handleError } from '@/lib/errorHandler'
 import PersonaCard from './PersonaCard'
 
 export default function ProfileSidebar() {
@@ -31,7 +32,8 @@ export default function ProfileSidebar() {
       })
       .catch((err: unknown) => {
         if (!active) return
-        setPersonaError(err instanceof Error ? err.message : 'Unable to sync aura data')
+        const message = handleError(err, 'ProfileSidebar.analyzeMessage', 'Unable to sync aura data')
+        setPersonaError(message)
       })
       .finally(() => {
         if (!active) return

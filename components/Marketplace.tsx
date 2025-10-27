@@ -16,6 +16,7 @@ import {
   miraiCardAbi,
   miraiMarketplaceAbi,
 } from '@/lib/contracts'
+import { handleError } from '@/lib/errorHandler'
 
 interface ListingSummary {
   tokenId: bigint
@@ -112,13 +113,19 @@ export default function Marketplace() {
             }
           }
         } catch (error) {
-          console.warn('Failed to resolve metadata for token', listing.tokenId.toString(), error)
+          handleError(
+            error,
+            `Marketplace.fetchMetadata.token-${listing.tokenId.toString()}`,
+            'Failed to resolve metadata for token.',
+          )
         }
       }
       setMetadataMap(nextMap)
     }
 
-    fetchMetadata().catch((error) => console.error(error))
+    fetchMetadata().catch((error) => {
+      handleError(error, 'Marketplace.fetchMetadata', 'Unable to load marketplace metadata.')
+    })
   }, [card, listings])
 
   const handleListValidation = () => {
@@ -178,7 +185,9 @@ export default function Marketplace() {
           <Web3Button
             contractAddress={MIRAI_MARKETPLACE_ADDRESS}
             action={(contract) => contract.call('buyCard', [listing.tokenId])}
-            onError={(error) => console.error('Failed to purchase card', error)}
+            onError={(error) => {
+              handleError(error, 'Marketplace.buyCard', 'Failed to purchase card. Please try again soon.')
+            }}
           >
             Buy with MRC
           </Web3Button>
@@ -257,8 +266,12 @@ export default function Marketplace() {
             setListPrice('')
           }}
           onError={(error) => {
-            console.error('Failed to list card', error)
-            setFormError('Listing failed. Ensure approvals are granted and try again.')
+            const message = handleError(
+              error,
+              'Marketplace.listCard',
+              'Listing failed. Ensure approvals are granted and try again.',
+            )
+            setFormError(message)
           }}
         >
           List Card
