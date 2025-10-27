@@ -5,12 +5,17 @@ import { ThirdwebProvider } from '@thirdweb-dev/react'
 import { polygon } from '@thirdweb-dev/chains'
 import { FederationProvider } from '@/components/FederationProvider'
 
-const THIRDWEB_CLIENT_ID = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID
-
 export function Providers({ children }: { children: ReactNode }) {
+    const thirdwebClientId = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID
+    const content = <FederationProvider>{children}</FederationProvider>
+
+    if (!thirdwebClientId) {
+        return content
+    }
+
     return (
-        <ThirdwebProvider clientId={THIRDWEB_CLIENT_ID} activeChain={polygon}>
-            <FederationProvider>{children}</FederationProvider>
+        <ThirdwebProvider clientId={thirdwebClientId} activeChain={polygon}>
+            {content}
         </ThirdwebProvider>
     )
 }
