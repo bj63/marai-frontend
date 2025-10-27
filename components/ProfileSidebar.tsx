@@ -13,14 +13,34 @@ export default function ProfileSidebar() {
   const { data: balance } = useTokenBalance(contract, address)
   const [aura, setAura] = useState('hsl(180,85%,60%)')
   const [personality, setPersonality] = useState<Record<string, number>>({})
+  const [loadingPersona, setLoadingPersona] = useState(true)
+  const [personaError, setPersonaError] = useState<string | null>(null)
 
   useEffect(() => {
+    let active = true
+    setLoadingPersona(true)
+    setPersonaError(null)
+
     analyzeMessage('Hello Mirai')
       .then((data) => {
-        setAura(data.aura)
-        setPersonality(data.personality || {})
+        if (!active) return
+        if (data?.aura) {
+          setAura(data.aura)
+        }
+        setPersonality(data?.personality || {})
       })
-      .catch(() => {})
+      .catch((err: unknown) => {
+        if (!active) return
+        setPersonaError(err instanceof Error ? err.message : 'Unable to sync aura data')
+      })
+      .finally(() => {
+        if (!active) return
+        setLoadingPersona(false)
+      })
+
+    return () => {
+      active = false
+    }
   }, [])
 
   return (
@@ -30,6 +50,13 @@ export default function ProfileSidebar() {
         <div className="text-xs opacity-60 mb-1">MiraiCoin (MRC)</div>
         <div className="text-2xl font-semibold">{balance?.displayValue ?? '0'} MRC</div>
       </div>
+      <PersonaCard
+        aura={aura}
+        personality={personality}
+        address={address}
+        loading={loadingPersona}
+        error={personaError}
+      />
       <PersonaCard aura={aura} personality={personality} address={address} />
     </aside>
   )
