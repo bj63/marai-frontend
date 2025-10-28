@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 const TRAIT_TITLES: Record<string, string> = {
   empathy: 'Empathy',
@@ -95,17 +95,25 @@ export default function PersonaCard({ aura, personality, address }: PersonaCardP
   const topRole = traits[0]?.[0]
   const dominantTitle = topRole ? TRAIT_ROLES[topRole] ?? `Aspect of ${topRole}` : 'Awaiting Resonance'
 
-  const sparkles = useMemo(
-    () =>
+  const [sparkles, setSparkles] = useState<Array<{
+    id: number
+    top: string
+    left: string
+    opacity: number
+    size: number
+  }>>([])
+
+  useEffect(() => {
+    setSparkles(
       Array.from({ length: 12 }, (_, index) => ({
         id: index,
         top: `${Math.random() * 100}%`,
         left: `${Math.random() * 100}%`,
         opacity: 0.25 + Math.random() * 0.35,
         size: 0.75 + Math.random() * 1.25,
-      })),
-    [aura]
-  )
+      }))
+    )
+  }, [aura])
 
   const promptBlueprint = useMemo(() => {
     const topTraits = traits.slice(0, 3).map(([trait]) => trait)
