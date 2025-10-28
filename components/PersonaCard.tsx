@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 function hashSeed(input: string) {
   let hash = 1779033703 ^ input.length
@@ -123,6 +123,16 @@ export default function PersonaCard({ aura, personality, address }: PersonaCardP
   const topRole = traits[0]?.[0]
   const dominantTitle = topRole ? TRAIT_ROLES[topRole] ?? `Aspect of ${topRole}` : 'Awaiting Resonance'
 
+  const [sparkles, setSparkles] = useState<Array<{
+    id: number
+    top: string
+    left: string
+    opacity: number
+    size: number
+  }>>([])
+
+  useEffect(() => {
+    setSparkles(
   const statusLabel = error ? 'Signal Lost' : loading ? 'Calibrating' : 'Synchronized'
   const statusDetail = error ? error : loading ? 'Tuning personality lattice…' : 'Persona signature locked in'
 
@@ -145,9 +155,9 @@ export default function PersonaCard({ aura, personality, address }: PersonaCardP
         left: `${Math.random() * 100}%`,
         opacity: 0.25 + Math.random() * 0.35,
         size: 0.75 + Math.random() * 1.25,
-      })),
-    [aura]
-  )
+      }))
+    )
+  }, [aura])
 
   const promptBlueprint = useMemo(() => {
     const topTraits = traits.slice(0, 3).map(([trait]) => trait)
