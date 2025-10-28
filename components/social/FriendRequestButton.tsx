@@ -55,6 +55,9 @@ export function FriendRequestButton({
     danger: 'border-rose-400 bg-rose-500/20 text-rose-200',
   }
 
+  const shouldShowResponseControls =
+    state === 'pending' && Boolean(onAcceptRequest || onRejectRequest)
+
   return (
     <div className="flex flex-wrap items-center gap-3 text-white/70">
       <button
@@ -101,6 +104,7 @@ export function FriendRequestButton({
       )}
 
       {state === 'pending' && (onAcceptRequest || onRejectRequest) && (
+      {shouldShowResponseControls && (
         <>
           {onAcceptRequest && (
             <button
@@ -109,6 +113,7 @@ export function FriendRequestButton({
               onClick={() => {
                 void handle(async () => {
                   await onAcceptRequest?.()
+                  await onAcceptRequest()
                 }, 'accepted')
               }}
             >
@@ -122,6 +127,7 @@ export function FriendRequestButton({
               onClick={() => {
                 void handle(async () => {
                   await onRejectRequest?.()
+                  await onRejectRequest()
                 }, 'rejected')
               }}
             >
