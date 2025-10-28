@@ -2,6 +2,11 @@ export const MIRAI_MARKETPLACE_ADDRESS = process.env.NEXT_PUBLIC_MIRAI_MARKETPLA
 export const MIRAI_CARD_ADDRESS = process.env.NEXT_PUBLIC_MIRAI_CARD || ''
 export const MIRAI_COIN_ADDRESS = process.env.NEXT_PUBLIC_MIRAI_COIN || ''
 
+// Backwards-compatible aliases used by earlier components.
+export const MIRAI_MARKETPLACE = MIRAI_MARKETPLACE_ADDRESS
+export const MIRAI_CARD = MIRAI_CARD_ADDRESS
+export const MIRAI_COIN = MIRAI_COIN_ADDRESS
+
 export const miraiMarketplaceAbi = [
   {
     inputs: [
