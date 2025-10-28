@@ -100,30 +100,34 @@ export function FriendRequestButton({
         </button>
       )}
 
-      {state === 'pending' && (
+      {state === 'pending' && (onAcceptRequest || onRejectRequest) && (
         <>
-          <button
-            type="button"
-            className="text-xs font-medium uppercase tracking-wide text-emerald-300 hover:text-emerald-200"
-            onClick={() => {
-              void handle(async () => {
-                await onAcceptRequest?.()
-              }, 'accepted')
-            }}
-          >
-            Accept
-          </button>
-          <button
-            type="button"
-            className="text-xs font-medium uppercase tracking-wide text-rose-300 hover:text-rose-200"
-            onClick={() => {
-              void handle(async () => {
-                await onRejectRequest?.()
-              }, 'rejected')
-            }}
-          >
-            Decline
-          </button>
+          {onAcceptRequest && (
+            <button
+              type="button"
+              className="text-xs font-medium uppercase tracking-wide text-emerald-300 hover:text-emerald-200"
+              onClick={() => {
+                void handle(async () => {
+                  await onAcceptRequest?.()
+                }, 'accepted')
+              }}
+            >
+              Accept
+            </button>
+          )}
+          {onRejectRequest && (
+            <button
+              type="button"
+              className="text-xs font-medium uppercase tracking-wide text-rose-300 hover:text-rose-200"
+              onClick={() => {
+                void handle(async () => {
+                  await onRejectRequest?.()
+                }, 'rejected')
+              }}
+            >
+              Decline
+            </button>
+          )}
         </>
       )}
     </div>
