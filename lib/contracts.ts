@@ -67,7 +67,8 @@ export const miraiMarketplaceAbi = [
   },
   {
     inputs: [
-      { components: [
+      {
+        components: [
           { internalType: 'uint256', name: 'tokenId', type: 'uint256' },
           { internalType: 'address', name: 'seller', type: 'address' },
           { internalType: 'uint256', name: 'price', type: 'uint256' },
@@ -75,11 +76,13 @@ export const miraiMarketplaceAbi = [
         ],
         internalType: 'struct MiraiMarketplace.Listing[]',
         name: '',
-        type: 'tuple[]' },
+        type: 'tuple[]',
+      },
     ],
     name: 'getActiveListings',
     outputs: [
-      { components: [
+      {
+        components: [
           { internalType: 'uint256', name: 'tokenId', type: 'uint256' },
           { internalType: 'address', name: 'seller', type: 'address' },
           { internalType: 'uint256', name: 'price', type: 'uint256' },
@@ -87,7 +90,8 @@ export const miraiMarketplaceAbi = [
         ],
         internalType: 'struct MiraiMarketplace.Listing[]',
         name: '',
-        type: 'tuple[]' },
+        type: 'tuple[]',
+      },
     ],
     stateMutability: 'view',
     type: 'function',
@@ -96,7 +100,8 @@ export const miraiMarketplaceAbi = [
     inputs: [{ internalType: 'uint256', name: 'tokenId', type: 'uint256' }],
     name: 'getListing',
     outputs: [
-      { components: [
+      {
+        components: [
           { internalType: 'uint256', name: 'tokenId', type: 'uint256' },
           { internalType: 'address', name: 'seller', type: 'address' },
           { internalType: 'uint256', name: 'price', type: 'uint256' },
@@ -104,7 +109,8 @@ export const miraiMarketplaceAbi = [
         ],
         internalType: 'struct MiraiMarketplace.Listing',
         name: '',
-        type: 'tuple' },
+        type: 'tuple',
+      },
     ],
     stateMutability: 'view',
     type: 'function',
@@ -124,7 +130,10 @@ export const miraiMarketplaceAbi = [
     type: 'function',
   },
   {
-    inputs: [{ internalType: 'uint256', name: 'tokenId', type: 'uint256' }, { internalType: 'uint256', name: 'price', type: 'uint256' }],
+    inputs: [
+      { internalType: 'uint256', name: 'tokenId', type: 'uint256' },
+      { internalType: 'uint256', name: 'price', type: 'uint256' },
+    ],
     name: 'listCard',
     outputs: [],
     stateMutability: 'nonpayable',
@@ -145,14 +154,20 @@ export const miraiMarketplaceAbi = [
     type: 'function',
   },
   {
-    inputs: [{ internalType: 'uint256', name: 'tokenId', type: 'uint256' }, { internalType: 'uint256', name: 'price', type: 'uint256' }],
+    inputs: [
+      { internalType: 'uint256', name: 'tokenId', type: 'uint256' },
+      { internalType: 'uint256', name: 'price', type: 'uint256' },
+    ],
     name: 'updateListing',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
   },
   {
-    inputs: [{ internalType: 'uint96', name: 'bps', type: 'uint96' }, { internalType: 'address', name: 'recipient', type: 'address' }],
+    inputs: [
+      { internalType: 'uint96', name: 'bps', type: 'uint96' },
+      { internalType: 'address', name: 'recipient', type: 'address' },
+    ],
     name: 'setRoyalty',
     outputs: [],
     stateMutability: 'nonpayable',
@@ -330,3 +345,7 @@ export const miraiCoinAbi = [
     type: 'function',
   },
 ] as const
+
+export type MiraiMarketplaceAbi = typeof miraiMarketplaceAbi
+export type MiraiCardAbi = typeof miraiCardAbi
+export type MiraiCoinAbi = typeof miraiCoinAbi
