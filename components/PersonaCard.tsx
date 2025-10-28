@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 
 const TRAIT_TITLES: Record<string, string> = {
   empathy: 'Empathy',
@@ -79,6 +79,23 @@ const PLACEHOLDER_TRAITS: Array<[string, number]> = [
   ['empathy', 0.53],
 ]
 
+const createDeterministicRandom = (seed: number) => {
+  let value = seed
+  return () => {
+    value = (value * 1664525 + 1013904223) % 4294967296
+    return value / 4294967296
+  }
+}
+
+const hashString = (value: string) => {
+  let hash = 0
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(index)
+    hash |= 0
+  }
+  return hash >>> 0
+}
+
 export default function PersonaCard({ aura, personality, address }: PersonaCardProps) {
   const traits = useMemo(() => {
     const entries = Object.entries(personality)
@@ -95,25 +112,24 @@ export default function PersonaCard({ aura, personality, address }: PersonaCardP
   const topRole = traits[0]?.[0]
   const dominantTitle = topRole ? TRAIT_ROLES[topRole] ?? `Aspect of ${topRole}` : 'Awaiting Resonance'
 
-  const [sparkles, setSparkles] = useState<Array<{
-    id: number
-    top: string
-    left: string
-    opacity: number
-    size: number
-  }>>([])
+  const sparkleSeed = useMemo(() => {
+    const serializedTraits = traits
+      .slice(0, 6)
+      .map(([trait, value]) => `${trait}:${Math.round(value * 1000)}`)
+      .join('|')
+    return hashString(`${aura ?? ''}|${serializedTraits}`)
+  }, [aura, traits])
 
-  useEffect(() => {
-    setSparkles(
-      Array.from({ length: 12 }, (_, index) => ({
-        id: index,
-        top: `${Math.random() * 100}%`,
-        left: `${Math.random() * 100}%`,
-        opacity: 0.25 + Math.random() * 0.35,
-        size: 0.75 + Math.random() * 1.25,
-      }))
-    )
-  }, [aura])
+  const sparkles = useMemo(() => {
+    const random = createDeterministicRandom(sparkleSeed || 1)
+    return Array.from({ length: 12 }, (_, index) => ({
+      id: index,
+      top: `${random() * 100}%`,
+      left: `${random() * 100}%`,
+      opacity: 0.25 + random() * 0.35,
+      size: 0.75 + random() * 1.25,
+    }))
+  }, [sparkleSeed])
 
   const promptBlueprint = useMemo(() => {
     const topTraits = traits.slice(0, 3).map(([trait]) => trait)
