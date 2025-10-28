@@ -52,14 +52,7 @@ export default function ProfileSidebar() {
         <div className="text-xs opacity-60 mb-1">MiraiCoin (MRC)</div>
         <div className="text-2xl font-semibold">{balance?.displayValue ?? '0'} MRC</div>
       </div>
-      <PersonaCard
-        aura={aura}
-        personality={personality}
-        address={address}
-        loading={loadingPersona}
-        error={personaError}
-      />
-      <PersonaCard aura={aura} personality={personality} address={address} />
+      <PersonaCard aura={aura} personality={personality} address={address} loading={loadingPersona} error={personaError} />
     </aside>
   )
 }
