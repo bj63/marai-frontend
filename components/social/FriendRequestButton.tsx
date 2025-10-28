@@ -55,6 +55,9 @@ export function FriendRequestButton({
     danger: 'border-rose-400 bg-rose-500/20 text-rose-200',
   }
 
+  const shouldShowResponseControls =
+    state === 'pending' && Boolean(onAcceptRequest || onRejectRequest)
+
   return (
     <div className="flex flex-wrap items-center gap-3 text-white/70">
       <button
@@ -100,30 +103,34 @@ export function FriendRequestButton({
         </button>
       )}
 
-      {state === 'pending' && (
+      {shouldShowResponseControls && (
         <>
-          <button
-            type="button"
-            className="text-xs font-medium uppercase tracking-wide text-emerald-300 hover:text-emerald-200"
-            onClick={() => {
-              void handle(async () => {
-                await onAcceptRequest?.()
-              }, 'accepted')
-            }}
-          >
-            Accept
-          </button>
-          <button
-            type="button"
-            className="text-xs font-medium uppercase tracking-wide text-rose-300 hover:text-rose-200"
-            onClick={() => {
-              void handle(async () => {
-                await onRejectRequest?.()
-              }, 'rejected')
-            }}
-          >
-            Decline
-          </button>
+          {onAcceptRequest && (
+            <button
+              type="button"
+              className="text-xs font-medium uppercase tracking-wide text-emerald-300 hover:text-emerald-200"
+              onClick={() => {
+                void handle(async () => {
+                  await onAcceptRequest()
+                }, 'accepted')
+              }}
+            >
+              Accept
+            </button>
+          )}
+          {onRejectRequest && (
+            <button
+              type="button"
+              className="text-xs font-medium uppercase tracking-wide text-rose-300 hover:text-rose-200"
+              onClick={() => {
+                void handle(async () => {
+                  await onRejectRequest()
+                }, 'rejected')
+              }}
+            >
+              Decline
+            </button>
+          )}
         </>
       )}
     </div>
