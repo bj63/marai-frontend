@@ -23,6 +23,10 @@ export function FriendRequestButton({
   const [state, setState] = useState<RequestState>(initialState)
   const [isLoading, setIsLoading] = useState(false)
 
+  const canAccept = typeof onAcceptRequest === 'function'
+  const canReject = typeof onRejectRequest === 'function'
+  const canRespondToIncomingRequest = canAccept || canReject
+
   const { label, variant } = useMemo(() => {
     switch (state) {
       case 'pending':
@@ -103,6 +107,9 @@ export function FriendRequestButton({
         </button>
       )}
 
+      {state === 'pending' && canRespondToIncomingRequest && (
+        <>
+          {canAccept && (
       {state === 'pending' && (onAcceptRequest || onRejectRequest) && (
       {shouldShowResponseControls && (
         <>
@@ -120,6 +127,7 @@ export function FriendRequestButton({
               Accept
             </button>
           )}
+          {canReject && (
           {onRejectRequest && (
             <button
               type="button"
