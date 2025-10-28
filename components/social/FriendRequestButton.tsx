@@ -23,6 +23,10 @@ export function FriendRequestButton({
   const [state, setState] = useState<RequestState>(initialState)
   const [isLoading, setIsLoading] = useState(false)
 
+  const canAccept = typeof onAcceptRequest === 'function'
+  const canReject = typeof onRejectRequest === 'function'
+  const canRespondToIncomingRequest = canAccept || canReject
+
   const { label, variant } = useMemo(() => {
     switch (state) {
       case 'pending':
@@ -100,30 +104,34 @@ export function FriendRequestButton({
         </button>
       )}
 
-      {state === 'pending' && (
+      {state === 'pending' && canRespondToIncomingRequest && (
         <>
-          <button
-            type="button"
-            className="text-xs font-medium uppercase tracking-wide text-emerald-300 hover:text-emerald-200"
-            onClick={() => {
-              void handle(async () => {
-                await onAcceptRequest?.()
-              }, 'accepted')
-            }}
-          >
-            Accept
-          </button>
-          <button
-            type="button"
-            className="text-xs font-medium uppercase tracking-wide text-rose-300 hover:text-rose-200"
-            onClick={() => {
-              void handle(async () => {
-                await onRejectRequest?.()
-              }, 'rejected')
-            }}
-          >
-            Decline
-          </button>
+          {canAccept && (
+            <button
+              type="button"
+              className="text-xs font-medium uppercase tracking-wide text-emerald-300 hover:text-emerald-200"
+              onClick={() => {
+                void handle(async () => {
+                  await onAcceptRequest?.()
+                }, 'accepted')
+              }}
+            >
+              Accept
+            </button>
+          )}
+          {canReject && (
+            <button
+              type="button"
+              className="text-xs font-medium uppercase tracking-wide text-rose-300 hover:text-rose-200"
+              onClick={() => {
+                void handle(async () => {
+                  await onRejectRequest?.()
+                }, 'rejected')
+              }}
+            >
+              Decline
+            </button>
+          )}
         </>
       )}
     </div>
