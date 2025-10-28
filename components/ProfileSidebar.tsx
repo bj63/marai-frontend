@@ -5,6 +5,8 @@ import { useAddress, useContract, useTokenBalance } from '@thirdweb-dev/react'
 import WalletBar from './WalletBar'
 import { analyzeMessage } from '@/lib/api'
 import { MIRAI_COIN } from '@/lib/contracts'
+import { handleError } from '@/lib/errorHandler'
+import PersonaCard from './PersonaCard'
 
 export default function ProfileSidebar() {
   const address = useAddress()
@@ -12,14 +14,35 @@ export default function ProfileSidebar() {
   const { data: balance } = useTokenBalance(contract, address)
   const [aura, setAura] = useState('hsl(180,85%,60%)')
   const [personality, setPersonality] = useState<Record<string, number>>({})
+  const [loadingPersona, setLoadingPersona] = useState(true)
+  const [personaError, setPersonaError] = useState<string | null>(null)
 
   useEffect(() => {
+    let active = true
+    setLoadingPersona(true)
+    setPersonaError(null)
+
     analyzeMessage('Hello Mirai')
       .then((data) => {
-        setAura(data.aura)
-        setPersonality(data.personality || {})
+        if (!active) return
+        if (data?.aura) {
+          setAura(data.aura)
+        }
+        setPersonality(data?.personality || {})
       })
-      .catch(() => {})
+      .catch((err: unknown) => {
+        if (!active) return
+        const message = handleError(err, 'ProfileSidebar.analyzeMessage', 'Unable to sync aura data')
+        setPersonaError(message)
+      })
+      .finally(() => {
+        if (!active) return
+        setLoadingPersona(false)
+      })
+
+    return () => {
+      active = false
+    }
   }, [])
 
   return (
@@ -29,28 +52,7 @@ export default function ProfileSidebar() {
         <div className="text-xs opacity-60 mb-1">MiraiCoin (MRC)</div>
         <div className="text-2xl font-semibold">{balance?.displayValue ?? '0'} MRC</div>
       </div>
-      <div className="glass rounded-xl p-0 overflow-hidden">
-        <div
-          className="h-28"
-          style={{
-            background: `radial-gradient(circle at 50% 50%, ${aura} 0%, transparent 70%)`,
-          }}
-        />
-        <div className="p-4">
-          <div className="text-sm opacity-70">Personality</div>
-          <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
-            {Object.entries(personality).map(([key, value]) => (
-              <div key={key} className="flex justify-between">
-                <span className="opacity-60">{key}</span>
-                <span>{Math.round(value * 100)}%</span>
-              </div>
-            ))}
-            {Object.keys(personality).length === 0 && (
-              <div className="col-span-2 text-xs opacity-50">Syncing aura data...</div>
-            )}
-          </div>
-        </div>
-      </div>
+      <PersonaCard aura={aura} personality={personality} address={address} loading={loadingPersona} error={personaError} />
     </aside>
   )
 }

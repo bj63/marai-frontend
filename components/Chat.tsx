@@ -4,6 +4,7 @@ import { useState } from 'react'
 import CharacterAvatar from './CharacterAvatar'
 import TimelineCard, { TimelineEntry } from './TimelineCard'
 import { analyzeMessage } from '@/lib/api'
+import { handleError } from '@/lib/errorHandler'
 
 interface ChatMessage {
   you: string
@@ -45,8 +46,12 @@ export default function Chat() {
       setIntensity(emotionScore)
       setTimeline(data.timeline ?? [])
     } catch (err) {
-      console.error(err)
-      setError('We hit a snag connecting to Mirai. Please try again in a moment.')
+      const message = handleError(
+        err,
+        'Chat.handleSend',
+        'We hit a snag connecting to Mirai. Please try again in a moment.',
+      )
+      setError(message)
     } finally {
       setIsLoading(false)
     }
@@ -92,6 +97,7 @@ export default function Chat() {
           }}
           placeholder="Share a thought with Mirai..."
           disabled={isLoading}
+          aria-label="Chat message input"
         />
         <button onClick={handleSend} disabled={isLoading}>
           {isLoading ? 'Sending…' : 'Send'}

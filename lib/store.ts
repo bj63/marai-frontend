@@ -7,12 +7,13 @@ export interface Message {
     federationId?: string
 }
 
-interface Personality {
+export interface Personality {
     empathy: number
     creativity: number
     confidence: number
     curiosity: number
     humor: number
+    energy: number
 }
 
 interface MoaState {
@@ -38,6 +39,7 @@ export const useMoaStore = create<MoaState>((set) => ({
         confidence: 0.8,
         curiosity: 0.7,
         humor: 0.6,
+        energy: 0.7,
     },
     mood: 'neutral',
     federationId: '',
