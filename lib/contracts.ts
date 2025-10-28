@@ -1,20 +1,24 @@
-function getRequiredEnv(value: string | undefined, key: string) {
+function assertRequiredEnv(value: string | undefined, key: string): string {
   if (typeof value === 'string' && value.trim().length > 0) {
     return value
   }
   throw new Error(`Missing required environment variable: ${key}`)
 }
 
-export const MIRAI_CARD_ADDRESS = getRequiredEnv(
-  process.env.NEXT_PUBLIC_MIRAI_CARD,
+const miraiCardAddress = process.env.NEXT_PUBLIC_MIRAI_CARD
+const miraiCoinAddress = process.env.NEXT_PUBLIC_MIRAI_COIN
+const miraiMarketplaceAddress = process.env.NEXT_PUBLIC_MIRAI_MARKETPLACE
+
+export const MIRAI_CARD_ADDRESS: string = assertRequiredEnv(
+  miraiCardAddress,
   'NEXT_PUBLIC_MIRAI_CARD'
 )
-export const MIRAI_COIN_ADDRESS = getRequiredEnv(
-  process.env.NEXT_PUBLIC_MIRAI_COIN,
+export const MIRAI_COIN_ADDRESS: string = assertRequiredEnv(
+  miraiCoinAddress,
   'NEXT_PUBLIC_MIRAI_COIN'
 )
-export const MIRAI_MARKETPLACE_ADDRESS = getRequiredEnv(
-  process.env.NEXT_PUBLIC_MIRAI_MARKETPLACE,
+export const MIRAI_MARKETPLACE_ADDRESS: string = assertRequiredEnv(
+  miraiMarketplaceAddress,
   'NEXT_PUBLIC_MIRAI_MARKETPLACE'
 )
 
