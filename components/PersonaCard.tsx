@@ -2,6 +2,27 @@
 
 import { useMemo } from 'react'
 
+function hashSeed(input: string) {
+  let hash = 1779033703 ^ input.length
+  for (let i = 0; i < input.length; i += 1) {
+    hash = Math.imul(hash ^ input.charCodeAt(i), 3432918353)
+    hash = (hash << 13) | (hash >>> 19)
+  }
+  hash = Math.imul(hash ^ (hash >>> 16), 2246822507)
+  hash = Math.imul(hash ^ (hash >>> 13), 3266489909)
+  hash ^= hash >>> 16
+  return hash >>> 0
+}
+
+function mulberry32(seed: number) {
+  return () => {
+    let t = (seed += 0x6d2b79f5)
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
 const TRAIT_TITLES: Record<string, string> = {
   empathy: 'Empathy',
   creativity: 'Creativity',
@@ -68,6 +89,11 @@ const TRAIT_PROMPT_CUES: Record<
 }
 
 interface PersonaCardProps {
+  aura?: string | null
+  personality: Record<string, number>
+  address?: string | null
+  loading?: boolean
+  error?: string | null
   aura: string
   personality: Record<string, number>
   address?: string | null
@@ -96,6 +122,8 @@ const hashString = (value: string) => {
   return hash >>> 0
 }
 
+export default function PersonaCard({ aura, personality, address, loading, error }: PersonaCardProps) {
+  const safeAura = aura && aura.trim().length > 0 ? aura : 'hsl(188, 82%, 62%)'
 export default function PersonaCard({ aura, personality, address }: PersonaCardProps) {
   const traits = useMemo(() => {
     const entries = Object.entries(personality)
@@ -122,6 +150,22 @@ export default function PersonaCard({ aura, personality, address }: PersonaCardP
 
   const sparkles = useMemo(() => {
     const random = createDeterministicRandom(sparkleSeed || 1)
+  const [sparkles, setSparkles] = useState<Array<{
+    id: number
+    top: string
+    left: string
+    opacity: number
+    size: number
+  }>>([])
+
+  useEffect(() => {
+    setSparkles(
+  const statusLabel = error ? 'Signal Lost' : loading ? 'Calibrating' : 'Synchronized'
+  const statusDetail = error ? error : loading ? 'Tuning personality lattice…' : 'Persona signature locked in'
+
+  const sparkleSeed = useMemo(() => hashSeed(`${safeAura}-${address ?? 'guest'}-${dominantTitle}`), [safeAura, address, dominantTitle])
+  const sparkles = useMemo(() => {
+    const random = mulberry32(sparkleSeed)
     return Array.from({ length: 12 }, (_, index) => ({
       id: index,
       top: `${random() * 100}%`,
@@ -130,6 +174,17 @@ export default function PersonaCard({ aura, personality, address }: PersonaCardP
       size: 0.75 + random() * 1.25,
     }))
   }, [sparkleSeed])
+  const sparkles = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, index) => ({
+        id: index,
+        top: `${Math.random() * 100}%`,
+        left: `${Math.random() * 100}%`,
+        opacity: 0.25 + Math.random() * 0.35,
+        size: 0.75 + Math.random() * 1.25,
+      }))
+    )
+  }, [aura])
 
   const promptBlueprint = useMemo(() => {
     const topTraits = traits.slice(0, 3).map(([trait]) => trait)
@@ -140,11 +195,44 @@ export default function PersonaCard({ aura, personality, address }: PersonaCardP
         tags: ['anime portrait', 'volumetric light', 'ultra detail'],
         negative:
           'low detail, dull lighting, muted colors, distorted anatomy, text overlay',
+        palette: 'opalescent cyan & prismatic rose glow',
+        vibe: 'calm poise, empathetic aura',
+        motif: 'floating light petals',
+        camera: 'portrait bust, soft volumetric lighting',
       }
     }
 
     const cues = topTraits.map((trait) => TRAIT_PROMPT_CUES[trait]).filter(Boolean)
 
+    const palette = cues
+      .map((cue) => cue?.palette)
+      .filter(Boolean)
+      .join(', ')
+    const vibe = cues
+      .map((cue) => cue?.vibe)
+      .filter(Boolean)
+      .join(' · ')
+    const motif = cues
+      .map((cue) => cue?.motif)
+      .filter(Boolean)
+      .join(' + ')
+    const camera = cues
+      .map((cue) => cue?.camera)
+      .filter(Boolean)
+      .join(' | ')
+
+    const cleanedPalette = palette || 'opalescent cyan & prismatic rose glow'
+    const cleanedVibe = vibe || 'calm poise, empathetic aura'
+    const cleanedMotif = motif || 'floating light petals'
+    const cleanedCamera = camera || 'portrait bust, soft volumetric lighting'
+
+    const dominantSlug = dominantTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'persona'
+
+    return {
+      prompt: `anime illustration of the ${dominantTitle.toLowerCase()} persona, ${cleanedVibe}. ${cleanedMotif}. palette: ${cleanedPalette}. ${cleanedCamera}. rendered in ultra-detailed midjourney style, iridescent lighting, 4k concept art`,
+      tags: [
+        'midjourney v6',
+        dominantSlug,
     const palette = cues.map((cue) => cue?.palette).filter(Boolean).join(', ')
     const vibe = cues.map((cue) => cue?.vibe).filter(Boolean).join(' · ')
     const motif = cues.map((cue) => cue?.motif).filter(Boolean).join(' + ')
@@ -159,6 +247,10 @@ export default function PersonaCard({ aura, personality, address }: PersonaCardP
       ],
       negative:
         'lowres, blurred details, flat shading, deformed proportions, watermark, text, duplicated limbs',
+      palette: cleanedPalette,
+      vibe: cleanedVibe,
+      motif: cleanedMotif,
+      camera: cleanedCamera,
     }
   }, [dominantTitle, traits])
 
@@ -169,6 +261,16 @@ export default function PersonaCard({ aura, personality, address }: PersonaCardP
           <span>Mirai Persona</span>
           <span>{address ? `${address.slice(0, 6)}…${address.slice(-4)}` : 'Guest'}</span>
         </header>
+
+        <div
+          className={`persona-card__status ${
+            error ? 'persona-card__status--error' : loading ? 'persona-card__status--loading' : 'persona-card__status--ready'
+          }`}
+          aria-live="polite"
+        >
+          <span className="persona-card__status-label">{statusLabel}</span>
+          <span className="persona-card__status-detail">{statusDetail}</span>
+        </div>
 
         <div className="mt-3">
           <div className="text-[0.65rem] uppercase tracking-[0.45em] opacity-70">Designation</div>
@@ -181,6 +283,7 @@ export default function PersonaCard({ aura, personality, address }: PersonaCardP
           <div
             className="absolute inset-0"
             style={{
+              background: `radial-gradient(circle at 40% 15%, ${safeAura} 0%, rgba(12, 15, 24, 0.3) 40%, rgba(6, 8, 18, 0.92) 100%)`,
               background: `radial-gradient(circle at 40% 15%, ${aura} 0%, rgba(12, 15, 24, 0.3) 40%, rgba(6, 8, 18, 0.92) 100%)`,
             }}
           />
@@ -200,6 +303,7 @@ export default function PersonaCard({ aura, personality, address }: PersonaCardP
               key={sparkle.id}
               className="absolute rounded-full"
               style={{
+                background: safeAura,
                 background: aura,
                 opacity: sparkle.opacity,
                 top: sparkle.top,
@@ -237,6 +341,8 @@ export default function PersonaCard({ aura, personality, address }: PersonaCardP
                   className="h-full rounded-full"
                   style={{
                     width: `${Math.min(100, Math.max(0, Math.round(value * 100)))}%`,
+                    background: safeAura,
+                    boxShadow: `0 0 12px ${safeAura}`,
                     background: aura,
                     boxShadow: `0 0 12px ${aura}`,
                   }}
@@ -251,6 +357,24 @@ export default function PersonaCard({ aura, personality, address }: PersonaCardP
             <div className="persona-card__prompt-label">Dream Prompt</div>
             <div className="persona-card__prompt-body">{promptBlueprint.prompt}</div>
           </div>
+          <dl className="persona-card__blueprint">
+            <div>
+              <dt>Palette</dt>
+              <dd>{promptBlueprint.palette}</dd>
+            </div>
+            <div>
+              <dt>Energy</dt>
+              <dd>{promptBlueprint.vibe}</dd>
+            </div>
+            <div>
+              <dt>Motifs</dt>
+              <dd>{promptBlueprint.motif}</dd>
+            </div>
+            <div>
+              <dt>Camera</dt>
+              <dd>{promptBlueprint.camera}</dd>
+            </div>
+          </dl>
           <div className="persona-card__tags">
             {promptBlueprint.tags.map((tag) => (
               <span key={tag} className="persona-card__tag">
