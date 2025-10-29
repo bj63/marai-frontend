@@ -79,3 +79,62 @@ export async function generateImage(payload: GenerateImageRequest) {
 
   return handleApiResponse<GenerateImageResponse>(res, 'Image generation')
 }
+
+export type RelationalEntityRequest = {
+  userId: string
+  emotion: string
+  entityId?: string | null
+  walletAddress?: string | null
+  relationshipScore?: number | null
+}
+
+export type RelationalEntityResponse = {
+  imageUrl: string | null
+  prompt: string
+  connectionScore: number
+  bonded: boolean
+  entityId: string | null
+}
+
+type RawRelationalEntityResponse = {
+  image_url?: string | null
+  imageUrl?: string | null
+  prompt: string
+  connection_score?: number | null
+  connectionScore?: number | null
+  bonded: boolean
+  entity_id?: string | null
+  entityId?: string | null
+}
+
+export async function evolveRelationalEntity(payload: RelationalEntityRequest) {
+  const res = await fetch(`${resolveApiBase()}/api/relational-entity`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(
+      Object.fromEntries(
+        Object.entries({
+          user_id: payload.userId.trim(),
+          emotion: payload.emotion,
+          entity_id: payload.entityId ?? undefined,
+          wallet: payload.walletAddress ?? undefined,
+          relationship: payload.relationshipScore ?? undefined,
+        }).filter(([, value]) => value !== undefined && value !== null && value !== ''),
+      ),
+    ),
+  })
+
+  const raw = await handleApiResponse<RawRelationalEntityResponse>(res, 'Relational entity evolution')
+
+  const imageUrl = raw.imageUrl ?? raw.image_url ?? null
+  const connectionScore = raw.connectionScore ?? raw.connection_score ?? 0
+  const entityId = raw.entityId ?? raw.entity_id ?? null
+
+  return {
+    imageUrl,
+    prompt: raw.prompt,
+    connectionScore: typeof connectionScore === 'number' ? connectionScore : 0,
+    bonded: Boolean(raw.bonded),
+    entityId,
+  } satisfies RelationalEntityResponse
+}
