@@ -119,7 +119,7 @@ export default function BrandPhotoSpotlight() {
             fill
             sizes="(max-width: 768px) 100vw, 320px"
             className="object-cover"
-            priority
+            loading="lazy"
             unoptimized={hasCustomImage}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0a1024]/80 via-transparent to-[#0a1024]/20" />
