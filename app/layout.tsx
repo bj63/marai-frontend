@@ -67,6 +67,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                         <span className="text-brand-bayou">Hybrid</span>
                         <span>Tech + Soul</span>
                       </div>
+                      <Link
+                        href="/admin"
+                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-[#101737] px-3 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:border-brand-magnolia/50 hover:text-brand-magnolia"
+                      >
+                        Admin hub
+                      </Link>
                       <AuthStatus />
                     </div>
                   </div>

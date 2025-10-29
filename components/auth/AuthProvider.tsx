@@ -3,6 +3,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabaseClient'
+import {
+  requestMagicLink,
+  signInWithGoogle,
+  signInWithPassword,
+  signOut as signOutFromSupabase,
+  signUpWithPassword,
+  type AuthResult,
+} from '@/lib/supabaseApi'
 import { requestMagicLink, signOut as signOutFromSupabase } from '@/lib/supabaseApi'
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
@@ -11,6 +19,14 @@ interface AuthContextValue {
   session: Session | null
   user: User | null
   status: AuthStatus
+  signInWithMagicLink: (email: string) => Promise<AuthResult>
+  signUpWithCredentials: (
+    email: string,
+    password: string,
+    username: string,
+  ) => Promise<AuthResult>
+  signInWithCredentials: (email: string, password: string) => Promise<AuthResult>
+  signInWithGoogle: () => Promise<AuthResult>
   signInWithEmail: (email: string) => Promise<{ error: unknown } | null>
   signOut: () => Promise<void>
 }
@@ -64,11 +80,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const signInWithMagicLink = useCallback(
   const signInWithEmail = useCallback(
     async (email: string) => {
       setStatus('loading')
       const result = await requestMagicLink(email)
 
+      if (result.error) {
       if (result?.error) {
         setStatus(session ? 'authenticated' : 'unauthenticated')
       } else {
@@ -79,6 +97,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [session],
   )
+
+  const signUpWithCredentials = useCallback(
+    async (email: string, password: string, username: string) => {
+      setStatus('loading')
+      const result = await signUpWithPassword(email, password, username)
+
+      if (result.error) {
+        setStatus(session ? 'authenticated' : 'unauthenticated')
+      } else {
+        setStatus('unauthenticated')
+      }
+
+      return result
+    },
+    [session],
+  )
+
+  const signInWithCredentials = useCallback(
+    async (email: string, password: string) => {
+      setStatus('loading')
+      const result = await signInWithPassword(email, password)
+
+      if (result.error) {
+        setStatus(session ? 'authenticated' : 'unauthenticated')
+      }
+
+      return result
+    },
+    [session],
+  )
+
+  const signInWithGoogleAccount = useCallback(async () => {
+    setStatus('loading')
+    const result = await signInWithGoogle()
+
+    if (result.error) {
+      setStatus(session ? 'authenticated' : 'unauthenticated')
+    }
+
+    return result
+  }, [session])
 
   const signOut = useCallback(async () => {
     setStatus('loading')
@@ -92,6 +151,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       user: session?.user ?? null,
       status,
+      signInWithMagicLink,
+      signUpWithCredentials,
+      signInWithCredentials,
+      signInWithGoogle: signInWithGoogleAccount,
+      signOut,
+    }),
+    [
+      session,
+      signInWithCredentials,
+      signInWithGoogleAccount,
+      signInWithMagicLink,
+      signOut,
+      signUpWithCredentials,
+      status,
+    ],
       signInWithEmail,
       signOut,
     }),
