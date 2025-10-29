@@ -100,15 +100,18 @@ export async function createPost(post: Omit<FeedPost, 'id' | 'created_at'>): Pro
   if (error) console.error('createPost:', error)
 }
 
-export async function signIn(email: string): Promise<{ error: unknown } | null> {
+export async function requestMagicLink(email: string): Promise<{ error: unknown } | null> {
   const { error } = await supabase.auth.signInWithOtp({ email })
   if (error) {
-    console.error('signIn:', error)
+    console.error('requestMagicLink:', error)
     return { error }
   }
   return null
 }
 
 export async function signOut(): Promise<void> {
-  await supabase.auth.signOut()
+  const { error } = await supabase.auth.signOut()
+  if (error) {
+    console.error('signOut:', error)
+  }
 }
