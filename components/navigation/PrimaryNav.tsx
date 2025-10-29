@@ -21,9 +21,20 @@ const navItems: NavItem[] = [
     description: 'Overview and onboarding status',
   },
   {
+    label: 'Onboarding',
+    href: '/onboarding',
+    description: 'Step-by-step profile setup',
+    requiresAuth: true,
+  },
+  {
     label: 'Feed',
     href: '/feed',
     description: 'Mood posts and AI reflections',
+  },
+  {
+    label: 'Explore',
+    href: '/explore',
+    description: 'Search profiles and posts',
   },
   {
     label: 'Chat',
@@ -49,6 +60,24 @@ const navItems: NavItem[] = [
     label: 'Profile',
     href: '/profile',
     description: 'Account and persona management',
+    requiresAuth: true,
+  },
+  {
+    label: 'Notifications',
+    href: '/notifications',
+    description: 'Mentions and roster changes',
+    requiresAuth: true,
+  },
+  {
+    label: 'Messages',
+    href: '/messages',
+    description: 'Direct collaboration threads',
+    requiresAuth: true,
+  },
+  {
+    label: 'Settings',
+    href: '/settings',
+    description: 'Privacy and wallet configuration',
     requiresAuth: true,
   },
   {
