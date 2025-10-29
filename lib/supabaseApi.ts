@@ -135,6 +135,27 @@ export async function updateUserMetadata(
     return { error }
   }
 
+
+  if (error) {
+    console.error('savePersonality:', error)
+    return { personality: null, error }
+  }
+
+  return { personality: data }
+}
+
+export async function updateUserMetadata(
+  metadata: Record<string, unknown>,
+): Promise<AuthResult> {
+  const { error } = await supabase.auth.updateUser({
+    data: metadata,
+  })
+
+  if (error) {
+    console.error('updateUserMetadata:', error)
+    return { error }
+  }
+
   return {}
 }
 
@@ -163,6 +184,28 @@ export async function requestMagicLink(email: string): Promise<AuthResult> {
   const { error } = await supabase.auth.signInWithOtp({ email })
   if (error) {
     console.error('requestMagicLink:', error)
+    return { error }
+  }
+  return {}
+}
+
+export async function signUpWithPassword(
+  email: string,
+  password: string,
+  username: string,
+): Promise<AuthResult> {
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { username },
+    },
+  })
+
+  if (error) {
+    console.error('signUpWithPassword:', error)
+    return { error }
+  }
     return { error }
   }
   return {}
