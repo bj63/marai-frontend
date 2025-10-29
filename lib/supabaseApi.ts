@@ -171,6 +171,10 @@ export async function signInWithGoogle(): Promise<AuthResult> {
 
   if (error) {
     console.error('signInWithGoogle:', error)
+export async function requestMagicLink(email: string): Promise<{ error: unknown } | null> {
+  const { error } = await supabase.auth.signInWithOtp({ email })
+  if (error) {
+    console.error('requestMagicLink:', error)
     return { error }
   }
 
