@@ -24,6 +24,37 @@ Users can interact with emotional avatars, view dynamic visuals, and later conne
 
 ## 🧩 Project Structure
 ```
+## 💡 What the Application Does
+
+**MarAI** is an emotionally intelligent social platform powered by relational AI.  
+It blends **chat**, **emotion recognition**, and **AI image generation** to create interactive digital companions and social experiences that evolve emotionally over time.
+
+Users interact with **Amaris**, a glowing AI character who learns emotional states, responds with empathy, and generates expressive visuals.  
+Developers can extend the system with APIs and emotional logic modules, while clients can integrate it into apps, NFT platforms, or custom AI solutions.
+
+---
+
+## 🧑‍💻 Developer Instructions
+
+**Goal:** Set up the full stack locally or in the cloud.
+
+### Prerequisites
+- Node.js 18+  
+- Python 3.10+  
+- Supabase account (for DB + Auth)  
+- (Optional) Render / Vercel accounts for deployment  
+
+### Steps
+
+#### 1️⃣ Backend Setup (MOA_AI_V3)
+```bash
+git clone https://github.com/bj63/MOA_AI_V3.git
+cd MOA_AI_V3
+python -m venv venv
+source venv/bin/activate      # macOS/Linux
+venv\Scripts\activate         # Windows
+pip install -r requirements.txt
+
 
 marai-frontend/
 ├── app/
