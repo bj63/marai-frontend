@@ -106,6 +106,36 @@ export default function FeedPage() {
             return
         }
 
+
+        const hydrateProfile = async () => {
+            const record = await getProfile(user.id)
+            if (!active) return
+            setProfile(record)
+        }
+
+        hydrateProfile()
+
+        return () => {
+            active = false
+        }
+    }, [status, user?.id])
+
+    const authorName = useMemo(() => {
+        if (!user) return null
+
+        const metadata = user.user_metadata as { username?: string; full_name?: string } | null
+        return profile?.name || metadata?.username || metadata?.full_name || user.email?.split('@')[0] || null
+    }, [profile?.name, user])
+
+    const handlePost = async () => {
+        const trimmedNote = note.trim()
+        const trimmedSong = song.trim()
+
+        if (!trimmedNote && !trimmedSong) {
+            setFeedback('Add a note or link before sharing an update.')
+            return
+        }
+
         if (!user || status !== 'authenticated') {
             setFeedback('Sign in to broadcast mood updates to the feed.')
             return
@@ -224,6 +254,61 @@ export default function FeedPage() {
                 ),
             )
         }
+    }
+
+    const handleComment = async (postId: string) => {
+        if (!user?.id) {
+            setFeedback('Sign in to join the conversation and leave comments.')
+            return
+        }
+
+        const draft = commentDrafts[postId]?.trim()
+        if (!draft) return
+
+        const { comment, error } = await addComment(postId, user.id, draft)
+        if (error || !comment) {
+            setFeedback('Comment could not be sent. Please try again shortly.')
+            return
+        }
+
+        setCommentDrafts((previous) => ({
+            ...previous,
+            [postId]: '',
+        }))
+
+        setFeed((previous) =>
+            previous.map((entry) =>
+                entry.id === postId
+                    ? {
+                          ...entry,
+                          comments: [...entry.comments, comment],
+                      }
+                    : entry,
+            ),
+        )
+    }
+
+    const handleGenerateCaption = async () => {
+        if (!note.trim()) {
+            setFeedback('Share a few words first so Amaris can build from your intent.')
+            return
+        }
+
+        setCaptionLoading(true)
+        const { suggestion, error } = await generateCaptionSuggestion({
+            mood,
+            message: note.trim(),
+        })
+
+        if (error || !suggestion?.caption) {
+            setFeedback('Amaris is offline right now. Try again in a moment.')
+            setCaptionLoading(false)
+            return
+        }
+
+        setCaptionSuggestion(suggestion.caption)
+        setNote(suggestion.caption)
+        setCaptionLoading(false)
     }
 
     const handleComment = async (postId: string) => {
