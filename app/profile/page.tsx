@@ -10,27 +10,19 @@ import { reportError } from '@/lib/observability'
 import {
   getFeedForUser,
   getFollowers,
+  getFollowing,
   getPersonality,
   getProfile,
-  getFollowing,
   savePersonality,
   saveProfile,
-  updateUserMetadata,
   type FeedPostWithEngagement,
   type FollowProfile,
   type MiraiProfile,
   type Personality as DbPersonality,
+  updateUserMetadata,
 } from '@/lib/supabaseApi'
 import MoodCard from '@/components/MoodCard'
 import FollowButton from '@/components/profile/FollowButton'
-  getPersonality,
-  getProfile,
-  savePersonality,
-  saveProfile,
-  updateUserMetadata,
-  type MiraiProfile,
-  type Personality as DbPersonality,
-} from '@/lib/supabaseApi'
 
 type TraitKey = keyof StorePersonality
 
@@ -95,10 +87,7 @@ function mapPersonality(record: DbPersonality | null): StorePersonality {
   }
 }
 
-function deriveProfileForm(
-  profile: MiraiProfile | null,
-  fallbackName: string,
-): ProfileFormState {
+function deriveProfileForm(profile: MiraiProfile | null, fallbackName: string): ProfileFormState {
   return {
     name: profile?.name ?? fallbackName,
     avatar: profile?.avatar ?? emojiOptions[0],
@@ -253,147 +242,6 @@ export default function ProfilePage() {
   }
 
   const updateFollowState = (memberId: string, nextState: boolean) => {
-    const source =
-      followers.find((member) => member.user_id === memberId) ||
-      following.find((member) => member.user_id === memberId) ||
-      null
-
-    setFollowers((previous) =>
-      previous.map((member) =>
-        member.user_id === memberId
-          ? {
-              ...member,
-              is_following: nextState,
-            }
-          : member,
-      ),
-    )
-
-    loadConnections()
-
-    return () => {
-      active = false
-    }
-  }, [status, user?.id])
-
-  const handleCopyFederationId = async () => {
-    if (!federationId) return
-
-    try {
-      await navigator.clipboard.writeText(federationId)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch (error) {
-      console.error('Failed to copy federation identifier', error)
-    }
-  }
-
-  const updateTrait = (trait: TraitKey, value: number) => {
-    const clamped = clamp(value)
-    const next = {
-      ...traits,
-      [trait]: clamped,
-    }
-    setTraits(next)
-    setStorePersonality(next)
-  }
-
-  const updateFollowState = (memberId: string, nextState: boolean) => {
-    const source =
-      followers.find((member) => member.user_id === memberId) ||
-      following.find((member) => member.user_id === memberId) ||
-      null
-
-    setFollowers((previous) =>
-      previous.map((member) =>
-        member.user_id === memberId
-          ? {
-              ...member,
-              is_following: nextState,
-            }
-          : member,
-      ),
-    )
-
-    }
-  }, [founderNameFallback, setStorePersonality, status, user?.id])
-
-  useEffect(() => {
-    setTraits({
-      ...defaultTraits,
-      ...storePersonality,
-    })
-  }, [storePersonality])
-
-  useEffect(() => {
-    if (status !== 'authenticated' || !user?.id) {
-      setProfileFeed([])
-      setFollowers([])
-      setFollowing([])
-      setConnectionsLoading(false)
-      return
-    }
-
-    let active = true
-
-    const loadConnections = async () => {
-      setConnectionsLoading(true)
-      const [feedRecords, followerRecords, followingRecords] = await Promise.all([
-        getFeedForUser(user.id, user.id),
-        getFollowers(user.id),
-        getFollowing(user.id),
-      ])
-
-      if (!active) return
-
-      setProfileFeed(
-        (feedRecords ?? []).map((record) => ({
-          ...record,
-          likes_count: record.likes_count ?? 0,
-          comments: record.comments ?? [],
-          viewer_has_liked: Boolean(record.viewer_has_liked),
-        })),
-      )
-      setFollowers(followerRecords ?? [])
-      setFollowing(followingRecords ?? [])
-      setConnectionsLoading(false)
-    }
-
-    loadConnections()
-
-    return () => {
-      active = false
-    }
-  }, [status, user?.id])
-
-  const handleCopyFederationId = async () => {
-    if (!federationId) return
-
-    try {
-      await navigator.clipboard.writeText(federationId)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch (error) {
-      console.error('Failed to copy federation identifier', error)
-    }
-  }
-
-  const updateTrait = (trait: TraitKey, value: number) => {
-    const clamped = clamp(value)
-    const next = {
-      ...traits,
-      [trait]: clamped,
-    }
-    setTraits(next)
-    setStorePersonality(next)
-  }
-
-  const updateFollowState = (memberId: string, nextState: boolean) => {
-    const source =
-      followers.find((member) => member.user_id === memberId) ||
-      following.find((member) => member.user_id === memberId) ||
-      null
-
     setFollowers((previous) =>
       previous.map((member) =>
         member.user_id === memberId
@@ -418,8 +266,11 @@ export default function ProfilePage() {
               : member,
           )
         }
+
+        const source = followers.find((member) => member.user_id === memberId) || null
         return source ? [...previous, { ...source, is_following: nextState }] : previous
       }
+
       return previous.filter((member) => member.user_id !== memberId)
     })
   }
@@ -457,231 +308,111 @@ export default function ProfilePage() {
       return
     }
 
-    const metadataPayload = {
-      username: profilePayload.name,
-      avatar_emoji: profilePayload.avatar,
-      accent_color: profilePayload.color,
-    }
-
-    }
-  }
-
-    const metadataPayload = {
-      username: profilePayload.name,
-      avatar_emoji: profilePayload.avatar,
-      accent_color: profilePayload.color,
-    }
-
-    const [profileResult, personalityResult, metadataResult] = await Promise.all([
-      saveProfile(user.id, profilePayload),
-      savePersonality(user.id, traits),
-      updateUserMetadata(metadataPayload),
-    ])
-
-    if (profileResult.error || personalityResult.error || metadataResult.error) {
-      setFeedback({
-        type: 'error',
-        message:
-          'We could not save your profile just yet. Try again or confirm your Supabase row-level security rules allow updates.',
-      })
-      setSaving(false)
-      return
-    }
-
-  const updateTrait = (trait: TraitKey, value: number) => {
-    const clamped = clamp(value)
-    const next = {
-      ...traits,
-      [trait]: clamped,
-    }
-    setTraits(next)
-    setStorePersonality(next)
-  }
-
-  const handleSave = async () => {
-    if (!user?.id) return
-    setSaving(true)
-    setFeedback(null)
-
-    const profilePayload = {
-      name: profileForm.name.trim(),
-      avatar: profileForm.avatar,
-      color: profileForm.color,
-    }
-
-    const metadataPayload = {
-      username: profilePayload.name,
-      avatar_emoji: profilePayload.avatar,
-      accent_color: profilePayload.color,
-    }
-
-    const [profileResult, personalityResult, metadataResult] = await Promise.all([
-      saveProfile(user.id, profilePayload),
-      savePersonality(user.id, traits),
-      updateUserMetadata(metadataPayload),
-    ])
-
-    if (profileResult.error || personalityResult.error || metadataResult.error) {
-      setFeedback({
-        type: 'error',
-        message:
-          'We could not save your profile just yet. Try again or confirm your Supabase row-level security rules allow updates.',
-      })
-      setSaving(false)
-      return
-    }
-
-    setFeedback({
-      type: 'success',
-      message: 'Profile updated! Your Mirai identity will stay in sync across every login.',
-    })
+    setFeedback({ type: 'success', message: 'Profile saved. Your collaborators will see the updated identity instantly.' })
     setSaving(false)
   }
 
-  if (status === 'loading') {
+  if (status === 'loading' || loading) {
     return (
-      <div className="relative mx-auto flex w-full max-w-3xl flex-col items-center gap-4 px-4 py-20 text-brand-mist/70">
-        <Loader2 className="h-6 w-6 animate-spin text-brand-magnolia" />
-        Checking your session…
+      <div className="flex min-h-[60vh] items-center justify-center text-brand-mist/70">
+        <Loader2 className="h-5 w-5 animate-spin text-brand-magnolia" />
+        <span className="ml-2 text-sm">Preparing your profile…</span>
       </div>
     )
   }
 
   if (!user) {
     return (
-      <div className="relative mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-20 text-brand-mist/70">
-        <header className="flex flex-col gap-2 text-white">
-          <p className="text-[0.7rem] uppercase tracking-[0.4em] text-brand-mist/60">Profile</p>
-          <h1 className="text-3xl font-semibold">Sign in to manage your Mirai identity</h1>
-        </header>
-        <p className="text-sm">
-          Use the authentication hub to sign in with email, Google, magic links, or a wallet. Once you&apos;re authenticated you
-          can personalise your Mirai presence and sync it for the rest of the organisation.
-        </p>
+      <div className="mx-auto flex min-h-[60vh] w-full max-w-3xl flex-col items-center justify-center gap-4 text-center text-brand-mist/80">
+        <AlertCircle className="h-8 w-8 text-brand-magnolia" />
+        <h1 className="text-2xl font-semibold text-white">Sign in to personalise your Mirai</h1>
+        <p className="text-sm text-brand-mist/70">Connect your account to tune the persona, manage sharing, and claim your federation ID.</p>
         <Link
           href="/auth"
-          className="inline-flex items-center justify-center gap-2 rounded-md bg-brand-magnolia/80 px-4 py-2 text-sm font-semibold text-[#0b1022] transition hover:bg-brand-magnolia md:self-start"
+          className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-[#101737] px-3 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-white transition hover:border-brand-magnolia/40 hover:text-brand-magnolia"
         >
-          Head to account access
+          Go to sign-in hub
         </Link>
       </div>
     )
   }
 
-  if (loading) {
-    return (
-      <div className="relative mx-auto flex w-full max-w-3xl flex-col items-center gap-4 px-4 py-20 text-brand-mist/70">
-        <Loader2 className="h-6 w-6 animate-spin text-brand-magnolia" />
-        Loading your profile…
-      </div>
-    )
-  }
-
   return (
-    <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-12 text-brand-mist/80">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-12 text-brand-mist/80">
       <header className="flex flex-col gap-2 text-white">
-        <p className="text-[0.7rem] uppercase tracking-[0.4em] text-brand-mist/60">Profile</p>
-        <h1 className="text-3xl font-semibold">Shape your Mirai presence</h1>
-        <p className="max-w-2xl text-sm text-brand-mist/70">
-          Update account details, share your federation identifier with teammates, and tune Mirai&apos;s behaviour so every login
-          feels consistent.
+        <p className="text-[0.7rem] uppercase tracking-[0.35em] text-brand-mist/60">Profile</p>
+        <h1 className="text-3xl font-semibold">Craft your Mirai&apos;s identity</h1>
+        <p className="text-sm text-brand-mist/70">
+          Adjust the tone, colours, and voice that collaborators experience when they meet your federation.
         </p>
       </header>
 
-      {feedback && (
-        <div
-          className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
-            feedback.type === 'success'
-              ? 'border-brand-magnolia/50 bg-brand-magnolia/10 text-brand-magnolia'
-              : 'border-red-400/40 bg-red-500/10 text-red-300'
-          }`}
-        >
-          {feedback.type === 'success' ? (
-            <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" />
-          ) : (
-            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-          )}
-          <span>{feedback.message}</span>
-        </div>
-      )}
-
-      <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.32em] text-brand-mist/60">
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.id
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`rounded-full px-4 py-2 transition ${
-                isActive
-                  ? 'bg-brand-magnolia/20 text-brand-magnolia shadow-[0_0_16px_rgba(255,158,207,0.25)]'
-                  : 'bg-[#111834] text-brand-mist/50 hover:text-brand-magnolia'
-              }`}
-            >
-              {tab.label}
-            </button>
-          )
-        })}
+      <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.3em] text-brand-mist/60">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`rounded-full px-4 py-2 transition ${
+              activeTab === tab.id ? 'bg-brand-magnolia/20 text-white' : 'hover:bg-white/10'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+        {federationId ? (
+          <button
+            type="button"
+            onClick={handleCopyFederationId}
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-[0.65rem] uppercase tracking-[0.3em] text-brand-mist transition hover:border-brand-magnolia/40 hover:text-brand-magnolia"
+          >
+            <Copy className="h-3 w-3" />
+            {copied ? 'Copied' : `Federation ID: ${federationId}`}
+          </button>
+        ) : null}
       </div>
 
-      {activeTab === 'about' ? (
-        <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
-          <div className="flex flex-col gap-6 rounded-2xl border border-white/10 bg-[#0d142c]/70 p-6">
-            <section className="flex flex-col gap-3">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs uppercase tracking-[0.3em] text-brand-mist/60">Account owner</span>
-                <span className="text-base font-semibold text-white">{user.email}</span>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-xs uppercase tracking-[0.3em] text-brand-mist/60">Federation identifier</span>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="break-all rounded-md bg-[#141d3c] px-2 py-1 font-mono text-xs text-brand-mist/80">
-                    {federationId || 'Generating…'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleCopyFederationId}
-                    disabled={!federationId}
-                    className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-[0.7rem] uppercase tracking-[0.3em] text-brand-mist transition hover:border-brand-magnolia/60 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                    {copied ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-              </div>
-            </section>
+      {feedback ? (
+        <div
+          className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${
+            feedback.type === 'success'
+              ? 'border-brand-magnolia/40 bg-brand-magnolia/10 text-brand-magnolia'
+              : 'border-rose-500/40 bg-rose-500/10 text-rose-200'
+          }`}
+        >
+          {feedback.type === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+          {feedback.message}
+        </div>
+      ) : null}
 
-            <section className="flex flex-col gap-3">
+      {activeTab === 'about' ? (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr),minmax(0,1fr)]">
+          <div className="flex flex-col gap-6 rounded-2xl border border-white/10 bg-[#101737]/70 p-6">
+            <section className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1">
+                <h2 className="text-lg font-semibold text-white">Identity basics</h2>
+                <p className="text-xs text-brand-mist/60">Pick a name, emoji, and colour that your network recognises.</p>
+              </div>
+
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-brand-mist/70">Display name</span>
+                <span className="text-brand-mist/70">Mirai name</span>
                 <input
                   type="text"
                   value={profileForm.name}
-                  onChange={(event) =>
-                    setProfileForm((previous) => ({
-                      ...previous,
-                      name: event.target.value,
-                    }))
-                  }
-                  placeholder="Founder name or project alias"
-                  className="w-full rounded-md border border-white/10 bg-[#121b3a] px-3 py-2 text-sm text-white placeholder:text-brand-mist/50 focus:border-brand-magnolia/60 focus:outline-none"
+                  onChange={(event) => setProfileForm((previous) => ({ ...previous, name: event.target.value }))}
+                  placeholder="Federation handle"
+                  className="rounded-md border border-white/10 bg-[#141d3c] px-3 py-2 text-sm text-white placeholder:text-brand-mist/50 focus:outline-none"
                 />
               </label>
 
-              <div className="flex flex-col gap-2">
-                <span className="text-sm text-brand-mist/70">Choose avatar</span>
+              <div className="flex flex-col gap-1 text-sm">
+                <span className="text-brand-mist/70">Avatar</span>
                 <div className="flex flex-wrap gap-2">
                   {emojiOptions.map((emoji) => (
                     <button
                       key={emoji}
                       type="button"
-                      onClick={() =>
-                        setProfileForm((previous) => ({
-                          ...previous,
-                          avatar: emoji,
-                        }))
-                      }
+                      onClick={() => setProfileForm((previous) => ({ ...previous, avatar: emoji }))}
                       className={`text-2xl transition ${
                         profileForm.avatar === emoji
                           ? 'rounded-lg border border-brand-magnolia/60 bg-brand-magnolia/10'
@@ -699,12 +430,7 @@ export default function ProfilePage() {
                 <input
                   type="color"
                   value={profileForm.color}
-                  onChange={(event) =>
-                    setProfileForm((previous) => ({
-                      ...previous,
-                      color: event.target.value,
-                    }))
-                  }
+                  onChange={(event) => setProfileForm((previous) => ({ ...previous, color: event.target.value }))}
                   className="h-12 w-full cursor-pointer rounded-md border border-white/10 bg-[#121b3a]"
                 />
               </label>
@@ -804,338 +530,56 @@ export default function ProfilePage() {
       ) : null}
 
       {activeTab === 'followers' ? (
-        <section className="rounded-2xl border border-white/10 bg-[#101737]/60 p-6 text-sm text-brand-mist/80">
-          <header className="mb-4 flex items-center justify-between">
+        <section className="rounded-2xl border border-white/10 bg-[#101737]/60 p-6">
+          <header className="mb-4 flex items-center justify-between text-sm text-brand-mist/70">
             <h2 className="text-lg font-semibold text-white">Followers</h2>
             {connectionsLoading ? <Loader2 className="h-4 w-4 animate-spin text-brand-magnolia" /> : null}
           </header>
           {connectionsLoading ? (
-            <p className="text-sm text-brand-mist/60">Checking who&apos;s tuned in…</p>
+            <p className="text-sm text-brand-mist/60">Loading followers…</p>
           ) : followers.length === 0 ? (
-            <p className="text-sm text-brand-mist/60">No followers just yet. Invite collaborators from the admin hub.</p>
+            <p className="text-sm text-brand-mist/60">No followers yet. Share your federation link or publish more to grow visibility.</p>
           ) : (
-            <div className="space-y-3">
+            <ul className="space-y-3">
               {followers.map((member) => (
-                <div
-                  key={member.user_id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#121b3a]/70 p-4"
-                >
+                <li key={member.user_id} className="flex items-center justify-between rounded-xl border border-white/10 bg-[#0d142c]/70 px-4 py-3">
                   <div className="flex flex-col">
-                    <span className="text-base font-semibold text-white">{member.name || 'Federation member'}</span>
-                    <span className="text-xs uppercase tracking-[0.3em] text-brand-mist/50">{member.handle || member.user_id}</span>
-                    {member.bio ? <p className="mt-1 text-sm text-brand-mist/70">{member.bio}</p> : null}
+                    <span className="text-sm font-semibold text-white">{member.name}</span>
+                    <span className="text-xs text-brand-mist/60">{member.handle ?? member.user_id}</span>
                   </div>
-                  <FollowButton
-                    targetId={member.user_id}
-                    initiallyFollowing={Boolean(member.is_following)}
-                    onToggle={(state) => updateFollowState(member.user_id, state)}
-                  />
-                </div>
+                  <FollowButton targetId={member.user_id} initiallyFollowing={Boolean(member.is_following)} onToggle={(state) => updateFollowState(member.user_id, state)} />
+                </li>
               ))}
-            </div>
-          )}
-        </section>
-      ) : null}
-
-      {activeTab === 'followers' ? (
-        <section className="rounded-2xl border border-white/10 bg-[#101737]/60 p-6 text-sm text-brand-mist/80">
-          <header className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">Followers</h2>
-            {connectionsLoading ? <Loader2 className="h-4 w-4 animate-spin text-brand-magnolia" /> : null}
-          </header>
-          {connectionsLoading ? (
-            <p className="text-sm text-brand-mist/60">Checking who&apos;s tuned in…</p>
-          ) : followers.length === 0 ? (
-            <p className="text-sm text-brand-mist/60">No followers just yet. Invite collaborators from the admin hub.</p>
-          ) : (
-            <div className="space-y-3">
-              {followers.map((member) => (
-                <div
-                  key={member.user_id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#121b3a]/70 p-4"
-                >
-                  <div className="flex flex-col">
-                    <span className="text-base font-semibold text-white">{member.name || 'Federation member'}</span>
-                    <span className="text-xs uppercase tracking-[0.3em] text-brand-mist/50">{member.handle || member.user_id}</span>
-                    {member.bio ? <p className="mt-1 text-sm text-brand-mist/70">{member.bio}</p> : null}
-                  </div>
-                  <FollowButton
-                    targetId={member.user_id}
-                    initiallyFollowing={Boolean(member.is_following)}
-                    onToggle={(state) => updateFollowState(member.user_id, state)}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      ) : null}
-
-
-                >
-                  <div className="flex flex-col">
-                    <span className="text-base font-semibold text-white">{member.name || 'Federation member'}</span>
-                    <span className="text-xs uppercase tracking-[0.3em] text-brand-mist/50">{member.handle || member.user_id}</span>
-                    {member.bio ? <p className="mt-1 text-sm text-brand-mist/70">{member.bio}</p> : null}
-                  </div>
-                  <FollowButton
-                    targetId={member.user_id}
-                    initiallyFollowing={Boolean(member.is_following)}
-                    onToggle={(state) => updateFollowState(member.user_id, state)}
-                  />
-                </div>
-              ))}
-    return (
-      <div className="relative mx-auto flex w-full max-w-3xl flex-col items-center gap-4 px-4 py-20 text-brand-mist/70">
-        <Loader2 className="h-6 w-6 animate-spin text-brand-magnolia" />
-        Checking your session…
-      </div>
-    )
-  }
-
-  if (!user) {
-    return (
-      <div className="relative mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-20 text-brand-mist/70">
-        <header className="flex flex-col gap-2 text-white">
-          <p className="text-[0.7rem] uppercase tracking-[0.4em] text-brand-mist/60">Profile</p>
-          <h1 className="text-3xl font-semibold">Sign in to manage your Mirai identity</h1>
-        </header>
-        <p className="text-sm">
-          Use the authentication hub to sign in with email, Google, magic links, or a wallet. Once you&apos;re authenticated you
-          can personalise your Mirai presence and sync it for the rest of the organisation.
-        </p>
-        <Link
-          href="/auth"
-          className="inline-flex items-center justify-center gap-2 rounded-md bg-brand-magnolia/80 px-4 py-2 text-sm font-semibold text-[#0b1022] transition hover:bg-brand-magnolia md:self-start"
-        >
-          Head to account access
-        </Link>
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className="relative mx-auto flex w-full max-w-3xl flex-col items-center gap-4 px-4 py-20 text-brand-mist/70">
-        <Loader2 className="h-6 w-6 animate-spin text-brand-magnolia" />
-        Loading your profile…
-      </div>
-    )
-  }
-
-  return (
-    <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-12 text-brand-mist/80">
-      <header className="flex flex-col gap-2 text-white">
-        <p className="text-[0.7rem] uppercase tracking-[0.4em] text-brand-mist/60">Profile</p>
-        <h1 className="text-3xl font-semibold">Shape your Mirai presence</h1>
-        <p className="max-w-2xl text-sm text-brand-mist/70">
-          Update account details, share your federation identifier with teammates, and tune Mirai&apos;s behaviour so every login
-          feels consistent.
-        </p>
-      </header>
-
-      {feedback && (
-        <div
-          className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
-            feedback.type === 'success'
-              ? 'border-brand-magnolia/50 bg-brand-magnolia/10 text-brand-magnolia'
-              : 'border-red-400/40 bg-red-500/10 text-red-300'
-          }`}
-        >
-          {feedback.type === 'success' ? (
-            <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" />
-          ) : (
-            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-          )}
-          <span>{feedback.message}</span>
-        </div>
-      )}
-
-      <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
-        <div className="flex flex-col gap-6 rounded-2xl border border-white/10 bg-[#0d142c]/70 p-6">
-          <section className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-[0.3em] text-brand-mist/60">Account owner</span>
-              <span className="text-base font-semibold text-white">{user.email}</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-[0.3em] text-brand-mist/60">Federation identifier</span>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="break-all rounded-md bg-[#141d3c] px-2 py-1 font-mono text-xs text-brand-mist/80">
-                  {federationId || 'Generating…'}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleCopyFederationId}
-                  disabled={!federationId}
-                  className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-[0.7rem] uppercase tracking-[0.3em] text-brand-mist transition hover:border-brand-magnolia/60 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                  {copied ? 'Copied' : 'Copy'}
-                </button>
-              </div>
-            </div>
-          </section>
-
-          <section className="flex flex-col gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-brand-mist/70">Display name</span>
-              <input
-                type="text"
-                value={profileForm.name}
-                onChange={(event) =>
-                  setProfileForm((previous) => ({
-                    ...previous,
-                    name: event.target.value,
-                  }))
-                }
-                placeholder="Founder name or project alias"
-                className="w-full rounded-md border border-white/10 bg-[#121b3a] px-3 py-2 text-sm text-white placeholder:text-brand-mist/50 focus:border-brand-magnolia/60 focus:outline-none"
-              />
-            </label>
-
-            <div className="flex flex-col gap-2">
-              <span className="text-sm text-brand-mist/70">Choose avatar</span>
-              <div className="flex flex-wrap gap-2">
-                {emojiOptions.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    onClick={() =>
-                      setProfileForm((previous) => ({
-                        ...previous,
-                        avatar: emoji,
-                      }))
-                    }
-                    className={`text-2xl transition ${
-                      profileForm.avatar === emoji
-                        ? 'rounded-lg border border-brand-magnolia/60 bg-brand-magnolia/10'
-                        : 'rounded-lg border border-transparent bg-[#141d3c] hover:border-brand-magnolia/40'
-                    } px-3 py-2`}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </div>
+            </ul>
           )}
         </section>
       ) : null}
 
       {activeTab === 'following' ? (
-        <section className="rounded-2xl border border-white/10 bg-[#101737]/60 p-6 text-sm text-brand-mist/80">
-          <header className="mb-4 flex items-center justify-between">
+        <section className="rounded-2xl border border-white/10 bg-[#101737]/60 p-6">
+          <header className="mb-4 flex items-center justify-between text-sm text-brand-mist/70">
             <h2 className="text-lg font-semibold text-white">Following</h2>
             {connectionsLoading ? <Loader2 className="h-4 w-4 animate-spin text-brand-magnolia" /> : null}
           </header>
           {connectionsLoading ? (
-            <p className="text-sm text-brand-mist/60">Loading your connections…</p>
+            <p className="text-sm text-brand-mist/60">Loading your network…</p>
           ) : following.length === 0 ? (
-            <p className="text-sm text-brand-mist/60">You&apos;re not following anyone yet. Discover new teams from the explore page.</p>
+            <p className="text-sm text-brand-mist/60">Follow collaborators to see their pulses and unlock messaging shortcuts.</p>
           ) : (
-            <div className="space-y-3">
+            <ul className="space-y-3">
               {following.map((member) => (
-                <div
-                  key={member.user_id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#121b3a]/70 p-4"
-                >
+                <li key={member.user_id} className="flex items-center justify-between rounded-xl border border-white/10 bg-[#0d142c]/70 px-4 py-3">
                   <div className="flex flex-col">
-                    <span className="text-base font-semibold text-white">{member.name || 'Federation member'}</span>
-                    <span className="text-xs uppercase tracking-[0.3em] text-brand-mist/50">{member.handle || member.user_id}</span>
-                    {member.bio ? <p className="mt-1 text-sm text-brand-mist/70">{member.bio}</p> : null}
+                    <span className="text-sm font-semibold text-white">{member.name}</span>
+                    <span className="text-xs text-brand-mist/60">{member.handle ?? member.user_id}</span>
                   </div>
-                  <FollowButton
-                    targetId={member.user_id}
-                    initiallyFollowing
-                    onToggle={(state) => updateFollowState(member.user_id, state)}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      ) : null}
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-brand-mist/70">Accent colour</span>
-              <input
-                type="color"
-                value={profileForm.color}
-                onChange={(event) =>
-                  setProfileForm((previous) => ({
-                    ...previous,
-                    color: event.target.value,
-                  }))
-                }
-                className="h-12 w-full cursor-pointer rounded-md border border-white/10 bg-[#121b3a]"
-              />
-            </label>
-          </section>
-
-          <section className="flex flex-col gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-white">Tune Mirai&apos;s behaviour</h2>
-              <p className="text-xs text-brand-mist/70">Drag the sliders to personalise how your Mirai co-pilot shows up.</p>
-            </div>
-            <div className="flex flex-col gap-4">
-              {(Object.keys(traitCopy) as TraitKey[]).map((trait) => (
-                <div key={trait} className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between text-sm text-brand-mist/70">
-                    <span className="font-medium text-white">{traitCopy[trait].label}</span>
-                    <span>{Math.round((traits[trait] || 0) * 100)}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    value={traits[trait] ?? 0}
-                    onChange={(event) => updateTrait(trait, parseFloat(event.target.value))}
-                    className="accent-brand-magnolia"
-                  />
-                  <p className="text-[0.7rem] text-brand-mist/60">{traitCopy[trait].helper}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="inline-flex items-center justify-center gap-2 rounded-md bg-brand-magnolia/80 px-4 py-2 text-sm font-semibold text-[#0b1022] transition hover:bg-brand-magnolia disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {saving ? 'Saving…' : 'Save profile'}
-          </button>
-        </div>
-
-        <motion.div
-          className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/5 p-6 text-center text-brand-mist"
-          style={{ borderTop: `4px solid ${profileForm.color}` }}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div className="text-5xl">{profileForm.avatar}</div>
-          <div className="flex flex-col gap-1">
-            <span className="text-lg font-semibold text-white">{profileForm.name || founderNameFallback || 'Your Mirai'}</span>
-            <span className="text-xs uppercase tracking-[0.3em] text-brand-mist/60">Preview</span>
-          </div>
-          <div className="rounded-xl bg-[#121b3a]/70 p-4 text-left text-sm text-brand-mist/80">
-            <p className="text-brand-mist/60">Session signature</p>
-            <ul className="mt-2 space-y-1 text-xs">
-              {(Object.keys(traitCopy) as TraitKey[]).map((trait) => (
-                <li key={trait} className="flex justify-between">
-                  <span>{traitCopy[trait].label}</span>
-                  <span className="font-mono">{Math.round((traits[trait] || 0) * 100)}%</span>
+                  <FollowButton targetId={member.user_id} initiallyFollowing={Boolean(member.is_following ?? true)} onToggle={(state) => updateFollowState(member.user_id, state)} />
                 </li>
               ))}
             </ul>
-          </div>
-          <p className="text-xs text-brand-mist/70">
-            These settings sync with Supabase, so every teammate sees the same personality and branding when they log in.
-          </p>
-        </motion.div>
-      </div>
+          )}
+        </section>
+      ) : null}
     </div>
   )
 }
