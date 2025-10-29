@@ -16,12 +16,18 @@ import {
     type MiraiProfile,
     unlikePost,
 } from '@/lib/supabaseApi'
+import { Loader2, Music } from 'lucide-react'
+import MoodCard from '@/components/MoodCard'
+import { useAuth } from '@/components/auth/AuthProvider'
+import { useMoaStore } from '@/lib/store'
+import { createPost, getFeed, getProfile, type FeedPost, type MiraiProfile } from '@/lib/supabaseApi'
 
 export default function FeedPage() {
     const { status, user } = useAuth()
     const { setMood: setGlobalMood, federationId } = useMoaStore()
 
     const [feed, setFeed] = useState<FeedPostWithEngagement[]>([])
+    const [feed, setFeed] = useState<FeedPost[]>([])
     const [loadingFeed, setLoadingFeed] = useState(true)
     const [creatingPost, setCreatingPost] = useState(false)
     const [feedback, setFeedback] = useState<string | null>(null)
@@ -49,6 +55,9 @@ export default function FeedPage() {
             }))
             if (!active) return
             setFeed(normalized)
+            const posts = await getFeed()
+            if (!active) return
+            setFeed(posts)
             setLoadingFeed(false)
         }
 
@@ -58,6 +67,7 @@ export default function FeedPage() {
             active = false
         }
     }, [user?.id])
+    }, [])
 
     useEffect(() => {
         if (status !== 'authenticated' || !user?.id) {
@@ -66,6 +76,44 @@ export default function FeedPage() {
         }
 
         let active = true
+
+        const hydrateProfile = async () => {
+            const record = await getProfile(user.id)
+            if (!active) return
+            setProfile(record)
+        }
+
+        hydrateProfile()
+
+        return () => {
+            active = false
+        }
+    }, [status, user?.id])
+
+    const authorName = useMemo(() => {
+        if (!user) return null
+
+        const metadata = user.user_metadata as { username?: string; full_name?: string } | null
+        return profile?.name || metadata?.username || metadata?.full_name || user.email?.split('@')[0] || null
+    }, [profile?.name, user])
+
+    const handlePost = async () => {
+        const trimmedNote = note.trim()
+        const trimmedSong = song.trim()
+
+        if (!trimmedNote && !trimmedSong) {
+            setFeedback('Add a note or link before sharing an update.')
+            return
+        }
+
+        if (!user || status !== 'authenticated') {
+            setFeedback('Sign in to broadcast mood updates to the feed.')
+            return
+        }
+
+        setCreatingPost(true)
+        setFeedback(null)
+
 
         const hydrateProfile = async () => {
             const record = await getProfile(user.id)
@@ -231,7 +279,15 @@ export default function FeedPage() {
         setCaptionSuggestion(suggestion.caption)
         setNote(suggestion.caption)
         setCaptionLoading(false)
+        setFeed((previous) => [post, ...previous])
+        setGlobalMood(mood)
+        setNote('')
+        setSong('')
+        setCreatingPost(false)
     }
+
+    const canShare = status === 'authenticated'
+    const hasInput = note.trim().length > 0 || song.trim().length > 0
 
     return (
         <div className="flex min-h-screen flex-col items-center p-6">
@@ -400,6 +456,7 @@ export default function FeedPage() {
                             </div>
                         )
                     })
+                    feed.map((post) => <MoodCard key={post.id} post={post} />)
                 )}
             </div>
 
