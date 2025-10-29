@@ -36,7 +36,7 @@ export default function CharacterAvatar({ color, intensity }: CharacterAvatarPro
       }}
       className="avatar-wrapper"
     >
-      <Image src="/avatars/mirai.svg" alt="Mirai" width={220} height={220} priority />
+      <Image src="/avatars/mirai.svg" alt="Mirai" width={220} height={220} loading="lazy" />
     </motion.div>
   )
 }
