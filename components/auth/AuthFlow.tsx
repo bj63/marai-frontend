@@ -21,6 +21,7 @@ import {
   useMetamask,
   useWalletConnect,
 } from '@thirdweb-dev/react'
+import { reportError } from '@/lib/observability'
 import { useAuth } from './AuthProvider'
 
 interface AuthFeedback {
@@ -173,6 +174,7 @@ export default function AuthFlow() {
         message: 'Wallet connected. You can now approve marketplace actions.',
       })
     } catch (error) {
+      reportError('AuthFlow.connectWallet', error)
       console.error('connectWallet:', error)
       setWalletFeedback({
         tone: 'error',

@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { AlertCircle, CheckCircle2, Copy, Loader2, Save } from 'lucide-react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { useMoaStore, type Personality as StorePersonality } from '@/lib/store'
+import { reportError } from '@/lib/observability'
 import {
   getFeedForUser,
   getFollowers,
@@ -237,6 +238,52 @@ export default function ProfilePage() {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch (error) {
+      reportError('ProfilePage.copyFederationId', error)
+    }
+  }
+
+  const updateTrait = (trait: TraitKey, value: number) => {
+    const clamped = clamp(value)
+    const next = {
+      ...traits,
+      [trait]: clamped,
+    }
+    setTraits(next)
+    setStorePersonality(next)
+  }
+
+  const updateFollowState = (memberId: string, nextState: boolean) => {
+    const source =
+      followers.find((member) => member.user_id === memberId) ||
+      following.find((member) => member.user_id === memberId) ||
+      null
+
+    setFollowers((previous) =>
+      previous.map((member) =>
+        member.user_id === memberId
+          ? {
+              ...member,
+              is_following: nextState,
+            }
+          : member,
+      ),
+    )
+
+    loadConnections()
+
+    return () => {
+      active = false
+    }
+  }, [status, user?.id])
+
+  const handleCopyFederationId = async () => {
+    if (!federationId) return
+
+    try {
+      await navigator.clipboard.writeText(federationId)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch (error) {
       console.error('Failed to copy federation identifier', error)
     }
   }
@@ -418,6 +465,28 @@ export default function ProfilePage() {
 
     }
   }
+
+    const metadataPayload = {
+      username: profilePayload.name,
+      avatar_emoji: profilePayload.avatar,
+      accent_color: profilePayload.color,
+    }
+
+    const [profileResult, personalityResult, metadataResult] = await Promise.all([
+      saveProfile(user.id, profilePayload),
+      savePersonality(user.id, traits),
+      updateUserMetadata(metadataPayload),
+    ])
+
+    if (profileResult.error || personalityResult.error || metadataResult.error) {
+      setFeedback({
+        type: 'error',
+        message:
+          'We could not save your profile just yet. Try again or confirm your Supabase row-level security rules allow updates.',
+      })
+      setSaving(false)
+      return
+    }
 
   const updateTrait = (trait: TraitKey, value: number) => {
     const clamped = clamp(value)
@@ -767,6 +836,41 @@ export default function ProfilePage() {
           )}
         </section>
       ) : null}
+
+      {activeTab === 'followers' ? (
+        <section className="rounded-2xl border border-white/10 bg-[#101737]/60 p-6 text-sm text-brand-mist/80">
+          <header className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-white">Followers</h2>
+            {connectionsLoading ? <Loader2 className="h-4 w-4 animate-spin text-brand-magnolia" /> : null}
+          </header>
+          {connectionsLoading ? (
+            <p className="text-sm text-brand-mist/60">Checking who&apos;s tuned in…</p>
+          ) : followers.length === 0 ? (
+            <p className="text-sm text-brand-mist/60">No followers just yet. Invite collaborators from the admin hub.</p>
+          ) : (
+            <div className="space-y-3">
+              {followers.map((member) => (
+                <div
+                  key={member.user_id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#121b3a]/70 p-4"
+                >
+                  <div className="flex flex-col">
+                    <span className="text-base font-semibold text-white">{member.name || 'Federation member'}</span>
+                    <span className="text-xs uppercase tracking-[0.3em] text-brand-mist/50">{member.handle || member.user_id}</span>
+                    {member.bio ? <p className="mt-1 text-sm text-brand-mist/70">{member.bio}</p> : null}
+                  </div>
+                  <FollowButton
+                    targetId={member.user_id}
+                    initiallyFollowing={Boolean(member.is_following)}
+                    onToggle={(state) => updateFollowState(member.user_id, state)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
 
                 >
                   <div className="flex flex-col">

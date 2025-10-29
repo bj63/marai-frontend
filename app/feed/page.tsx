@@ -106,6 +106,44 @@ export default function FeedPage() {
             return
         }
 
+        if (!user || status !== 'authenticated') {
+            setFeedback('Sign in to broadcast mood updates to the feed.')
+            return
+        }
+
+        setCreatingPost(true)
+        setFeedback(null)
+
+
+        const hydrateProfile = async () => {
+            const record = await getProfile(user.id)
+            if (!active) return
+            setProfile(record)
+        }
+
+        hydrateProfile()
+
+        return () => {
+            active = false
+        }
+    }, [status, user?.id])
+
+    const authorName = useMemo(() => {
+        if (!user) return null
+
+        const metadata = user.user_metadata as { username?: string; full_name?: string } | null
+        return profile?.name || metadata?.username || metadata?.full_name || user.email?.split('@')[0] || null
+    }, [profile?.name, user])
+
+    const handlePost = async () => {
+        const trimmedNote = note.trim()
+        const trimmedSong = song.trim()
+
+        if (!trimmedNote && !trimmedSong) {
+            setFeedback('Add a note or link before sharing an update.')
+            return
+        }
+
 
         const hydrateProfile = async () => {
             const record = await getProfile(user.id)

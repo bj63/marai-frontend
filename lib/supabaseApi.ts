@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient'
+import { recordSupabaseFailure, recordSupabaseSuccess, reportError } from './observability'
 
 export interface MiraiProfile {
   id: string
@@ -138,6 +139,7 @@ export interface AuthResult {
 }
 
 export async function getProfile(userId: string): Promise<MiraiProfile | null> {
+  const startedAt = Date.now()
   const { data, error } = await supabase
     .from('mirai_profile')
     .select('*')
@@ -145,9 +147,12 @@ export async function getProfile(userId: string): Promise<MiraiProfile | null> {
     .maybeSingle()
 
   if (error) {
-    console.error('getProfile:', error)
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('getProfile', durationMs)
+    reportError('getProfile', error, { userId })
     return null
   }
+  recordSupabaseSuccess('getProfile', Date.now() - startedAt)
   return data
 }
 
@@ -160,6 +165,7 @@ export async function saveProfile(
     ...profile,
   }
 
+  const startedAt = Date.now()
   const { data, error } = await supabase
     .from('mirai_profile')
     .upsert(payload, { onConflict: 'user_id' })
@@ -167,6 +173,13 @@ export async function saveProfile(
     .single()
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('saveProfile', durationMs)
+    reportError('saveProfile', error, { userId })
+    return { profile: null, error }
+  }
+
+  recordSupabaseSuccess('saveProfile', Date.now() - startedAt)
     console.error('saveProfile:', error)
     return { profile: null, error }
   }
@@ -181,6 +194,7 @@ export async function saveProfile(
 }
 
 export async function getPersonality(userId: string): Promise<Personality | null> {
+  const startedAt = Date.now()
   const { data, error } = await supabase
     .from('personality')
     .select('*')
@@ -188,9 +202,12 @@ export async function getPersonality(userId: string): Promise<Personality | null
     .maybeSingle()
 
   if (error) {
-    console.error('getPersonality:', error)
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('getPersonality', durationMs)
+    reportError('getPersonality', error, { userId })
     return null
   }
+  recordSupabaseSuccess('getPersonality', Date.now() - startedAt)
   return data
 }
 
@@ -204,6 +221,7 @@ export async function savePersonality(
     updated_at: new Date().toISOString(),
   }
 
+  const startedAt = Date.now()
   const { data, error } = await supabase
     .from('personality')
     .upsert(payload, { onConflict: 'user_id' })
@@ -211,6 +229,32 @@ export async function savePersonality(
     .single()
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('savePersonality', durationMs)
+    reportError('savePersonality', error, { userId })
+    return { personality: null, error }
+  }
+
+  recordSupabaseSuccess('savePersonality', Date.now() - startedAt)
+  return { personality: data }
+}
+
+export async function updateUserMetadata(
+  metadata: Record<string, unknown>,
+): Promise<AuthResult> {
+  const startedAt = Date.now()
+  const { error } = await supabase.auth.updateUser({
+    data: metadata,
+  })
+
+  if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('updateUserMetadata', durationMs)
+    reportError('updateUserMetadata', error, { keys: Object.keys(metadata) })
+    return { error }
+  }
+
+  recordSupabaseSuccess('updateUserMetadata', Date.now() - startedAt)
 
   if (error) {
     console.error('savePersonality:', error)
@@ -273,26 +317,38 @@ export async function updateUserMetadata(
 }
 
 export async function getFeed(): Promise<FeedPost[]> {
+  const startedAt = Date.now()
   const { data, error } = await supabase
     .from('feed_posts')
     .select('*')
     .order('created_at', { ascending: false })
 
   if (error) {
-    console.error('getFeed:', error)
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('getFeed', durationMs)
+    reportError('getFeed', error)
     return []
   }
+  recordSupabaseSuccess('getFeed', Date.now() - startedAt)
   return data || []
 }
 
 export async function getFeedWithEngagement(
   viewerId?: string,
 ): Promise<FeedPostWithEngagement[]> {
+  const startedAt = Date.now()
   const { data, error } = await supabase.rpc('fetch_feed_with_engagement', {
     viewer_id: viewerId ?? null,
   })
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('getFeedWithEngagement', durationMs)
+    reportError('getFeedWithEngagement', error, { viewerId })
+    return []
+  }
+
+  recordSupabaseSuccess('getFeedWithEngagement', Date.now() - startedAt)
     console.error('getFeedWithEngagement:', error)
     return []
   }
@@ -304,12 +360,20 @@ export async function getFeedForUser(
   userId: string,
   viewerId?: string,
 ): Promise<FeedPostWithEngagement[]> {
+  const startedAt = Date.now()
   const { data, error } = await supabase.rpc('fetch_profile_feed', {
     target_user_id: userId,
     viewer_id: viewerId ?? null,
   })
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('getFeedForUser', durationMs)
+    reportError('getFeedForUser', error, { userId, viewerId })
+    return []
+  }
+
+  recordSupabaseSuccess('getFeedForUser', Date.now() - startedAt)
     console.error('getFeedForUser:', error)
     return []
   }
@@ -321,6 +385,107 @@ export async function likePost(
   postId: string,
   userId: string,
 ): Promise<AuthResult> {
+  const startedAt = Date.now()
+  const { error } = await supabase
+    .from('feed_likes')
+    .upsert({ post_id: postId, user_id: userId })
+
+  if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('likePost', durationMs)
+    reportError('likePost', error, { postId, userId })
+    return { error }
+  }
+
+  recordSupabaseSuccess('likePost', Date.now() - startedAt)
+  return {}
+}
+
+export async function unlikePost(postId: string, userId: string): Promise<AuthResult> {
+  const startedAt = Date.now()
+  const { error } = await supabase
+    .from('feed_likes')
+    .delete()
+    .eq('post_id', postId)
+    .eq('user_id', userId)
+
+  if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('unlikePost', durationMs)
+    reportError('unlikePost', error, { postId, userId })
+    return { error }
+  }
+
+  recordSupabaseSuccess('unlikePost', Date.now() - startedAt)
+  return {}
+}
+
+export async function getComments(postId: string): Promise<FeedComment[]> {
+  const startedAt = Date.now()
+  const { data, error } = await supabase
+    .from('feed_comments_view')
+    .select('*')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('getComments', durationMs)
+    reportError('getComments', error, { postId })
+    return []
+  }
+
+  recordSupabaseSuccess('getComments', Date.now() - startedAt)
+  return (data as FeedComment[]) || []
+}
+
+export async function addComment(
+  postId: string,
+  userId: string,
+  body: string,
+): Promise<{ comment: FeedComment | null; error?: unknown }> {
+  const startedAt = Date.now()
+  const { data, error } = await supabase
+    .from('feed_comments')
+    .insert([
+      {
+        post_id: postId,
+        user_id: userId,
+        body,
+      },
+    ])
+    .select('*')
+    .single()
+
+  if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('addComment', durationMs)
+    reportError('addComment', error, { postId, userId })
+    return { comment: null, error }
+  }
+
+  recordSupabaseSuccess('addComment', Date.now() - startedAt)
+  return { comment: data as FeedComment }
+}
+
+export async function createPost(
+  post: Omit<FeedPost, 'id' | 'created_at'>,
+): Promise<{ post: FeedPost | null; error?: unknown }> {
+  const startedAt = Date.now()
+  const { data, error } = await supabase
+    .from('feed_posts')
+    .insert([post])
+    .select()
+    .single()
+
+  if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('createPost', durationMs)
+    reportError('createPost', error, { userId: post.user_id })
+    return { post: null, error }
+  }
+
+  recordSupabaseSuccess('createPost', Date.now() - startedAt)
   const { error } = await supabase
     .from('feed_likes')
     .upsert({ post_id: postId, user_id: userId })
@@ -479,6 +644,15 @@ export async function createPost(
 }
 
 export async function requestMagicLink(email: string): Promise<AuthResult> {
+  const startedAt = Date.now()
+  const { error } = await supabase.auth.signInWithOtp({ email })
+  if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('requestMagicLink', durationMs)
+    reportError('requestMagicLink', error, { email })
+    return { error }
+  }
+  recordSupabaseSuccess('requestMagicLink', Date.now() - startedAt)
   const { error } = await supabase.auth.signInWithOtp({ email })
   if (error) {
     console.error('requestMagicLink:', error)
@@ -637,6 +811,7 @@ export async function signUpWithPassword(
   password: string,
   username: string,
 ): Promise<AuthResult> {
+  const startedAt = Date.now()
   const { error } = await supabase.auth.signUp({
     email,
     password,
@@ -646,6 +821,13 @@ export async function signUpWithPassword(
   })
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('signUpWithPassword', durationMs)
+    reportError('signUpWithPassword', error, { email })
+    return { error }
+  }
+
+  recordSupabaseSuccess('signUpWithPassword', Date.now() - startedAt)
     console.error('signUpWithPassword:', error)
     return { error }
   }
@@ -654,6 +836,17 @@ export async function signUpWithPassword(
 }
 
 export async function signInWithPassword(email: string, password: string): Promise<AuthResult> {
+  const startedAt = Date.now()
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+  if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('signInWithPassword', durationMs)
+    reportError('signInWithPassword', error, { email })
+    return { error }
+  }
+
+  recordSupabaseSuccess('signInWithPassword', Date.now() - startedAt)
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
@@ -668,6 +861,7 @@ export async function signInWithGoogle(): Promise<AuthResult> {
   const redirectTo =
     typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined
 
+  const startedAt = Date.now()
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -679,6 +873,13 @@ export async function signInWithGoogle(): Promise<AuthResult> {
   })
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('signInWithGoogle', durationMs)
+    reportError('signInWithGoogle', error)
+    return { error }
+  }
+
+  recordSupabaseSuccess('signInWithGoogle', Date.now() - startedAt)
     console.error('signInWithGoogle:', error)
     return { error }
   }
@@ -687,6 +888,20 @@ export async function signInWithGoogle(): Promise<AuthResult> {
 }
 
 export async function signOut(): Promise<void> {
+  const startedAt = Date.now()
+  const { error } = await supabase.auth.signOut()
+  if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('signOut', durationMs)
+    reportError('signOut', error)
+    return
+  }
+
+  recordSupabaseSuccess('signOut', Date.now() - startedAt)
+}
+
+export async function getFollowers(userId: string): Promise<FollowProfile[]> {
+  const startedAt = Date.now()
   const { error } = await supabase.auth.signOut()
   if (error) {
     console.error('signOut:', error)
@@ -701,6 +916,13 @@ export async function getFollowers(userId: string): Promise<FollowProfile[]> {
     .order('created_at', { ascending: false })
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('getFollowers', durationMs)
+    reportError('getFollowers', error, { userId })
+    return []
+  }
+
+  recordSupabaseSuccess('getFollowers', Date.now() - startedAt)
     console.error('getFollowers:', error)
     return []
   }
@@ -709,6 +931,7 @@ export async function getFollowers(userId: string): Promise<FollowProfile[]> {
 }
 
 export async function getFollowing(userId: string): Promise<FollowProfile[]> {
+  const startedAt = Date.now()
   const { data, error } = await supabase
     .from('following_view')
     .select('*')
@@ -716,6 +939,13 @@ export async function getFollowing(userId: string): Promise<FollowProfile[]> {
     .order('created_at', { ascending: false })
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('getFollowing', durationMs)
+    reportError('getFollowing', error, { userId })
+    return []
+  }
+
+  recordSupabaseSuccess('getFollowing', Date.now() - startedAt)
     console.error('getFollowing:', error)
     return []
   }
@@ -727,11 +957,19 @@ export async function followProfile(
   followerId: string,
   targetId: string,
 ): Promise<AuthResult> {
+  const startedAt = Date.now()
   const { error } = await supabase
     .from('follows')
     .upsert({ follower_id: followerId, following_id: targetId })
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('followProfile', durationMs)
+    reportError('followProfile', error, { followerId, targetId })
+    return { error }
+  }
+
+  recordSupabaseSuccess('followProfile', Date.now() - startedAt)
     console.error('followProfile:', error)
     return { error }
   }
@@ -743,6 +981,7 @@ export async function unfollowProfile(
   followerId: string,
   targetId: string,
 ): Promise<AuthResult> {
+  const startedAt = Date.now()
   const { error } = await supabase
     .from('follows')
     .delete()
@@ -750,6 +989,13 @@ export async function unfollowProfile(
     .eq('following_id', targetId)
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('unfollowProfile', durationMs)
+    reportError('unfollowProfile', error, { followerId, targetId })
+    return { error }
+  }
+
+  recordSupabaseSuccess('unfollowProfile', Date.now() - startedAt)
     console.error('unfollowProfile:', error)
     return { error }
   }
@@ -761,6 +1007,7 @@ export async function getFollowState(
   followerId: string,
   targetId: string,
 ): Promise<boolean> {
+  const startedAt = Date.now()
   const { count, error } = await supabase
     .from('follows')
     .select('*', { count: 'exact', head: true })
@@ -768,6 +1015,13 @@ export async function getFollowState(
     .eq('following_id', targetId)
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('getFollowState', durationMs)
+    reportError('getFollowState', error, { followerId, targetId })
+    return false
+  }
+
+  recordSupabaseSuccess('getFollowState', Date.now() - startedAt)
     console.error('getFollowState:', error)
     return false
   }
@@ -776,6 +1030,7 @@ export async function getFollowState(
 }
 
 export async function getOnboardingState(userId: string): Promise<OnboardingState | null> {
+  const startedAt = Date.now()
   const { data, error } = await supabase
     .from('onboarding_state')
     .select('*')
@@ -783,6 +1038,13 @@ export async function getOnboardingState(userId: string): Promise<OnboardingStat
     .maybeSingle()
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('getOnboardingState', durationMs)
+    reportError('getOnboardingState', error, { userId })
+    return null
+  }
+
+  recordSupabaseSuccess('getOnboardingState', Date.now() - startedAt)
     console.error('getOnboardingState:', error)
     return null
   }
@@ -794,6 +1056,7 @@ export async function upsertOnboardingState(
   userId: string,
   payload: Partial<OnboardingState>,
 ): Promise<{ state: OnboardingState | null; error?: unknown }> {
+  const startedAt = Date.now()
   const { data, error } = await supabase
     .from('onboarding_state')
     .upsert(
@@ -807,6 +1070,13 @@ export async function upsertOnboardingState(
     .single()
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('upsertOnboardingState', durationMs)
+    reportError('upsertOnboardingState', error, { userId })
+    return { state: null, error }
+  }
+
+  recordSupabaseSuccess('upsertOnboardingState', Date.now() - startedAt)
     console.error('upsertOnboardingState:', error)
     return { state: null, error }
   }
@@ -815,6 +1085,7 @@ export async function upsertOnboardingState(
 }
 
 export async function getNotifications(userId: string): Promise<Notification[]> {
+  const startedAt = Date.now()
   const { data, error } = await supabase
     .from('notifications')
     .select('*')
@@ -822,6 +1093,13 @@ export async function getNotifications(userId: string): Promise<Notification[]> 
     .order('created_at', { ascending: false })
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('getNotifications', durationMs)
+    reportError('getNotifications', error, { userId })
+    return []
+  }
+
+  recordSupabaseSuccess('getNotifications', Date.now() - startedAt)
     console.error('getNotifications:', error)
     return []
   }
@@ -830,12 +1108,20 @@ export async function getNotifications(userId: string): Promise<Notification[]> 
 }
 
 export async function markNotificationRead(id: string): Promise<AuthResult> {
+  const startedAt = Date.now()
   const { error } = await supabase
     .from('notifications')
     .update({ read_at: new Date().toISOString() })
     .eq('id', id)
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('markNotificationRead', durationMs)
+    reportError('markNotificationRead', error, { id })
+    return { error }
+  }
+
+  recordSupabaseSuccess('markNotificationRead', Date.now() - startedAt)
     console.error('markNotificationRead:', error)
     return { error }
   }
@@ -844,6 +1130,7 @@ export async function markNotificationRead(id: string): Promise<AuthResult> {
 }
 
 export async function markAllNotificationsRead(userId: string): Promise<AuthResult> {
+  const startedAt = Date.now()
   const { error } = await supabase
     .from('notifications')
     .update({ read_at: new Date().toISOString() })
@@ -851,6 +1138,13 @@ export async function markAllNotificationsRead(userId: string): Promise<AuthResu
     .is('read_at', null)
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('markAllNotificationsRead', durationMs)
+    reportError('markAllNotificationsRead', error, { userId })
+    return { error }
+  }
+
+  recordSupabaseSuccess('markAllNotificationsRead', Date.now() - startedAt)
     console.error('markAllNotificationsRead:', error)
     return { error }
   }
@@ -859,6 +1153,7 @@ export async function markAllNotificationsRead(userId: string): Promise<AuthResu
 }
 
 export async function getConversations(userId: string): Promise<ConversationSummary[]> {
+  const startedAt = Date.now()
   const { data, error } = await supabase
     .from('conversations_view')
     .select('*')
@@ -866,6 +1161,13 @@ export async function getConversations(userId: string): Promise<ConversationSumm
     .order('updated_at', { ascending: false })
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('getConversations', durationMs)
+    reportError('getConversations', error, { userId })
+    return []
+  }
+
+  recordSupabaseSuccess('getConversations', Date.now() - startedAt)
     console.error('getConversations:', error)
     return []
   }
@@ -874,6 +1176,7 @@ export async function getConversations(userId: string): Promise<ConversationSumm
 }
 
 export async function getConversationMessages(conversationId: string): Promise<DirectMessage[]> {
+  const startedAt = Date.now()
   const { data, error } = await supabase
     .from('messages_view')
     .select('*')
@@ -881,6 +1184,13 @@ export async function getConversationMessages(conversationId: string): Promise<D
     .order('created_at', { ascending: true })
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('getConversationMessages', durationMs)
+    reportError('getConversationMessages', error, { conversationId })
+    return []
+  }
+
+  recordSupabaseSuccess('getConversationMessages', Date.now() - startedAt)
     console.error('getConversationMessages:', error)
     return []
   }
@@ -893,6 +1203,7 @@ export async function sendMessage(
   senderId: string,
   body: string,
 ): Promise<{ message: DirectMessage | null; error?: unknown }> {
+  const startedAt = Date.now()
   const { data, error } = await supabase
     .from('messages')
     .insert([
@@ -906,6 +1217,13 @@ export async function sendMessage(
     .single()
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('sendMessage', durationMs)
+    reportError('sendMessage', error, { conversationId, senderId })
+    return { message: null, error }
+  }
+
+  recordSupabaseSuccess('sendMessage', Date.now() - startedAt)
     console.error('sendMessage:', error)
     return { message: null, error }
   }
@@ -914,6 +1232,22 @@ export async function sendMessage(
 }
 
 export async function searchDirectory(term: string): Promise<SearchResult[]> {
+  const trimmed = term.trim()
+  if (!trimmed) return []
+
+  const startedAt = Date.now()
+  const { data, error } = await supabase.rpc('search_directory', {
+    query_term: trimmed,
+  })
+
+  if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('searchDirectory', durationMs)
+    reportError('searchDirectory', error, { term: trimmed })
+    return []
+  }
+
+  recordSupabaseSuccess('searchDirectory', Date.now() - startedAt)
   if (!term.trim()) return []
 
   const { data, error } = await supabase.rpc('search_directory', {
@@ -929,6 +1263,7 @@ export async function searchDirectory(term: string): Promise<SearchResult[]> {
 }
 
 export async function getUserSettings(userId: string): Promise<UserSettings | null> {
+  const startedAt = Date.now()
   const { data, error } = await supabase
     .from('user_settings')
     .select('*')
@@ -936,6 +1271,13 @@ export async function getUserSettings(userId: string): Promise<UserSettings | nu
     .maybeSingle()
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('getUserSettings', durationMs)
+    reportError('getUserSettings', error, { userId })
+    return null
+  }
+
+  recordSupabaseSuccess('getUserSettings', Date.now() - startedAt)
     console.error('getUserSettings:', error)
     return null
   }
@@ -947,6 +1289,7 @@ export async function saveUserSettings(
   userId: string,
   settings: Partial<UserSettings>,
 ): Promise<{ settings: UserSettings | null; error?: unknown }> {
+  const startedAt = Date.now()
   const { data, error } = await supabase
     .from('user_settings')
     .upsert(
@@ -960,6 +1303,13 @@ export async function saveUserSettings(
     .single()
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('saveUserSettings', durationMs)
+    reportError('saveUserSettings', error, { userId })
+    return { settings: null, error }
+  }
+
+  recordSupabaseSuccess('saveUserSettings', Date.now() - startedAt)
     console.error('saveUserSettings:', error)
     return { settings: null, error }
   }
@@ -971,11 +1321,23 @@ export async function generateCaptionSuggestion(
   payload: { mood: string; message: string },
 ): Promise<{ suggestion: CaptionSuggestionResult | null; error?: unknown }> {
   try {
+    const startedAt = Date.now()
     const { data, error } = await supabase.functions.invoke('generate-caption', {
       body: payload,
     })
 
     if (error) {
+      const durationMs = Date.now() - startedAt
+      recordSupabaseFailure('generateCaptionSuggestion', durationMs)
+      reportError('generateCaptionSuggestion', error, payload)
+      return { suggestion: null, error }
+    }
+
+    recordSupabaseSuccess('generateCaptionSuggestion', Date.now() - startedAt)
+    return { suggestion: data as CaptionSuggestionResult }
+  } catch (error) {
+    recordSupabaseFailure('generateCaptionSuggestion')
+    reportError('generateCaptionSuggestion', error, payload)
       console.error('generateCaptionSuggestion:', error)
       return { suggestion: null, error }
     }
@@ -988,6 +1350,7 @@ export async function generateCaptionSuggestion(
 }
 
 export async function getTeamMembers(): Promise<TeamMember[]> {
+  const startedAt = Date.now()
   const { data, error } = await supabase
     .from('team_members')
     .select('*')
@@ -995,6 +1358,13 @@ export async function getTeamMembers(): Promise<TeamMember[]> {
     .order('created_at', { ascending: true })
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('getTeamMembers', durationMs)
+    reportError('getTeamMembers', error)
+    return []
+  }
+
+  recordSupabaseSuccess('getTeamMembers', Date.now() - startedAt)
     console.error('getTeamMembers:', error)
     return []
   }
@@ -1010,6 +1380,7 @@ export async function addTeamMember(
     status: 'invited' as const,
   }
 
+  const startedAt = Date.now()
   const { data, error } = await supabase
     .from('team_members')
     .insert([payload])
@@ -1017,6 +1388,13 @@ export async function addTeamMember(
     .single()
 
   if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('addTeamMember', durationMs)
+    reportError('addTeamMember', error, { email: member.email })
+    return { member: null, error }
+  }
+
+  recordSupabaseSuccess('addTeamMember', Date.now() - startedAt)
     console.error('addTeamMember:', error)
     return { member: null, error }
   }
@@ -1025,6 +1403,17 @@ export async function addTeamMember(
 }
 
 export async function removeTeamMember(id: string): Promise<AuthResult> {
+  const startedAt = Date.now()
+  const { error } = await supabase.from('team_members').delete().eq('id', id)
+
+  if (error) {
+    const durationMs = Date.now() - startedAt
+    recordSupabaseFailure('removeTeamMember', durationMs)
+    reportError('removeTeamMember', error, { id })
+    return { error }
+  }
+
+  recordSupabaseSuccess('removeTeamMember', Date.now() - startedAt)
   const { error } = await supabase.from('team_members').delete().eq('id', id)
 
   if (error) {

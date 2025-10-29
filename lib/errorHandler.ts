@@ -1,3 +1,5 @@
+import { reportError } from './observability'
+
 type Logger = (message?: unknown, ...optionalParams: unknown[]) => void
 
 const defaultLogger: Logger = (...args) => {
@@ -14,6 +16,7 @@ export function handleError(
   logger: Logger = defaultLogger,
 ): string {
   const prefix = `[${context}]`
+  reportError(context, error)
   if (error instanceof Error) {
     logger(prefix, error)
     return error.message || fallbackMessage

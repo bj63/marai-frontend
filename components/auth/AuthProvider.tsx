@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabaseClient'
+import { reportError } from '@/lib/observability'
 import {
   requestMagicLink,
   signInWithGoogle,
@@ -47,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!active) return
 
         if (error) {
+          reportError('AuthProvider.getSession', error)
           console.error('AuthProvider.getSession', error)
           setSession(null)
           setStatus('unauthenticated')
@@ -58,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         if (!active) return
 
+        reportError('AuthProvider.resolveSession', error)
         console.error('AuthProvider.resolveSession', error)
         setSession(null)
         setStatus('unauthenticated')
