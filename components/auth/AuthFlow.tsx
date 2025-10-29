@@ -175,6 +175,7 @@ export default function AuthFlow() {
       })
     } catch (error) {
       reportError('AuthFlow.connectWallet', error)
+      console.error('connectWallet:', error)
       setWalletFeedback({
         tone: 'error',
         message: 'We could not connect to that wallet. Approve the browser request and try again.',

@@ -12,6 +12,7 @@ import {
   signUpWithPassword,
   type AuthResult,
 } from '@/lib/supabaseApi'
+import { requestMagicLink, signOut as signOutFromSupabase } from '@/lib/supabaseApi'
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
 
@@ -27,6 +28,7 @@ interface AuthContextValue {
   ) => Promise<AuthResult>
   signInWithCredentials: (email: string, password: string) => Promise<AuthResult>
   signInWithGoogle: () => Promise<AuthResult>
+  signInWithEmail: (email: string) => Promise<{ error: unknown } | null>
   signOut: () => Promise<void>
 }
 
@@ -47,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (error) {
           reportError('AuthProvider.getSession', error)
+          console.error('AuthProvider.getSession', error)
           setSession(null)
           setStatus('unauthenticated')
           return
@@ -58,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!active) return
 
         reportError('AuthProvider.resolveSession', error)
+        console.error('AuthProvider.resolveSession', error)
         setSession(null)
         setStatus('unauthenticated')
       }
@@ -80,11 +84,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signInWithMagicLink = useCallback(
+  const signInWithEmail = useCallback(
     async (email: string) => {
       setStatus('loading')
       const result = await requestMagicLink(email)
 
       if (result.error) {
+      if (result?.error) {
         setStatus(session ? 'authenticated' : 'unauthenticated')
       } else {
         setStatus('unauthenticated')
@@ -163,6 +169,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUpWithCredentials,
       status,
     ],
+      signInWithEmail,
+      signOut,
+    }),
+    [session, signInWithEmail, signOut, status],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

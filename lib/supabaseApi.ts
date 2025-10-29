@@ -180,6 +180,16 @@ export async function saveProfile(
   }
 
   recordSupabaseSuccess('saveProfile', Date.now() - startedAt)
+    console.error('saveProfile:', error)
+    return { profile: null, error }
+  }
+
+
+  if (error) {
+    console.error('saveProfile:', error)
+    return { profile: null, error }
+  }
+
   return { profile: data }
 }
 
@@ -245,6 +255,64 @@ export async function updateUserMetadata(
   }
 
   recordSupabaseSuccess('updateUserMetadata', Date.now() - startedAt)
+
+  if (error) {
+    console.error('savePersonality:', error)
+    return { personality: null, error }
+  }
+
+  return { personality: data }
+}
+
+export async function updateUserMetadata(
+  metadata: Record<string, unknown>,
+): Promise<AuthResult> {
+  const { error } = await supabase.auth.updateUser({
+    data: metadata,
+  })
+
+  if (error) {
+    console.error('updateUserMetadata:', error)
+    return { error }
+  }
+
+
+  return { personality: data }
+}
+
+export async function updateUserMetadata(
+  metadata: Record<string, unknown>,
+): Promise<AuthResult> {
+  const { error } = await supabase.auth.updateUser({
+    data: metadata,
+  })
+
+  if (error) {
+    console.error('updateUserMetadata:', error)
+    return { error }
+  }
+
+
+  if (error) {
+    console.error('savePersonality:', error)
+    return { personality: null, error }
+  }
+
+  return { personality: data }
+}
+
+export async function updateUserMetadata(
+  metadata: Record<string, unknown>,
+): Promise<AuthResult> {
+  const { error } = await supabase.auth.updateUser({
+    data: metadata,
+  })
+
+  if (error) {
+    console.error('updateUserMetadata:', error)
+    return { error }
+  }
+
   return {}
 }
 
@@ -281,6 +349,10 @@ export async function getFeedWithEngagement(
   }
 
   recordSupabaseSuccess('getFeedWithEngagement', Date.now() - startedAt)
+    console.error('getFeedWithEngagement:', error)
+    return []
+  }
+
   return (data as FeedPostWithEngagement[]) || []
 }
 
@@ -302,6 +374,10 @@ export async function getFeedForUser(
   }
 
   recordSupabaseSuccess('getFeedForUser', Date.now() - startedAt)
+    console.error('getFeedForUser:', error)
+    return []
+  }
+
   return (data as FeedPostWithEngagement[]) || []
 }
 
@@ -410,6 +486,160 @@ export async function createPost(
   }
 
   recordSupabaseSuccess('createPost', Date.now() - startedAt)
+  const { error } = await supabase
+    .from('feed_likes')
+    .upsert({ post_id: postId, user_id: userId })
+
+  if (error) {
+    console.error('likePost:', error)
+    return { error }
+  }
+
+  return {}
+}
+
+export async function unlikePost(postId: string, userId: string): Promise<AuthResult> {
+  const { error } = await supabase
+    .from('feed_likes')
+    .delete()
+    .eq('post_id', postId)
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('unlikePost:', error)
+    return { error }
+  }
+
+  return {}
+}
+
+export async function getComments(postId: string): Promise<FeedComment[]> {
+  const { data, error } = await supabase
+    .from('feed_comments_view')
+    .select('*')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('getComments:', error)
+    return []
+  }
+
+  return (data as FeedComment[]) || []
+}
+
+export async function addComment(
+  postId: string,
+  userId: string,
+  body: string,
+): Promise<{ comment: FeedComment | null; error?: unknown }> {
+  const { data, error } = await supabase
+    .from('feed_comments')
+    .insert([
+      {
+        post_id: postId,
+        user_id: userId,
+        body,
+      },
+    ])
+    .select('*')
+    .single()
+
+  if (error) {
+    console.error('addComment:', error)
+    return { comment: null, error }
+  }
+
+  return { comment: data as FeedComment }
+}
+
+
+  if (error) {
+    console.error('likePost:', error)
+    return { error }
+  }
+
+  return {}
+}
+
+export async function unlikePost(postId: string, userId: string): Promise<AuthResult> {
+  const { error } = await supabase
+    .from('feed_likes')
+    .delete()
+    .eq('post_id', postId)
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('unlikePost:', error)
+    return { error }
+  }
+
+  return {}
+}
+
+export async function getComments(postId: string): Promise<FeedComment[]> {
+  const { data, error } = await supabase
+    .from('feed_comments_view')
+    .select('*')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('getComments:', error)
+    return []
+  }
+
+  return (data as FeedComment[]) || []
+}
+
+export async function addComment(
+  postId: string,
+  userId: string,
+  body: string,
+): Promise<{ comment: FeedComment | null; error?: unknown }> {
+  const { data, error } = await supabase
+    .from('feed_comments')
+    .insert([
+      {
+        post_id: postId,
+        user_id: userId,
+        body,
+      },
+    ])
+    .select('*')
+    .single()
+
+  if (error) {
+    console.error('addComment:', error)
+    return { comment: null, error }
+  }
+
+  return { comment: data as FeedComment }
+}
+
+export async function createPost(
+  post: Omit<FeedPost, 'id' | 'created_at'>,
+): Promise<{ post: FeedPost | null; error?: unknown }> {
+  const { data, error } = await supabase.from('feed_posts').insert([post]).select().single()
+
+  if (error) {
+    console.error('createPost:', error)
+    return { post: null, error }
+  }
+
+  return { post: data }
+}
+
+export async function createPost(
+  post: Omit<FeedPost, 'id' | 'created_at'>,
+): Promise<{ post: FeedPost | null; error?: unknown }> {
+  const { data, error } = await supabase.from('feed_posts').insert([post]).select().single()
+
+  if (error) {
+    console.error('createPost:', error)
+    return { post: null, error }
+  }
+
   return { post: data }
 }
 
@@ -423,6 +653,156 @@ export async function requestMagicLink(email: string): Promise<AuthResult> {
     return { error }
   }
   recordSupabaseSuccess('requestMagicLink', Date.now() - startedAt)
+  const { error } = await supabase.auth.signInWithOtp({ email })
+  if (error) {
+    console.error('requestMagicLink:', error)
+    return { error }
+  }
+  return {}
+}
+
+export async function signUpWithPassword(
+  email: string,
+  password: string,
+  username: string,
+): Promise<AuthResult> {
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { username },
+    },
+  })
+
+  if (error) {
+    console.error('signUpWithPassword:', error)
+    return { error }
+  }
+
+  return {}
+}
+
+export async function signInWithPassword(email: string, password: string): Promise<AuthResult> {
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+  if (error) {
+    console.error('signInWithPassword:', error)
+    return { error }
+  }
+    return { error }
+  }
+  return {}
+}
+
+export async function signUpWithPassword(
+  email: string,
+  password: string,
+  username: string,
+): Promise<AuthResult> {
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { username },
+    },
+  })
+
+  if (error) {
+    console.error('signUpWithPassword:', error)
+    return { error }
+  }
+
+  return {}
+}
+
+export async function signInWithPassword(email: string, password: string): Promise<AuthResult> {
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+  if (error) {
+    console.error('signInWithPassword:', error)
+    return { error }
+  }
+    return { error }
+  }
+  return {}
+}
+
+export async function signUpWithPassword(
+  email: string,
+  password: string,
+  username: string,
+): Promise<AuthResult> {
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { username },
+    },
+  })
+
+  if (error) {
+    console.error('signUpWithPassword:', error)
+    return { error }
+  }
+    return { error }
+  }
+  return {}
+}
+
+export async function signUpWithPassword(
+  email: string,
+  password: string,
+  username: string,
+): Promise<AuthResult> {
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { username },
+    },
+  })
+
+  if (error) {
+    console.error('signUpWithPassword:', error)
+    return { error }
+  }
+
+  return {}
+}
+
+export async function signInWithPassword(email: string, password: string): Promise<AuthResult> {
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+  if (error) {
+    console.error('signInWithPassword:', error)
+    return { error }
+  }
+
+  return {}
+}
+
+export async function signInWithGoogle(): Promise<AuthResult> {
+  const redirectTo =
+    typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined
+
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo,
+      queryParams: {
+        prompt: 'select_account',
+      },
+    },
+  })
+
+  if (error) {
+    console.error('signInWithGoogle:', error)
+export async function requestMagicLink(email: string): Promise<{ error: unknown } | null> {
+  const { error } = await supabase.auth.signInWithOtp({ email })
+  if (error) {
+    console.error('requestMagicLink:', error)
+    return { error }
+  }
   return {}
 }
 
@@ -448,6 +828,10 @@ export async function signUpWithPassword(
   }
 
   recordSupabaseSuccess('signUpWithPassword', Date.now() - startedAt)
+    console.error('signUpWithPassword:', error)
+    return { error }
+  }
+
   return {}
 }
 
@@ -463,6 +847,13 @@ export async function signInWithPassword(email: string, password: string): Promi
   }
 
   recordSupabaseSuccess('signInWithPassword', Date.now() - startedAt)
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+  if (error) {
+    console.error('signInWithPassword:', error)
+    return { error }
+  }
+
   return {}
 }
 
@@ -489,6 +880,10 @@ export async function signInWithGoogle(): Promise<AuthResult> {
   }
 
   recordSupabaseSuccess('signInWithGoogle', Date.now() - startedAt)
+    console.error('signInWithGoogle:', error)
+    return { error }
+  }
+
   return {}
 }
 
@@ -507,6 +902,13 @@ export async function signOut(): Promise<void> {
 
 export async function getFollowers(userId: string): Promise<FollowProfile[]> {
   const startedAt = Date.now()
+  const { error } = await supabase.auth.signOut()
+  if (error) {
+    console.error('signOut:', error)
+  }
+}
+
+export async function getFollowers(userId: string): Promise<FollowProfile[]> {
   const { data, error } = await supabase
     .from('followers_view')
     .select('*')
@@ -521,6 +923,10 @@ export async function getFollowers(userId: string): Promise<FollowProfile[]> {
   }
 
   recordSupabaseSuccess('getFollowers', Date.now() - startedAt)
+    console.error('getFollowers:', error)
+    return []
+  }
+
   return (data as FollowProfile[]) || []
 }
 
@@ -540,6 +946,10 @@ export async function getFollowing(userId: string): Promise<FollowProfile[]> {
   }
 
   recordSupabaseSuccess('getFollowing', Date.now() - startedAt)
+    console.error('getFollowing:', error)
+    return []
+  }
+
   return (data as FollowProfile[]) || []
 }
 
@@ -560,6 +970,10 @@ export async function followProfile(
   }
 
   recordSupabaseSuccess('followProfile', Date.now() - startedAt)
+    console.error('followProfile:', error)
+    return { error }
+  }
+
   return {}
 }
 
@@ -582,6 +996,10 @@ export async function unfollowProfile(
   }
 
   recordSupabaseSuccess('unfollowProfile', Date.now() - startedAt)
+    console.error('unfollowProfile:', error)
+    return { error }
+  }
+
   return {}
 }
 
@@ -604,6 +1022,10 @@ export async function getFollowState(
   }
 
   recordSupabaseSuccess('getFollowState', Date.now() - startedAt)
+    console.error('getFollowState:', error)
+    return false
+  }
+
   return (count ?? 0) > 0
 }
 
@@ -623,6 +1045,10 @@ export async function getOnboardingState(userId: string): Promise<OnboardingStat
   }
 
   recordSupabaseSuccess('getOnboardingState', Date.now() - startedAt)
+    console.error('getOnboardingState:', error)
+    return null
+  }
+
   return data as OnboardingState | null
 }
 
@@ -651,6 +1077,10 @@ export async function upsertOnboardingState(
   }
 
   recordSupabaseSuccess('upsertOnboardingState', Date.now() - startedAt)
+    console.error('upsertOnboardingState:', error)
+    return { state: null, error }
+  }
+
   return { state: data as OnboardingState }
 }
 
@@ -670,6 +1100,10 @@ export async function getNotifications(userId: string): Promise<Notification[]> 
   }
 
   recordSupabaseSuccess('getNotifications', Date.now() - startedAt)
+    console.error('getNotifications:', error)
+    return []
+  }
+
   return (data as Notification[]) || []
 }
 
@@ -688,6 +1122,10 @@ export async function markNotificationRead(id: string): Promise<AuthResult> {
   }
 
   recordSupabaseSuccess('markNotificationRead', Date.now() - startedAt)
+    console.error('markNotificationRead:', error)
+    return { error }
+  }
+
   return {}
 }
 
@@ -707,6 +1145,10 @@ export async function markAllNotificationsRead(userId: string): Promise<AuthResu
   }
 
   recordSupabaseSuccess('markAllNotificationsRead', Date.now() - startedAt)
+    console.error('markAllNotificationsRead:', error)
+    return { error }
+  }
+
   return {}
 }
 
@@ -726,6 +1168,10 @@ export async function getConversations(userId: string): Promise<ConversationSumm
   }
 
   recordSupabaseSuccess('getConversations', Date.now() - startedAt)
+    console.error('getConversations:', error)
+    return []
+  }
+
   return (data as ConversationSummary[]) || []
 }
 
@@ -745,6 +1191,10 @@ export async function getConversationMessages(conversationId: string): Promise<D
   }
 
   recordSupabaseSuccess('getConversationMessages', Date.now() - startedAt)
+    console.error('getConversationMessages:', error)
+    return []
+  }
+
   return (data as DirectMessage[]) || []
 }
 
@@ -774,6 +1224,10 @@ export async function sendMessage(
   }
 
   recordSupabaseSuccess('sendMessage', Date.now() - startedAt)
+    console.error('sendMessage:', error)
+    return { message: null, error }
+  }
+
   return { message: data as DirectMessage }
 }
 
@@ -794,6 +1248,17 @@ export async function searchDirectory(term: string): Promise<SearchResult[]> {
   }
 
   recordSupabaseSuccess('searchDirectory', Date.now() - startedAt)
+  if (!term.trim()) return []
+
+  const { data, error } = await supabase.rpc('search_directory', {
+    query_term: term.trim(),
+  })
+
+  if (error) {
+    console.error('searchDirectory:', error)
+    return []
+  }
+
   return (data as SearchResult[]) || []
 }
 
@@ -813,6 +1278,10 @@ export async function getUserSettings(userId: string): Promise<UserSettings | nu
   }
 
   recordSupabaseSuccess('getUserSettings', Date.now() - startedAt)
+    console.error('getUserSettings:', error)
+    return null
+  }
+
   return data as UserSettings | null
 }
 
@@ -841,6 +1310,10 @@ export async function saveUserSettings(
   }
 
   recordSupabaseSuccess('saveUserSettings', Date.now() - startedAt)
+    console.error('saveUserSettings:', error)
+    return { settings: null, error }
+  }
+
   return { settings: data as UserSettings }
 }
 
@@ -865,6 +1338,13 @@ export async function generateCaptionSuggestion(
   } catch (error) {
     recordSupabaseFailure('generateCaptionSuggestion')
     reportError('generateCaptionSuggestion', error, payload)
+      console.error('generateCaptionSuggestion:', error)
+      return { suggestion: null, error }
+    }
+
+    return { suggestion: data as CaptionSuggestionResult }
+  } catch (error) {
+    console.error('generateCaptionSuggestion:', error)
     return { suggestion: null, error }
   }
 }
@@ -885,6 +1365,10 @@ export async function getTeamMembers(): Promise<TeamMember[]> {
   }
 
   recordSupabaseSuccess('getTeamMembers', Date.now() - startedAt)
+    console.error('getTeamMembers:', error)
+    return []
+  }
+
   return data ?? []
 }
 
@@ -911,6 +1395,10 @@ export async function addTeamMember(
   }
 
   recordSupabaseSuccess('addTeamMember', Date.now() - startedAt)
+    console.error('addTeamMember:', error)
+    return { member: null, error }
+  }
+
   return { member: data }
 }
 
@@ -926,5 +1414,12 @@ export async function removeTeamMember(id: string): Promise<AuthResult> {
   }
 
   recordSupabaseSuccess('removeTeamMember', Date.now() - startedAt)
+  const { error } = await supabase.from('team_members').delete().eq('id', id)
+
+  if (error) {
+    console.error('removeTeamMember:', error)
+    return { error }
+  }
+
   return {}
 }
