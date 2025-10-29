@@ -26,6 +26,7 @@ interface MoaState {
     addMessage: (msg: Message) => void
     setMood: (mood: string) => void
     growTrait: (trait: keyof Personality, amount: number) => void
+    setPersonality: (personality: Personality) => void
     resetConversation: () => void
     setFederationId: (identifier: string) => void
 }
@@ -64,6 +65,11 @@ export const useMoaStore = create<MoaState>((set) => ({
                 ...state.personality,
                 [trait]: Math.min(1, (state.personality[trait] || 0.5) + amount),
             },
+        })),
+
+    setPersonality: (personality) =>
+        set(() => ({
+            personality: { ...personality },
         })),
 
     resetConversation: () =>
