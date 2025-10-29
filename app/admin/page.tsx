@@ -39,6 +39,7 @@ const loginLabels: Record<TeamMember['login_method'], string> = {
 }
 
 export default function AdminPage() {
+  const { user, status } = useAuth()
   const { user } = useAuth()
   const [members, setMembers] = useState<TeamMember[]>([])
   const [loadingMembers, setLoadingMembers] = useState(true)
@@ -51,6 +52,12 @@ export default function AdminPage() {
     let active = true
 
     const loadMembers = async () => {
+      if (status !== 'authenticated') {
+        setMembers([])
+        setLoadingMembers(false)
+        return
+      }
+
       setLoadingMembers(true)
       const data = await getTeamMembers()
       if (!active) return
@@ -63,6 +70,7 @@ export default function AdminPage() {
     return () => {
       active = false
     }
+  }, [status])
   }, [])
 
   const founderFallback = useMemo<TeamMember | null>(() => {
@@ -87,6 +95,11 @@ export default function AdminPage() {
   const submitTeamMember = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setFormFeedback(null)
+
+    if (status !== 'authenticated') {
+      setFormFeedback('Sign in as the founder to invite teammates.')
+      return
+    }
 
     if (!formState.email) {
       setFormFeedback('Enter an email so we know where to send the invitation.')
@@ -119,6 +132,10 @@ export default function AdminPage() {
 
   const removeMember = async (member: TeamMember) => {
     if (member.role === 'founder') return
+    if (status !== 'authenticated') {
+      setFormFeedback('Sign in again to adjust the roster.')
+      return
+    }
     setRemovingMemberId(member.id)
     const result = await removeTeamMember(member.id)
 
@@ -131,12 +148,44 @@ export default function AdminPage() {
     setRemovingMemberId(null)
   }
 
+  if (status === 'loading') {
+    return (
+      <div className="relative mx-auto flex w-full max-w-4xl flex-col items-center gap-4 px-4 py-20 text-brand-mist/70">
+        <Loader2 className="h-6 w-6 animate-spin text-brand-magnolia" />
+        Checking your permissions…
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="relative mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-20 text-brand-mist/70">
+        <header className="flex flex-col gap-2 text-white">
+          <p className="text-[0.7rem] uppercase tracking-[0.4em] text-brand-mist/60">Admin control center</p>
+          <h1 className="text-3xl font-semibold">Sign in to manage the organisation</h1>
+        </header>
+        <p className="text-sm">
+          You need a founder or admin account to view the roster, invite teammates, or revoke access. Head to the
+          sign-in hub to authenticate first.
+        </p>
+        <Link
+          href="/auth"
+          className="inline-flex items-center justify-center gap-2 rounded-md bg-brand-magnolia/80 px-4 py-2 text-sm font-semibold text-[#0b1022] transition hover:bg-brand-magnolia md:self-start"
+        >
+          Go to account access
+        </Link>
+      </div>
+    )
+  }
+
   return (
     <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-12 text-brand-mist/80">
       <header className="flex flex-col gap-2">
         <p className="text-[0.7rem] uppercase tracking-[0.4em] text-brand-mist/60">Admin control center</p>
         <h1 className="text-3xl font-semibold text-white">Own your Mirai organisation</h1>
         <p className="max-w-2xl text-sm text-brand-mist/70">
+          Coordinate wallet signers, email logins, and Google access from one dashboard. The founder retains elevated
+          permissions, while admins and collaborators can plug into the workflows they need.
           Coordinate wallet signers, email logins, and Google access from one dashboard. The founder retains
           elevated permissions, while admins and collaborators can plug into the workflows they need.
         </p>
@@ -166,6 +215,7 @@ export default function AdminPage() {
                   className="flex flex-col gap-1 rounded-lg border border-white/10 bg-[#0b1026] px-4 py-3 text-sm text-white"
                 >
                   <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-white">{member.name || member.email}</span>
                     <span className="font-semibold text-white">
                       {member.name || member.email}
                     </span>
@@ -281,6 +331,8 @@ export default function AdminPage() {
         <aside className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-[#0d142c]/70 p-6">
           <h2 className="text-lg font-semibold text-white">How everything connects</h2>
           <p className="text-[0.75rem] text-brand-mist/70">
+            Keep the founder seat anchored to your email or wallet, then layer other sign-in methods for each squad.
+            Mirai stitches Supabase auth with Thirdweb wallets so you can route people by responsibility.
             Keep the founder seat anchored to your email or wallet, then layer other sign-in methods for each
             squad. Mirai stitches Supabase auth with Thirdweb wallets so you can route people by responsibility.
           </p>
@@ -291,6 +343,11 @@ export default function AdminPage() {
             </li>
             <li className="rounded-lg border border-white/10 bg-[#101737] px-3 py-2">
               <span className="block font-semibold text-white">Admin desk</span>
+              Admins rely on Google SSO or magic links to triage creators, tweak profiles, and monitor feed activity.
+            </li>
+            <li className="rounded-lg border border-white/10 bg-[#101737] px-3 py-2">
+              <span className="block font-semibold text-white">Collaborator lane</span>
+              Collaborators hop in with lightweight magic links to submit music, art, or updates without full admin powers.
               Admins rely on Google SSO or magic links to triage creators, tweak profiles, and monitor feed
               activity.
             </li>
@@ -303,6 +360,8 @@ export default function AdminPage() {
           <div className="rounded-lg border border-white/10 bg-[#101737] px-3 py-3 text-[0.7rem] text-brand-mist/70">
             <p className="font-semibold text-white">Need to adjust Supabase policies?</p>
             <p>
+              Review the <Link href="https://supabase.com/docs/guides/auth" className="text-brand-magnolia underline">Supabase auth guide</Link> and ensure the{' '}
+              <code className="rounded bg-black/40 px-1 py-0.5 text-[0.65rem]">team_members</code> table allows the service role to insert and delete rows.
               Review the <Link href="https://supabase.com/docs/guides/auth" className="text-brand-magnolia underline">
                 Supabase auth guide
               </Link>{' '}

@@ -62,12 +62,27 @@ export async function getProfile(userId: string): Promise<MiraiProfile | null> {
   return data
 }
 
-export async function saveProfile(userId: string, profile: Partial<MiraiProfile>): Promise<void> {
-  const { error } = await supabase
-    .from('mirai_profile')
-    .upsert({ user_id: userId, ...profile })
+export async function saveProfile(
+  userId: string,
+  profile: Partial<MiraiProfile>,
+): Promise<{ profile: MiraiProfile | null; error?: unknown }> {
+  const payload = {
+    user_id: userId,
+    ...profile,
+  }
 
-  if (error) console.error('saveProfile:', error)
+  const { data, error } = await supabase
+    .from('mirai_profile')
+    .upsert(payload, { onConflict: 'user_id' })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('saveProfile:', error)
+    return { profile: null, error }
+  }
+
+  return { profile: data }
 }
 
 export async function getPersonality(userId: string): Promise<Personality | null> {
@@ -84,13 +99,43 @@ export async function getPersonality(userId: string): Promise<Personality | null
   return data
 }
 
-export async function updatePersonality(userId: string, traits: Partial<Personality>): Promise<void> {
-  const { error } = await supabase
-    .from('personality')
-    .update({ ...traits, updated_at: new Date().toISOString() })
-    .eq('user_id', userId)
+export async function savePersonality(
+  userId: string,
+  traits: Partial<Personality>,
+): Promise<{ personality: Personality | null; error?: unknown }> {
+  const payload = {
+    user_id: userId,
+    ...traits,
+    updated_at: new Date().toISOString(),
+  }
 
-  if (error) console.error('updatePersonality:', error)
+  const { data, error } = await supabase
+    .from('personality')
+    .upsert(payload, { onConflict: 'user_id' })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('savePersonality:', error)
+    return { personality: null, error }
+  }
+
+  return { personality: data }
+}
+
+export async function updateUserMetadata(
+  metadata: Record<string, unknown>,
+): Promise<AuthResult> {
+  const { error } = await supabase.auth.updateUser({
+    data: metadata,
+  })
+
+  if (error) {
+    console.error('updateUserMetadata:', error)
+    return { error }
+  }
+
+  return {}
 }
 
 export async function getFeed(): Promise<FeedPost[]> {
