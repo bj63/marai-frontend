@@ -171,6 +171,12 @@ export async function saveProfile(
     return { profile: null, error }
   }
 
+
+  if (error) {
+    console.error('saveProfile:', error)
+    return { profile: null, error }
+  }
+
   return { profile: data }
 }
 
@@ -203,6 +209,45 @@ export async function savePersonality(
     .upsert(payload, { onConflict: 'user_id' })
     .select()
     .single()
+
+  if (error) {
+
+  if (error) {
+    console.error('savePersonality:', error)
+    return { personality: null, error }
+  }
+
+  return { personality: data }
+}
+
+export async function updateUserMetadata(
+  metadata: Record<string, unknown>,
+): Promise<AuthResult> {
+  const { error } = await supabase.auth.updateUser({
+    data: metadata,
+  })
+
+  if (error) {
+    console.error('updateUserMetadata:', error)
+    return { error }
+  }
+
+
+  return { personality: data }
+}
+
+export async function updateUserMetadata(
+  metadata: Record<string, unknown>,
+): Promise<AuthResult> {
+  const { error } = await supabase.auth.updateUser({
+    data: metadata,
+  })
+
+  if (error) {
+    console.error('updateUserMetadata:', error)
+    return { error }
+  }
+
 
   if (error) {
     console.error('savePersonality:', error)
@@ -343,6 +388,83 @@ export async function addComment(
   return { comment: data as FeedComment }
 }
 
+
+  if (error) {
+    console.error('likePost:', error)
+    return { error }
+  }
+
+  return {}
+}
+
+export async function unlikePost(postId: string, userId: string): Promise<AuthResult> {
+  const { error } = await supabase
+    .from('feed_likes')
+    .delete()
+    .eq('post_id', postId)
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('unlikePost:', error)
+    return { error }
+  }
+
+  return {}
+}
+
+export async function getComments(postId: string): Promise<FeedComment[]> {
+  const { data, error } = await supabase
+    .from('feed_comments_view')
+    .select('*')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('getComments:', error)
+    return []
+  }
+
+  return (data as FeedComment[]) || []
+}
+
+export async function addComment(
+  postId: string,
+  userId: string,
+  body: string,
+): Promise<{ comment: FeedComment | null; error?: unknown }> {
+  const { data, error } = await supabase
+    .from('feed_comments')
+    .insert([
+      {
+        post_id: postId,
+        user_id: userId,
+        body,
+      },
+    ])
+    .select('*')
+    .single()
+
+  if (error) {
+    console.error('addComment:', error)
+    return { comment: null, error }
+  }
+
+  return { comment: data as FeedComment }
+}
+
+export async function createPost(
+  post: Omit<FeedPost, 'id' | 'created_at'>,
+): Promise<{ post: FeedPost | null; error?: unknown }> {
+  const { data, error } = await supabase.from('feed_posts').insert([post]).select().single()
+
+  if (error) {
+    console.error('createPost:', error)
+    return { post: null, error }
+  }
+
+  return { post: data }
+}
+
 export async function createPost(
   post: Omit<FeedPost, 'id' | 'created_at'>,
 ): Promise<{ post: FeedPost | null; error?: unknown }> {
@@ -357,6 +479,151 @@ export async function createPost(
 }
 
 export async function requestMagicLink(email: string): Promise<AuthResult> {
+  const { error } = await supabase.auth.signInWithOtp({ email })
+  if (error) {
+    console.error('requestMagicLink:', error)
+    return { error }
+  }
+  return {}
+}
+
+export async function signUpWithPassword(
+  email: string,
+  password: string,
+  username: string,
+): Promise<AuthResult> {
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { username },
+    },
+  })
+
+  if (error) {
+    console.error('signUpWithPassword:', error)
+    return { error }
+  }
+
+  return {}
+}
+
+export async function signInWithPassword(email: string, password: string): Promise<AuthResult> {
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+  if (error) {
+    console.error('signInWithPassword:', error)
+    return { error }
+  }
+    return { error }
+  }
+  return {}
+}
+
+export async function signUpWithPassword(
+  email: string,
+  password: string,
+  username: string,
+): Promise<AuthResult> {
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { username },
+    },
+  })
+
+  if (error) {
+    console.error('signUpWithPassword:', error)
+    return { error }
+  }
+
+  return {}
+}
+
+export async function signInWithPassword(email: string, password: string): Promise<AuthResult> {
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+  if (error) {
+    console.error('signInWithPassword:', error)
+    return { error }
+  }
+    return { error }
+  }
+  return {}
+}
+
+export async function signUpWithPassword(
+  email: string,
+  password: string,
+  username: string,
+): Promise<AuthResult> {
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { username },
+    },
+  })
+
+  if (error) {
+    console.error('signUpWithPassword:', error)
+    return { error }
+  }
+    return { error }
+  }
+  return {}
+}
+
+export async function signUpWithPassword(
+  email: string,
+  password: string,
+  username: string,
+): Promise<AuthResult> {
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { username },
+    },
+  })
+
+  if (error) {
+    console.error('signUpWithPassword:', error)
+    return { error }
+  }
+
+  return {}
+}
+
+export async function signInWithPassword(email: string, password: string): Promise<AuthResult> {
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+  if (error) {
+    console.error('signInWithPassword:', error)
+    return { error }
+  }
+
+  return {}
+}
+
+export async function signInWithGoogle(): Promise<AuthResult> {
+  const redirectTo =
+    typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined
+
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo,
+      queryParams: {
+        prompt: 'select_account',
+      },
+    },
+  })
+
+  if (error) {
+    console.error('signInWithGoogle:', error)
+export async function requestMagicLink(email: string): Promise<{ error: unknown } | null> {
   const { error } = await supabase.auth.signInWithOtp({ email })
   if (error) {
     console.error('requestMagicLink:', error)
