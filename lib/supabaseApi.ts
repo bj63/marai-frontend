@@ -34,6 +34,20 @@ export interface FeedPost {
   created_at: string
 }
 
+export interface TeamMember {
+  id: string
+  email: string
+  name: string | null
+  role: 'founder' | 'admin' | 'collaborator'
+  login_method: 'password' | 'magic-link' | 'google' | 'wallet'
+  status: 'active' | 'invited'
+  created_at: string
+}
+
+export interface AuthResult {
+  error?: unknown
+}
+
 export async function getProfile(userId: string): Promise<MiraiProfile | null> {
   const { data, error } = await supabase
     .from('mirai_profile')
@@ -100,15 +114,120 @@ export async function createPost(post: Omit<FeedPost, 'id' | 'created_at'>): Pro
   if (error) console.error('createPost:', error)
 }
 
-export async function signIn(email: string): Promise<{ error: unknown } | null> {
+export async function requestMagicLink(email: string): Promise<AuthResult> {
   const { error } = await supabase.auth.signInWithOtp({ email })
   if (error) {
-    console.error('signIn:', error)
+    console.error('requestMagicLink:', error)
     return { error }
   }
-  return null
+  return {}
+}
+
+export async function signUpWithPassword(
+  email: string,
+  password: string,
+  username: string,
+): Promise<AuthResult> {
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { username },
+    },
+  })
+
+  if (error) {
+    console.error('signUpWithPassword:', error)
+    return { error }
+  }
+
+  return {}
+}
+
+export async function signInWithPassword(email: string, password: string): Promise<AuthResult> {
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+  if (error) {
+    console.error('signInWithPassword:', error)
+    return { error }
+  }
+
+  return {}
+}
+
+export async function signInWithGoogle(): Promise<AuthResult> {
+  const redirectTo =
+    typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined
+
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo,
+      queryParams: {
+        prompt: 'select_account',
+      },
+    },
+  })
+
+  if (error) {
+    console.error('signInWithGoogle:', error)
+    return { error }
+  }
+
+  return {}
 }
 
 export async function signOut(): Promise<void> {
-  await supabase.auth.signOut()
+  const { error } = await supabase.auth.signOut()
+  if (error) {
+    console.error('signOut:', error)
+  }
+}
+
+export async function getTeamMembers(): Promise<TeamMember[]> {
+  const { data, error } = await supabase
+    .from('team_members')
+    .select('*')
+    .order('role', { ascending: true })
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('getTeamMembers:', error)
+    return []
+  }
+
+  return data ?? []
+}
+
+export async function addTeamMember(
+  member: Pick<TeamMember, 'email' | 'name' | 'role' | 'login_method'>,
+): Promise<{ member: TeamMember | null; error?: unknown }> {
+  const payload = {
+    ...member,
+    status: 'invited' as const,
+  }
+
+  const { data, error } = await supabase
+    .from('team_members')
+    .insert([payload])
+    .select()
+    .single()
+
+  if (error) {
+    console.error('addTeamMember:', error)
+    return { member: null, error }
+  }
+
+  return { member: data }
+}
+
+export async function removeTeamMember(id: string): Promise<AuthResult> {
+  const { error } = await supabase.from('team_members').delete().eq('id', id)
+
+  if (error) {
+    console.error('removeTeamMember:', error)
+    return { error }
+  }
+
+  return {}
 }
