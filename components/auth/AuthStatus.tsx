@@ -46,6 +46,13 @@ export default function AuthStatus() {
         <UserCircle2 className="h-4 w-4 text-brand-magnolia" />
         {user.email}
       </span>
+      <Link
+        href="/profile"
+        className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-[#161f3e] px-2.5 py-1 text-[0.7rem] font-semibold transition hover:border-brand-magnolia/60"
+      >
+        <UserCircle2 className="h-3.5 w-3.5" />
+        Account
+      </Link>
       <span className="hidden items-center gap-1 rounded-full bg-brand-magnolia/10 px-2 py-1 text-[0.6rem] uppercase tracking-[0.35em] text-brand-magnolia sm:inline-flex">
         <ShieldCheck className="h-3 w-3" /> Active session
       </span>
