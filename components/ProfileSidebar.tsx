@@ -7,6 +7,7 @@ import { analyzeMessage } from '@/lib/api'
 import { MIRAI_COIN } from '@/lib/contracts'
 import { handleError } from '@/lib/errorHandler'
 import PersonaCard from './PersonaCard'
+import BrandPhotoSpotlight from './BrandPhotoSpotlight'
 
 export default function ProfileSidebar() {
   const address = useAddress()
@@ -53,6 +54,7 @@ export default function ProfileSidebar() {
         <div className="text-2xl font-semibold">{balance?.displayValue ?? '0'} MRC</div>
       </div>
       <PersonaCard aura={aura} personality={personality} address={address} loading={loadingPersona} error={personaError} />
+      <BrandPhotoSpotlight />
     </aside>
   )
 }

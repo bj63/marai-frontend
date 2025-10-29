@@ -1,0 +1,66 @@
+<svg width="720" height="720" viewBox="0 0 720 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="720" height="720" rx="64" fill="#0B1024"/>
+  <g opacity="0.9" filter="url(#glow)">
+    <circle cx="180" cy="200" r="180" fill="url(#paint0_linear)"/>
+    <circle cx="520" cy="520" r="220" fill="url(#paint1_linear)"/>
+    <circle cx="540" cy="160" r="140" fill="url(#paint2_linear)"/>
+    <circle cx="220" cy="520" r="160" fill="url(#paint3_linear)"/>
+  </g>
+  <rect x="120" y="120" width="480" height="480" rx="48" stroke="url(#paint4_linear)" stroke-width="4" stroke-dasharray="24 20" opacity="0.65"/>
+  <g filter="url(#frame_glow)">
+    <rect x="200" y="200" width="320" height="320" rx="36" fill="url(#paint5_linear)" opacity="0.85"/>
+    <rect x="200" y="200" width="320" height="320" rx="36" stroke="url(#paint6_linear)" stroke-width="3"/>
+  </g>
+  <g opacity="0.75">
+    <path d="M360 248C335 248 312 266 304 290C296 314 303 340 320 356L360 396L400 356C417 340 424 314 416 290C408 266 385 248 360 248Z" fill="url(#paint7_radial)"/>
+    <path d="M360 410C330 410 304 434 300 464C296 494 315 522 345 528C360 530 360 546 360 546C360 546 360 530 375 528C405 522 424 494 420 464C416 434 390 410 360 410Z" fill="url(#paint8_radial)"/>
+  </g>
+  <text x="360" y="164" text-anchor="middle" font-family="'Space Grotesk', 'Inter', sans-serif" font-size="32" letter-spacing="0.4em" fill="#C8D2E1" opacity="0.85">MARAI</text>
+  <text x="360" y="600" text-anchor="middle" font-family="'Inter', sans-serif" font-size="20" letter-spacing="0.3em" fill="#FF9ECF" opacity="0.8">HYBRID TECH + SOUL</text>
+  <defs>
+    <filter id="glow" x="-80" y="-80" width="880" height="880" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="40" result="blur"/>
+      <feBlend in="SourceGraphic" in2="blur" mode="screen"/>
+    </filter>
+    <filter id="frame_glow" x="140" y="140" width="440" height="440" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="18" result="blur"/>
+      <feBlend in="SourceGraphic" in2="blur" mode="screen"/>
+    </filter>
+    <linearGradient id="paint0_linear" x1="0" y1="20" x2="320" y2="380" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A47CFF"/>
+      <stop offset="1" stop-color="#3CE0B5"/>
+    </linearGradient>
+    <linearGradient id="paint1_linear" x1="340" y1="340" x2="700" y2="700" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3CE0B5"/>
+      <stop offset="1" stop-color="#FF9ECF"/>
+    </linearGradient>
+    <linearGradient id="paint2_linear" x1="420" y1="40" x2="660" y2="280" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF9ECF"/>
+      <stop offset="1" stop-color="#A47CFF"/>
+    </linearGradient>
+    <linearGradient id="paint3_linear" x1="80" y1="380" x2="360" y2="600" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3CE0B5"/>
+      <stop offset="1" stop-color="#A47CFF"/>
+    </linearGradient>
+    <linearGradient id="paint4_linear" x1="120" y1="120" x2="600" y2="600" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A47CFF" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#FF9ECF" stop-opacity="0.7"/>
+    </linearGradient>
+    <linearGradient id="paint5_linear" x1="200" y1="200" x2="520" y2="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#111A33"/>
+      <stop offset="1" stop-color="#1A2548"/>
+    </linearGradient>
+    <linearGradient id="paint6_linear" x1="200" y1="200" x2="520" y2="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A47CFF"/>
+      <stop offset="1" stop-color="#3CE0B5"/>
+    </linearGradient>
+    <radialGradient id="paint7_radial" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(360 314) scale(76 94)">
+      <stop offset="0" stop-color="#FF9ECF"/>
+      <stop offset="1" stop-color="#3CE0B5" stop-opacity="0.6"/>
+    </radialGradient>
+    <radialGradient id="paint8_radial" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(360 486) scale(78 94)">
+      <stop offset="0" stop-color="#A47CFF"/>
+      <stop offset="1" stop-color="#3CE0B5" stop-opacity="0.7"/>
+    </radialGradient>
+  </defs>
+</svg>
