@@ -40,6 +40,7 @@ const loginLabels: Record<TeamMember['login_method'], string> = {
 
 export default function AdminPage() {
   const { user, status } = useAuth()
+  const { user } = useAuth()
   const [members, setMembers] = useState<TeamMember[]>([])
   const [loadingMembers, setLoadingMembers] = useState(true)
   const [formState, setFormState] = useState<TeamFormState>(defaultFormState)
@@ -70,6 +71,7 @@ export default function AdminPage() {
       active = false
     }
   }, [status])
+  }, [])
 
   const founderFallback = useMemo<TeamMember | null>(() => {
     if (!user?.email) return null
@@ -184,6 +186,8 @@ export default function AdminPage() {
         <p className="max-w-2xl text-sm text-brand-mist/70">
           Coordinate wallet signers, email logins, and Google access from one dashboard. The founder retains elevated
           permissions, while admins and collaborators can plug into the workflows they need.
+          Coordinate wallet signers, email logins, and Google access from one dashboard. The founder retains
+          elevated permissions, while admins and collaborators can plug into the workflows they need.
         </p>
       </header>
 
@@ -212,6 +216,9 @@ export default function AdminPage() {
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold text-white">{member.name || member.email}</span>
+                    <span className="font-semibold text-white">
+                      {member.name || member.email}
+                    </span>
                     <span className="rounded-full bg-brand-magnolia/10 px-2 py-1 text-[0.65rem] uppercase tracking-[0.35em] text-brand-magnolia">
                       {member.role}
                     </span>
@@ -326,6 +333,8 @@ export default function AdminPage() {
           <p className="text-[0.75rem] text-brand-mist/70">
             Keep the founder seat anchored to your email or wallet, then layer other sign-in methods for each squad.
             Mirai stitches Supabase auth with Thirdweb wallets so you can route people by responsibility.
+            Keep the founder seat anchored to your email or wallet, then layer other sign-in methods for each
+            squad. Mirai stitches Supabase auth with Thirdweb wallets so you can route people by responsibility.
           </p>
           <ul className="flex flex-col gap-3 text-[0.75rem] text-brand-mist/70">
             <li className="rounded-lg border border-white/10 bg-[#101737] px-3 py-2">
@@ -339,6 +348,13 @@ export default function AdminPage() {
             <li className="rounded-lg border border-white/10 bg-[#101737] px-3 py-2">
               <span className="block font-semibold text-white">Collaborator lane</span>
               Collaborators hop in with lightweight magic links to submit music, art, or updates without full admin powers.
+              Admins rely on Google SSO or magic links to triage creators, tweak profiles, and monitor feed
+              activity.
+            </li>
+            <li className="rounded-lg border border-white/10 bg-[#101737] px-3 py-2">
+              <span className="block font-semibold text-white">Collaborator lane</span>
+              Collaborators hop in with lightweight magic links to submit music, art, or updates without full
+              admin powers.
             </li>
           </ul>
           <div className="rounded-lg border border-white/10 bg-[#101737] px-3 py-3 text-[0.7rem] text-brand-mist/70">
@@ -346,6 +362,11 @@ export default function AdminPage() {
             <p>
               Review the <Link href="https://supabase.com/docs/guides/auth" className="text-brand-magnolia underline">Supabase auth guide</Link> and ensure the{' '}
               <code className="rounded bg-black/40 px-1 py-0.5 text-[0.65rem]">team_members</code> table allows the service role to insert and delete rows.
+              Review the <Link href="https://supabase.com/docs/guides/auth" className="text-brand-magnolia underline">
+                Supabase auth guide
+              </Link>{' '}
+              and ensure the <code className="rounded bg-black/40 px-1 py-0.5 text-[0.65rem]">team_members</code>{' '}
+              table allows the service role to insert and delete rows.
             </p>
           </div>
         </aside>
