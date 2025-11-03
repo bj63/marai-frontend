@@ -4,13 +4,20 @@
 
 :root {
   color-scheme: dark;
-  --color-magnolia: #a47cff;
-  --color-bayou: #3ce0b5;
+  --design-primary: #a47cff;
+  --design-accent: #3ce0b5;
+  --design-background: #0b1024;
+  --design-neutral: #c8d2e1;
+  --design-surface: rgba(200, 210, 225, 0.08);
+  --design-stroke: rgba(200, 210, 225, 0.22);
+  --design-font-family: var(--font-body, 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+  --color-magnolia: var(--design-accent);
+  --color-bayou: var(--design-primary);
   --color-cypress: #ff9ecf;
-  --color-midnight: #0b1024;
-  --color-mist: #c8d2e1;
-  --glass: rgba(200, 210, 225, 0.08);
-  --stroke: rgba(200, 210, 225, 0.22);
+  --color-midnight: var(--design-background);
+  --color-mist: var(--design-neutral);
+  --glass: var(--design-surface);
+  --stroke: var(--design-stroke);
 }
 
 html,
@@ -20,7 +27,7 @@ body {
 }
 
 body {
-  font-family: var(--font-body), 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--design-font-family);
   line-height: 1.6;
 }
 

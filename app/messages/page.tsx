@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Loader2, MessageCircle, Send } from 'lucide-react'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { useDesignTheme } from '@/components/design/DesignThemeProvider'
 import {
   getConversationMessages,
   getConversations,
@@ -14,6 +15,7 @@ import {
 
 export default function MessagesPage() {
   const { status, user } = useAuth()
+  const { registerInteraction, flushFeedback, theme } = useDesignTheme()
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [messages, setMessages] = useState<DirectMessage[]>([])
@@ -21,6 +23,8 @@ export default function MessagesPage() {
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [sending, setSending] = useState(false)
   const [draft, setDraft] = useState('')
+  const conversationStartRef = useRef<number | null>(null)
+  const activeConversationRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (status !== 'authenticated' || !user?.id) {
@@ -50,9 +54,39 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (!selectedId) {
+      if (conversationStartRef.current && activeConversationRef.current) {
+        const duration = (Date.now() - conversationStartRef.current) / 1000
+        registerInteraction({
+          metric: 'conversation_screen_time',
+          value: Number.isFinite(duration) ? duration : 0,
+          targetId: activeConversationRef.current,
+          actionType: 'conversation_engagement',
+        })
+        conversationStartRef.current = null
+        activeConversationRef.current = null
+      }
       setMessages([])
       return
     }
+
+    if (activeConversationRef.current && conversationStartRef.current) {
+      const duration = (Date.now() - conversationStartRef.current) / 1000
+      registerInteraction({
+        metric: 'conversation_screen_time',
+        value: Number.isFinite(duration) ? duration : 0,
+        targetId: activeConversationRef.current,
+        actionType: 'conversation_engagement',
+      })
+    }
+
+    conversationStartRef.current = Date.now()
+    activeConversationRef.current = selectedId
+    registerInteraction({
+      metric: 'conversation_opened',
+      value: 1,
+      targetId: selectedId,
+      actionType: 'conversation_engagement',
+    })
 
     let active = true
 
@@ -71,6 +105,35 @@ export default function MessagesPage() {
     }
   }, [selectedId])
 
+  useEffect(() => {
+    return () => {
+      if (conversationStartRef.current && activeConversationRef.current) {
+        const duration = (Date.now() - conversationStartRef.current) / 1000
+        registerInteraction({
+          metric: 'conversation_screen_time',
+          value: Number.isFinite(duration) ? duration : 0,
+          targetId: activeConversationRef.current,
+          actionType: 'conversation_engagement',
+        })
+      }
+      conversationStartRef.current = null
+      activeConversationRef.current = null
+      void flushFeedback()
+    }
+  }, [flushFeedback, registerInteraction])
+
+  const relationalSignature = useMemo(() => theme.relational_signature ?? null, [theme.relational_signature])
+
+  const deriveSentiment = (text: string): 'positive' | 'neutral' | 'negative' => {
+    const normalized = text.toLowerCase()
+    const positiveHints = ['thank', 'great', 'appreciate', 'awesome', 'excited', 'love', 'glad']
+    const negativeHints = ['frustrated', 'angry', 'upset', 'worried', 'sad', 'problem', 'issue']
+
+    if (positiveHints.some((word) => normalized.includes(word))) return 'positive'
+    if (negativeHints.some((word) => normalized.includes(word))) return 'negative'
+    return 'neutral'
+  }
+
   const handleSend = async () => {
     if (!user?.id || !selectedId || !draft.trim()) return
 
@@ -79,6 +142,20 @@ export default function MessagesPage() {
     if (!error && message) {
       setMessages((previous) => [...previous, message])
       setDraft('')
+      registerInteraction({
+        metric: 'direct_message_sent',
+        value: 1,
+        sentiment: deriveSentiment(message.body),
+        targetId: selectedId,
+        actionType: 'conversation_engagement',
+        relationshipContext: {
+          target_user_id: selectedId,
+          connection_type: 'conversation',
+        },
+        metadata: {
+          length: message.body.length,
+        },
+      })
     }
     setSending(false)
   }
@@ -145,6 +222,16 @@ export default function MessagesPage() {
         <section className="flex h-[480px] flex-col rounded-2xl border border-white/10 bg-[#0f1737]/70">
           {selectedId ? (
             <>
+              {relationalSignature ? (
+                <div className="border-b border-white/10 bg-white/5 px-4 py-3 text-xs uppercase tracking-[0.32em] text-brand-mist/60">
+                  <span className="block text-[0.65rem] font-semibold text-brand-mist/70">Relational harmony active</span>
+                  {'summary' in relationalSignature && typeof relationalSignature.summary === 'string' ? (
+                    <span className="mt-1 block text-[0.6rem] normal-case tracking-normal text-brand-mist/70">
+                      {relationalSignature.summary}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 text-xs uppercase tracking-[0.32em] text-brand-mist/60">
                 <span>Thread</span>
                 {loadingMessages ? <Loader2 className="h-3.5 w-3.5 animate-spin text-brand-magnolia" /> : null}
