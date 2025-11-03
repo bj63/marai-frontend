@@ -23,6 +23,8 @@ import {
 } from '@/lib/supabaseApi'
 import MoodCard from '@/components/MoodCard'
 import FollowButton from '@/components/profile/FollowButton'
+import EvolutionCard, { type EmotionSnapshot } from '@/components/EvolutionCard'
+import { evolveRelationalEntity } from '@/lib/api'
 
 type TraitKey = keyof StorePersonality
 
@@ -35,6 +37,21 @@ interface ProfileFormState {
 type FeedbackState = { type: 'success' | 'error'; message: string } | null
 
 const emojiOptions = ['🐱', '🐰', '🐻', '🐉', '🦊', '🐧', '🐼']
+
+const moodToneMap: Record<string, { tone: string; intensity: number }> = {
+  happy: { tone: 'joy', intensity: 0.85 },
+  joy: { tone: 'joy', intensity: 0.88 },
+  excited: { tone: 'joy', intensity: 0.95 },
+  calm: { tone: 'calm', intensity: 0.4 },
+  curious: { tone: 'focused', intensity: 0.6 },
+  focused: { tone: 'focused', intensity: 0.65 },
+  tired: { tone: 'tired', intensity: 0.35 },
+  sad: { tone: 'sad', intensity: 0.42 },
+  angry: { tone: 'angry', intensity: 0.55 },
+  playful: { tone: 'happy', intensity: 0.75 },
+  grateful: { tone: 'grateful', intensity: 0.7 },
+  neutral: { tone: 'neutral', intensity: 0.45 },
+}
 
 const defaultTraits: StorePersonality = {
   empathy: 0.75,
@@ -74,6 +91,21 @@ const traitCopy: Record<TraitKey, { label: string; helper: string }> = {
 
 const clamp = (value: number) => Math.min(1, Math.max(0, value))
 
+function buildEmojiAvatar(emoji: string, accent: string) {
+  const sanitizedAccent = accent && /^#([0-9A-Fa-f]{3}){1,2}$/.test(accent) ? accent : '#6366F1'
+  const svg = `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" rx="32" ry="32" fill="${sanitizedAccent}"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="64">${emoji}</text></svg>`
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+}
+
+function resolveTone(mood: string | null | undefined) {
+  if (!mood) {
+    return moodToneMap.neutral
+  }
+
+  const normalized = mood.toLowerCase()
+  return moodToneMap[normalized] ?? moodToneMap.neutral
+}
+
 function mapPersonality(record: DbPersonality | null): StorePersonality {
   if (!record) return { ...defaultTraits }
 
@@ -100,11 +132,13 @@ export default function ProfilePage() {
   const federationId = useMoaStore((state) => state.federationId)
   const storePersonality = useMoaStore((state) => state.personality)
   const setStorePersonality = useMoaStore((state) => state.setPersonality)
+  const currentMood = useMoaStore((state) => state.mood)
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
   const [feedback, setFeedback] = useState<FeedbackState>(null)
+  const [evolutionNotice, setEvolutionNotice] = useState<FeedbackState>(null)
   const [activeTab, setActiveTab] = useState<'about' | 'posts' | 'followers' | 'following'>('about')
   const [profileForm, setProfileForm] = useState<ProfileFormState>(() => ({
     name: '',
@@ -119,6 +153,13 @@ export default function ProfilePage() {
   const [followers, setFollowers] = useState<FollowProfile[]>([])
   const [following, setFollowing] = useState<FollowProfile[]>([])
   const [connectionsLoading, setConnectionsLoading] = useState(true)
+  const [customEvolutionImage, setCustomEvolutionImage] = useState<string | null>(null)
+  const [entityId, setEntityId] = useState<string | null>(null)
+  const [overrideEmotionScore, setOverrideEmotionScore] = useState<number | null>(null)
+  const [overrideEmotionIntensity, setOverrideEmotionIntensity] = useState<number | null>(null)
+  const [overrideTone, setOverrideTone] = useState<string | null>(null)
+  const [remoteHistory, setRemoteHistory] = useState<EmotionSnapshot[]>([])
+  const [evolving, setEvolving] = useState(false)
 
   const founderNameFallback = useMemo(() => {
     if (!user) return ''
@@ -312,6 +353,145 @@ export default function ProfilePage() {
     setSaving(false)
   }
 
+  const fallbackEvolutionImage = useMemo(
+    () => buildEmojiAvatar(profileForm.avatar, profileForm.color),
+    [profileForm.avatar, profileForm.color],
+  )
+
+  const evolutionImage = customEvolutionImage ?? fallbackEvolutionImage
+
+  const traitAverage = useMemo(() => {
+    const values = Object.values(traits)
+    if (values.length === 0) return 0.5
+    const total = values.reduce((acc, value) => acc + value, 0)
+    return total / values.length
+  }, [traits])
+
+  const normalizedConnections = useMemo(
+    () => Math.min(1, (followers.length + following.length) / 20),
+    [followers.length, following.length],
+  )
+
+  const normalizedEngagement = useMemo(() => {
+    if (profileFeed.length === 0) return 0
+    const engagementTotal = profileFeed.reduce(
+      (accumulator, post) => accumulator + (post.likes_count ?? 0) + post.comments.length,
+      0,
+    )
+    return Math.min(1, engagementTotal / 50)
+  }, [profileFeed])
+
+  const derivedBondScore = useMemo(() => {
+    const score = (traitAverage * 0.4 + normalizedConnections * 0.35 + normalizedEngagement * 0.25) * 100
+    return Math.round(Math.min(100, Math.max(0, score)))
+  }, [normalizedConnections, normalizedEngagement, traitAverage])
+
+  const baseTimeline = useMemo<EmotionSnapshot[]>(() => {
+    if (profileFeed.length === 0) return []
+    return [...profileFeed]
+      .sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      )
+      .slice(0, 6)
+      .map((post) => {
+        const engagementScore = (post.likes_count ?? 0) * 6 + post.comments.length * 4
+        const score = Math.round(Math.min(100, Math.max(0, 45 + engagementScore)))
+        return {
+          timestamp: post.created_at,
+          score,
+          note: post.mood ? `Mood: ${post.mood}` : undefined,
+        }
+      })
+  }, [profileFeed])
+
+  const connectionHistory = remoteHistory.length > 0 ? remoteHistory : baseTimeline
+
+  const latestMood = useMemo(() => {
+    if (profileFeed.length > 0) {
+      const sorted = [...profileFeed].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      )
+      const withMood = sorted.find((post) => Boolean(post.mood))
+      if (withMood?.mood) {
+        return withMood.mood
+      }
+    }
+
+    return currentMood
+  }, [currentMood, profileFeed])
+
+  const toneDetails = resolveTone(overrideTone ?? latestMood)
+
+  const derivedIntensity = useMemo(() => {
+    const variation = Math.abs(traitAverage - 0.5)
+    const base = 0.35 + toneDetails.intensity * 0.4 + normalizedEngagement * 0.25 + variation * 0.2
+    return Math.min(1, Math.max(0, base))
+  }, [normalizedEngagement, toneDetails.intensity, traitAverage])
+
+  const derivedEmotionState = useMemo(() => {
+    const historyScore = connectionHistory.length > 0 ? connectionHistory[0].score / 100 : derivedBondScore / 100
+    const combined = traitAverage * 0.6 + historyScore * 0.4
+    return Math.round(Math.min(100, Math.max(0, combined * 100)))
+  }, [connectionHistory, derivedBondScore, traitAverage])
+
+  const liveEmotionScore = overrideEmotionScore ?? derivedEmotionState
+  const liveEmotionIntensity = overrideEmotionIntensity ?? derivedIntensity
+  const liveTone = overrideTone ?? toneDetails.tone
+
+  const marAiIdentifier = useMemo(() => {
+    const source = federationId || user?.id || '0'
+    const sum = source.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    return (sum % 9000) + 1000
+  }, [federationId, user?.id])
+
+  const evolutionUpdatedAt = connectionHistory.length > 0 ? connectionHistory[0].timestamp : undefined
+
+  const displayName = profileForm.name || founderNameFallback || 'Your Mirai'
+
+  const handleEvolve = async () => {
+    if (!user?.id) return
+    setEvolutionNotice(null)
+    setEvolving(true)
+    try {
+      const response = await evolveRelationalEntity({
+        userId: user.id,
+        emotion: liveTone,
+        entityId: entityId ?? undefined,
+        relationshipScore: liveEmotionScore,
+      })
+
+      if (response.imageUrl) {
+        setCustomEvolutionImage(response.imageUrl)
+      }
+
+      if (typeof response.connectionScore === 'number' && !Number.isNaN(response.connectionScore)) {
+        const nextScore = Math.round(Math.min(100, Math.max(0, response.connectionScore)))
+        setOverrideEmotionScore(nextScore)
+        setOverrideEmotionIntensity(Math.min(1, Math.max(0, nextScore / 100)))
+        setRemoteHistory((previous) => [
+          {
+            timestamp: new Date().toISOString(),
+            score: nextScore,
+            note: response.prompt,
+          },
+          ...previous,
+        ])
+      }
+
+      if (response.entityId) {
+        setEntityId(response.entityId)
+      }
+
+      setOverrideTone(liveTone)
+      setEvolutionNotice({ type: 'success', message: 'Your Mirai evolved with a refreshed aura.' })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'We could not evolve your Mirai just yet. Try again later.'
+      setEvolutionNotice({ type: 'error', message })
+    } finally {
+      setEvolving(false)
+    }
+  }
+
   if (status === 'loading' || loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center text-brand-mist/70">
@@ -382,6 +562,19 @@ export default function ProfilePage() {
         >
           {feedback.type === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
           {feedback.message}
+        </div>
+      ) : null}
+
+      {evolutionNotice ? (
+        <div
+          className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${
+            evolutionNotice.type === 'success'
+              ? 'border-brand-magnolia/30 bg-brand-magnolia/10 text-brand-magnolia'
+              : 'border-rose-500/40 bg-rose-500/10 text-rose-200'
+          }`}
+        >
+          {evolutionNotice.type === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+          {evolutionNotice.message}
         </div>
       ) : null}
 
@@ -474,32 +667,48 @@ export default function ProfilePage() {
             </button>
           </div>
 
-          <motion.div
-            className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/5 p-6 text-center text-brand-mist"
-            style={{ borderTop: `4px solid ${profileForm.color}` }}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="text-5xl">{profileForm.avatar}</div>
-            <div className="flex flex-col gap-1">
-              <span className="text-lg font-semibold text-white">{profileForm.name || founderNameFallback || 'Your Mirai'}</span>
-              <span className="text-xs uppercase tracking-[0.3em] text-brand-mist/60">Preview</span>
-            </div>
-            <div className="rounded-xl bg-[#121b3a]/70 p-4 text-left text-sm text-brand-mist/80">
-              <p className="text-brand-mist/60">Session signature</p>
-              <ul className="mt-2 space-y-1 text-xs">
-                {(Object.keys(traitCopy) as TraitKey[]).map((trait) => (
-                  <li key={trait} className="flex justify-between">
-                    <span>{traitCopy[trait].label}</span>
-                    <span className="font-mono">{Math.round((traits[trait] || 0) * 100)}%</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <p className="text-xs text-brand-mist/70">
-              These settings sync with Supabase, so every teammate sees the same personality and branding when they log in.
-            </p>
-          </motion.div>
+          <div className="flex flex-col gap-6">
+            <motion.div
+              className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/5 p-6 text-center text-brand-mist"
+              style={{ borderTop: `4px solid ${profileForm.color}` }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="text-5xl">{profileForm.avatar}</div>
+              <div className="flex flex-col gap-1">
+                <span className="text-lg font-semibold text-white">{displayName}</span>
+                <span className="text-xs uppercase tracking-[0.3em] text-brand-mist/60">Preview</span>
+              </div>
+              <div className="rounded-xl bg-[#121b3a]/70 p-4 text-left text-sm text-brand-mist/80">
+                <p className="text-brand-mist/60">Session signature</p>
+                <ul className="mt-2 space-y-1 text-xs">
+                  {(Object.keys(traitCopy) as TraitKey[]).map((trait) => (
+                    <li key={trait} className="flex justify-between">
+                      <span>{traitCopy[trait].label}</span>
+                      <span className="font-mono">{Math.round((traits[trait] || 0) * 100)}%</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <p className="text-xs text-brand-mist/70">
+                These settings sync with Supabase, so every teammate sees the same personality and branding when they log in.
+              </p>
+            </motion.div>
+
+            <EvolutionCard
+              marAiId={marAiIdentifier}
+              name={displayName}
+              imageUrl={evolutionImage}
+              bondScore={derivedBondScore}
+              emotionStateScore={liveEmotionScore}
+              emotionStateUpdatedAt={evolutionUpdatedAt}
+              history={connectionHistory}
+              onEvolve={handleEvolve}
+              loading={evolving}
+              emotionTone={liveTone}
+              emotionIntensity={liveEmotionIntensity}
+            />
+          </div>
         </div>
       ) : null}
 
