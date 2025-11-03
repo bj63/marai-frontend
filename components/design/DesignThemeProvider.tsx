@@ -42,6 +42,7 @@ type DesignInteractionInput = {
 
 type QueuedInteraction = DesignInteractionInput & { timestamp: number }
 
+export type NormalizedTheme = {
 type NormalizedTheme = {
   design_dna: DesignDNA
   evolution_stage: string | null
@@ -52,12 +53,16 @@ type NormalizedTheme = {
 type DesignThemeContextValue = {
   theme: NormalizedTheme
   loading: boolean
+  adaptiveEnabled: boolean
+  setAdaptiveEnabled: (enabled: boolean) => void
   submitEmotionContext: (input: Omit<DesignContextRequest, 'user_id'> & { user_id?: string }) => Promise<NormalizedTheme | null>
   registerInteraction: (interaction: DesignInteractionInput) => void
   flushFeedback: () => Promise<void>
 }
 
 const STORAGE_KEY = 'marai:design-theme'
+const PENDING_THEME_KEY = 'marai:design-theme-pending'
+const ADAPTIVE_KEY = 'marai:design-adaptive-enabled'
 const FEEDBACK_INTERVAL_MS = 5000
 
 const DEFAULT_DNA: DesignDNA = {
@@ -160,6 +165,21 @@ function loadCachedTheme(designProfile: UserDesignProfile | null): NormalizedThe
   return DEFAULT_THEME
 }
 
+function loadPendingTheme(): NormalizedTheme | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(PENDING_THEME_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as NormalizedTheme
+    if (parsed && isRecord(parsed.design_dna)) {
+      return normaliseTheme(parsed, DEFAULT_THEME)
+    }
+  } catch (error) {
+    reportError('DesignThemeProvider.loadPendingTheme', error)
+  }
+  return null
+}
+
 function applyCssVariables(theme: NormalizedTheme) {
   if (typeof document === 'undefined') return
   const root = document.documentElement
@@ -206,6 +226,14 @@ export function DesignThemeProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false)
   const [pendingInteractions, setPendingInteractions] = useState<QueuedInteraction[]>([])
   const [bootstrappedFromProfile, setBootstrappedFromProfile] = useState(Boolean(designProfile?.design_dna))
+  const [pendingTheme, setPendingTheme] = useState<NormalizedTheme | null>(() => loadPendingTheme())
+  const [adaptiveEnabledState, setAdaptiveEnabledState] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true
+    const stored = window.localStorage.getItem(ADAPTIVE_KEY)
+    return stored !== 'false'
+  })
+
+  const adaptiveEnabled = adaptiveEnabledState
 
   useLayoutEffect(() => {
     applyCssVariables(theme)
@@ -235,12 +263,45 @@ export function DesignThemeProvider({ children }: { children: ReactNode }) {
     }
   }, [theme])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!pendingTheme) {
+      window.localStorage.removeItem(PENDING_THEME_KEY)
+      return
+    }
+
+    try {
+      window.localStorage.setItem(PENDING_THEME_KEY, JSON.stringify(pendingTheme))
+    } catch (error) {
+      reportError('DesignThemeProvider.storePendingTheme', error)
+    }
+  }, [pendingTheme])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(ADAPTIVE_KEY, adaptiveEnabled ? 'true' : 'false')
+  }, [adaptiveEnabled])
+
+  useEffect(() => {
+    if (adaptiveEnabled && pendingTheme) {
+      setTheme(pendingTheme)
+      setPendingTheme(null)
+    }
+  }, [adaptiveEnabled, pendingTheme])
+
   const persistTheme = useCallback(
     async (updater: (previous: NormalizedTheme) => NormalizedTheme) => {
       let computedTheme: NormalizedTheme = DEFAULT_THEME
       setTheme((previous) => {
         const nextTheme = updater(previous)
         computedTheme = nextTheme
+        return adaptiveEnabled ? nextTheme : previous
+      })
+
+      if (!adaptiveEnabled) {
+        setPendingTheme(computedTheme)
+      } else if (pendingTheme) {
+        setPendingTheme(null)
         return nextTheme
       })
 
@@ -267,6 +328,17 @@ export function DesignThemeProvider({ children }: { children: ReactNode }) {
 
       return computedTheme
     },
+    [adaptiveEnabled, pendingTheme, refreshAccountData, user?.id],
+  )
+
+  const setAdaptiveEnabled = useCallback(
+    (enabled: boolean) => {
+      setAdaptiveEnabledState(enabled)
+      if (!enabled) {
+        setPendingTheme(null)
+      }
+    },
+    [],
     [refreshAccountData, user?.id],
   )
 
@@ -332,12 +404,14 @@ export function DesignThemeProvider({ children }: { children: ReactNode }) {
     try {
       const response = await postDesignFeedback(payload, session.access_token)
       if (response && response.status === 'mutated' && response.design_dna) {
+        await persistTheme((previous) => normaliseTheme(response, previous))
         const nextTheme = normaliseTheme(response, theme)
         await persistTheme(nextTheme)
       }
     } catch (error) {
       reportError('DesignThemeProvider.flushFeedback', error, payload)
     }
+  }, [persistTheme, session?.access_token, session?.user?.id])
   }, [persistTheme, session?.access_token, session?.user?.id, theme])
 
   useEffect(() => {
@@ -388,10 +462,13 @@ export function DesignThemeProvider({ children }: { children: ReactNode }) {
     () => ({
       theme,
       loading,
+      adaptiveEnabled,
+      setAdaptiveEnabled,
       submitEmotionContext,
       registerInteraction,
       flushFeedback,
     }),
+    [adaptiveEnabled, flushFeedback, loading, registerInteraction, setAdaptiveEnabled, submitEmotionContext, theme],
     [flushFeedback, loading, registerInteraction, submitEmotionContext, theme],
   )
 
