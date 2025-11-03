@@ -138,3 +138,105 @@ export async function evolveRelationalEntity(payload: RelationalEntityRequest) {
     entityId,
   } satisfies RelationalEntityResponse
 }
+
+export interface RemoteDesignDNA {
+  layout?: string | null
+  theme_tokens?: Record<string, string> | null
+  palette?: Record<string, string> | null
+  motion?: Record<string, unknown> | null
+  soundscape?: Record<string, unknown> | null
+  depth?: unknown
+  font?: string | null
+  [key: string]: unknown
+}
+
+export interface DesignTheme {
+  design_dna: RemoteDesignDNA
+  evolution_stage: string | null
+  preferred_emotion: string | null
+  relational_signature?: Record<string, unknown> | null
+}
+
+export interface DesignContextRequest {
+  user_id: string
+  emotion: string
+  intensity: number
+  confidence: number
+  user_state: string
+  relationship_context?: Record<string, unknown>
+}
+
+export type DesignContextResponse = DesignTheme & {
+  palette?: Record<string, string> | null
+  theme_tokens?: Record<string, string> | null
+}
+
+export interface DesignFeedbackInteraction {
+  metric: string
+  value?: number
+  sentiment?: string
+  target_id?: string
+  metadata?: Record<string, unknown>
+}
+
+export interface DesignFeedbackPayload {
+  user_id: string
+  action_type: string
+  interactions: DesignFeedbackInteraction[]
+  relationship_context?: Record<string, unknown>
+}
+
+export interface DesignFeedbackResponse {
+  status: string
+  design_dna?: RemoteDesignDNA
+  evolution_stage?: string | null
+  preferred_emotion?: string | null
+  relational_signature?: Record<string, unknown> | null
+}
+
+function buildAuthHeaders(accessToken?: string | null) {
+  return accessToken
+    ? {
+        Authorization: `Bearer ${accessToken}`,
+      }
+    : {}
+}
+
+export async function getDesignTheme(userId: string, accessToken?: string | null) {
+  const response = await fetch(`${resolveApiBase()}/design/theme/${encodeURIComponent(userId)}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeaders(accessToken),
+    },
+    cache: 'no-store',
+  })
+
+  return handleApiResponse<DesignTheme>(response, 'Fetch design theme')
+}
+
+export async function postDesignContext(payload: DesignContextRequest, accessToken?: string | null) {
+  const response = await fetch(`${resolveApiBase()}/design/context`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeaders(accessToken),
+    },
+    body: JSON.stringify(payload),
+  })
+
+  return handleApiResponse<DesignContextResponse>(response, 'Submit design context')
+}
+
+export async function postDesignFeedback(payload: DesignFeedbackPayload, accessToken?: string | null) {
+  const response = await fetch(`${resolveApiBase()}/design/feedback`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeaders(accessToken),
+    },
+    body: JSON.stringify(payload),
+  })
+
+  return handleApiResponse<DesignFeedbackResponse>(response, 'Submit design feedback')
+}

@@ -7,6 +7,7 @@ import TimelineCard, { TimelineEntry } from './TimelineCard'
 import { analyzeMessage, evolveRelationalEntity, type RelationalEntityResponse } from '@/lib/api'
 import { handleError } from '@/lib/errorHandler'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { useDesignTheme } from '@/components/design/DesignThemeProvider'
 
 interface ChatMessage {
   you: string
@@ -30,6 +31,7 @@ export default function Chat() {
   const [entityId, setEntityId] = useState<string | null>(null)
   const [isEvolvingEntity, setIsEvolvingEntity] = useState(false)
   const { user } = useAuth()
+  const { submitEmotionContext, registerInteraction } = useDesignTheme()
   const walletAddress = useAddress()
 
   const handleSend = async () => {
@@ -49,11 +51,35 @@ export default function Chat() {
         typeof data.emotion === 'string' && data.scores && typeof data.scores[data.emotion] === 'number'
           ? data.scores[data.emotion]
           : DEFAULT_INTENSITY
+      const confidence = Math.min(1, Math.max(0, emotionScore))
+      const relationshipContext = entityState?.entityId
+        ? {
+            target_user_id: entityState.entityId,
+            connection_type: 'relational-entity',
+          }
+        : undefined
 
       setMessages((prev) => [...prev, { you: currentInput, mirai: emotion, color: nextColor }])
       setColor(nextColor)
       setIntensity(emotionScore)
       setTimeline(data.timeline ?? [])
+
+      await submitEmotionContext({
+        user_id: user?.id,
+        emotion,
+        intensity: emotionScore,
+        confidence,
+        user_state: 'chatting',
+        relationship_context: relationshipContext,
+      })
+
+      registerInteraction({
+        metric: 'chat_message',
+        value: 1,
+        sentiment: emotionScore > 0.66 ? 'positive' : emotionScore < 0.33 ? 'negative' : 'neutral',
+        metadata: { emotion, intensity: emotionScore },
+        relationshipContext,
+      })
 
       setIsEvolvingEntity(true)
       try {

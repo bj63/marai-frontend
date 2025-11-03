@@ -113,6 +113,26 @@ export interface UserSettings {
   updated_at: string
 }
 
+export interface DesignDNA {
+  layout: string | null
+  theme_tokens: Record<string, string>
+  palette: Record<string, string>
+  motion: Record<string, unknown>
+  soundscape: Record<string, unknown>
+  depth: unknown
+  font: string | null
+}
+
+export interface UserDesignProfile {
+  id: string
+  user_id: string
+  design_dna: DesignDNA | null
+  evolution_stage: string | null
+  preferred_emotion: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface CaptionSuggestionResult {
   caption: string
 }
@@ -408,6 +428,30 @@ export async function saveUserSettings(
   )
 
   return result.error ? { error: result.error } : {}
+}
+
+export async function getUserDesignProfile(userId: string): Promise<UserDesignProfile | null> {
+  const { data } = await trackSupabase(
+    'getUserDesignProfile',
+    () => supabase.from('user_design_profile').select('*').eq('user_id', userId).maybeSingle(),
+    { userId },
+  )
+
+  return (data as UserDesignProfile | null) ?? null
+}
+
+export async function saveUserDesignProfile(
+  userId: string,
+  profile: Partial<UserDesignProfile> & { design_dna?: DesignDNA | null },
+): Promise<{ profile: UserDesignProfile | null; error?: unknown }> {
+  const payload = { user_id: userId, ...profile }
+  const result = await trackSupabase(
+    'saveUserDesignProfile',
+    () => supabase.from('user_design_profile').upsert(payload, { onConflict: 'user_id' }).select().single(),
+    { userId },
+  )
+
+  return { profile: (result.data as UserDesignProfile | null) ?? null, error: result.error ?? undefined }
 }
 
 export async function getNotifications(userId: string): Promise<Notification[]> {

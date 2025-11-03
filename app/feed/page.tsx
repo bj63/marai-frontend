@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Heart, Loader2, MessageCircle, Music, Sparkles } from 'lucide-react'
 import MoodCard from '@/components/MoodCard'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { useMoaStore } from '@/lib/store'
+import { useDesignTheme } from '@/components/design/DesignThemeProvider'
 import {
   addComment,
   createPost,
@@ -21,6 +22,7 @@ import {
 export default function FeedPage() {
   const { status, user } = useAuth()
   const { setMood: setGlobalMood, federationId } = useMoaStore()
+  const { registerInteraction } = useDesignTheme()
 
   const [feed, setFeed] = useState<FeedPostWithEngagement[]>([])
   const [loadingFeed, setLoadingFeed] = useState(true)
@@ -31,10 +33,31 @@ export default function FeedPage() {
   const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({})
   const [captionLoading, setCaptionLoading] = useState(false)
   const [captionSuggestion, setCaptionSuggestion] = useState<string | null>(null)
+  const viewStartedAt = useRef<number | null>(null)
 
   const [mood, setMood] = useState('happy')
   const [note, setNote] = useState('')
   const [song, setSong] = useState('')
+
+  useEffect(() => {
+    viewStartedAt.current = Date.now()
+    registerInteraction({
+      metric: 'feed_opened',
+      value: 1,
+      actionType: 'feed_engagement',
+    })
+
+    return () => {
+      if (viewStartedAt.current) {
+        const duration = (Date.now() - viewStartedAt.current) / 1000
+        registerInteraction({
+          metric: 'feed_screen_time',
+          value: Number.isFinite(duration) ? duration : 0,
+          actionType: 'feed_engagement',
+        })
+      }
+    }
+  }, [registerInteraction])
 
   useEffect(() => {
     let active = true
@@ -82,6 +105,16 @@ export default function FeedPage() {
     return profile?.name || metadata?.username || metadata?.full_name || user.email?.split('@')[0] || null
   }, [profile?.name, user])
 
+  const deriveSentiment = (text: string): 'positive' | 'neutral' | 'negative' => {
+    const normalized = text.toLowerCase()
+    const positiveHints = ['great', 'love', 'excited', 'proud', 'grateful', 'thankful']
+    const negativeHints = ['frustrated', 'sad', 'upset', 'worried', 'angry', 'bad']
+
+    if (positiveHints.some((word) => normalized.includes(word))) return 'positive'
+    if (negativeHints.some((word) => normalized.includes(word))) return 'negative'
+    return 'neutral'
+  }
+
   const handlePost = async () => {
     const trimmedNote = note.trim()
     const trimmedSong = song.trim()
@@ -128,6 +161,17 @@ export default function FeedPage() {
     setSong('')
     setCaptionSuggestion(null)
     setCreatingPost(false)
+
+    registerInteraction({
+      metric: 'feed_post_created',
+      value: 1,
+      sentiment: deriveSentiment(trimmedNote),
+      actionType: 'feed_engagement',
+      metadata: {
+        mood,
+        hasSong: Boolean(trimmedSong),
+      },
+    })
   }
 
   const canShare = status === 'authenticated'
@@ -153,6 +197,12 @@ export default function FeedPage() {
               : entry,
           ),
         )
+        registerInteraction({
+          metric: 'feed_like_removed',
+          value: 1,
+          targetId: postId,
+          actionType: 'feed_engagement',
+        })
       }
       return
     }
@@ -170,6 +220,12 @@ export default function FeedPage() {
             : entry,
         ),
       )
+      registerInteraction({
+        metric: 'feed_like_added',
+        value: 1,
+        targetId: postId,
+        actionType: 'feed_engagement',
+      })
     }
   }
 
@@ -203,6 +259,17 @@ export default function FeedPage() {
           : entry,
       ),
     )
+
+    registerInteraction({
+      metric: 'feed_comment_added',
+      value: 1,
+      targetId: postId,
+      actionType: 'feed_engagement',
+      sentiment: deriveSentiment(draft),
+      metadata: {
+        length: draft.length,
+      },
+    })
   }
 
   const handleGenerateCaption = async () => {

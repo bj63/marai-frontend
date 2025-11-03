@@ -10,7 +10,11 @@ import {
   signInWithPassword,
   signOut as signOutFromSupabase,
   signUpWithPassword,
+  getUserSettings,
+  getUserDesignProfile,
   type AuthResult,
+  type UserSettings,
+  type UserDesignProfile,
 } from '@/lib/supabaseApi'
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
@@ -19,6 +23,10 @@ interface AuthContextValue {
   session: Session | null
   user: User | null
   status: AuthStatus
+  settings: UserSettings | null
+  designProfile: UserDesignProfile | null
+  accountHydrated: boolean
+  refreshAccountData: () => Promise<void>
   signInWithMagicLink: (email: string) => Promise<AuthResult>
   signUpWithCredentials: (email: string, password: string, username: string) => Promise<AuthResult>
   signInWithCredentials: (email: string, password: string) => Promise<AuthResult>
@@ -31,6 +39,9 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [status, setStatus] = useState<AuthStatus>('loading')
+  const [settings, setSettings] = useState<UserSettings | null>(null)
+  const [designProfile, setDesignProfile] = useState<UserDesignProfile | null>(null)
+  const [accountHydrated, setAccountHydrated] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -66,6 +77,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!active) return
       setSession(nextSession)
       setStatus(nextSession ? 'authenticated' : 'unauthenticated')
+      if (!nextSession) {
+        setSettings(null)
+        setDesignProfile(null)
+        setAccountHydrated(false)
+      }
     })
 
     return () => {
@@ -73,6 +89,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe()
     }
   }, [])
+
+  const hydrateForUser = useCallback(async (userId: string) => {
+    try {
+      const [fetchedSettings, fetchedDesignProfile] = await Promise.all([
+        getUserSettings(userId),
+        getUserDesignProfile(userId),
+      ])
+
+      setSettings(fetchedSettings)
+      setDesignProfile(fetchedDesignProfile)
+      setAccountHydrated(true)
+    } catch (error) {
+      reportError('AuthProvider.hydrateForUser', error, { userId })
+      setAccountHydrated(false)
+    }
+  }, [])
+
+  const refreshAccountData = useCallback(async () => {
+    const userId = session?.user?.id
+    if (!userId) {
+      setSettings(null)
+      setDesignProfile(null)
+      setAccountHydrated(false)
+      return
+    }
+
+    await hydrateForUser(userId)
+  }, [hydrateForUser, session?.user?.id])
+
+  useEffect(() => {
+    if (status !== 'authenticated' || !session?.user?.id) {
+      setSettings(null)
+      setDesignProfile(null)
+      setAccountHydrated(false)
+      return
+    }
+
+    let active = true
+
+    const hydrate = async () => {
+      try {
+        await hydrateForUser(session.user.id)
+        if (!active) return
+      } catch (error) {
+        if (!active) return
+        reportError('AuthProvider.hydrateAccount', error, { userId: session.user.id })
+        setAccountHydrated(false)
+      }
+    }
+
+    hydrate()
+
+    return () => {
+      active = false
+    }
+  }, [hydrateForUser, session?.user?.id, status])
 
   const signInWithMagicLink = useCallback(
     async (email: string) => {
@@ -89,9 +161,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStatus('loading')
       const result = await signUpWithPassword(email, password, username)
       setStatus(session ? 'authenticated' : 'unauthenticated')
+      if (!result.error) {
+        const { data } = await supabase.auth.getSession()
+        const userId = data.session?.user?.id
+        if (userId) {
+          await hydrateForUser(userId)
+        }
+      }
       return result
     },
-    [session],
+    [hydrateForUser, session],
   )
 
   const signInWithCredentials = useCallback(
@@ -100,10 +179,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await signInWithPassword(email, password)
       if (result.error) {
         setStatus(session ? 'authenticated' : 'unauthenticated')
+      } else {
+        const { data } = await supabase.auth.getSession()
+        const userId = data.session?.user?.id
+        if (userId) {
+          await hydrateForUser(userId)
+        }
       }
       return result
     },
-    [session],
+    [hydrateForUser, session],
   )
 
   const signInWithGoogleAccount = useCallback(async () => {
@@ -111,15 +196,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await signInWithGoogle()
     if (result.error) {
       setStatus(session ? 'authenticated' : 'unauthenticated')
+    } else {
+      const { data } = await supabase.auth.getSession()
+      const userId = data.session?.user?.id
+      if (userId) {
+        await hydrateForUser(userId)
+      }
     }
     return result
-  }, [session])
+  }, [hydrateForUser, session])
 
   const signOut = useCallback(async () => {
     setStatus('loading')
     await signOutFromSupabase()
     setSession(null)
     setStatus('unauthenticated')
+    setSettings(null)
+    setDesignProfile(null)
+    setAccountHydrated(false)
   }, [])
 
   const value = useMemo<AuthContextValue>(
@@ -127,13 +221,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       user: session?.user ?? null,
       status,
+      settings,
+      designProfile,
+      accountHydrated,
+      refreshAccountData,
       signInWithMagicLink,
       signUpWithCredentials,
       signInWithCredentials,
       signInWithGoogle: signInWithGoogleAccount,
       signOut,
     }),
-    [session, signInWithCredentials, signInWithGoogleAccount, signInWithMagicLink, signOut, signUpWithCredentials, status],
+    [
+      accountHydrated,
+      designProfile,
+      refreshAccountData,
+      session,
+      settings,
+      signInWithCredentials,
+      signInWithGoogleAccount,
+      signInWithMagicLink,
+      signOut,
+      signUpWithCredentials,
+      status,
+    ],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
