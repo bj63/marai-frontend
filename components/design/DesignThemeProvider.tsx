@@ -43,6 +43,7 @@ type DesignInteractionInput = {
 type QueuedInteraction = DesignInteractionInput & { timestamp: number }
 
 export type NormalizedTheme = {
+type NormalizedTheme = {
   design_dna: DesignDNA
   evolution_stage: string | null
   preferred_emotion: string | null
@@ -301,6 +302,15 @@ export function DesignThemeProvider({ children }: { children: ReactNode }) {
         setPendingTheme(computedTheme)
       } else if (pendingTheme) {
         setPendingTheme(null)
+        return nextTheme
+      })
+
+      try {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(computedTheme))
+        }
+      } catch (error) {
+        reportError('DesignThemeProvider.cacheTheme', error)
       }
 
       if (user?.id) {
@@ -329,6 +339,7 @@ export function DesignThemeProvider({ children }: { children: ReactNode }) {
       }
     },
     [],
+    [refreshAccountData, user?.id],
   )
 
   useEffect(() => {
@@ -394,11 +405,14 @@ export function DesignThemeProvider({ children }: { children: ReactNode }) {
       const response = await postDesignFeedback(payload, session.access_token)
       if (response && response.status === 'mutated' && response.design_dna) {
         await persistTheme((previous) => normaliseTheme(response, previous))
+        const nextTheme = normaliseTheme(response, theme)
+        await persistTheme(nextTheme)
       }
     } catch (error) {
       reportError('DesignThemeProvider.flushFeedback', error, payload)
     }
   }, [persistTheme, session?.access_token, session?.user?.id])
+  }, [persistTheme, session?.access_token, session?.user?.id, theme])
 
   useEffect(() => {
     if (!pendingInteractions.length) return
@@ -455,6 +469,7 @@ export function DesignThemeProvider({ children }: { children: ReactNode }) {
       flushFeedback,
     }),
     [adaptiveEnabled, flushFeedback, loading, registerInteraction, setAdaptiveEnabled, submitEmotionContext, theme],
+    [flushFeedback, loading, registerInteraction, submitEmotionContext, theme],
   )
 
   return <DesignThemeContext.Provider value={value}>{children}</DesignThemeContext.Provider>

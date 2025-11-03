@@ -42,6 +42,7 @@ export default function FeedPage() {
     adaptiveEnabled,
     setAdaptiveEnabled,
   } = useDesignTheme()
+  const { registerInteraction } = useDesignTheme()
 
   const [feed, setFeed] = useState<FeedPostWithEngagement[]>([])
   const [loadingFeed, setLoadingFeed] = useState(true)
@@ -64,6 +65,26 @@ export default function FeedPage() {
   const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([])
   const [loadingSocial, setLoadingSocial] = useState(true)
   const [socialNotice, setSocialNotice] = useState<string | null>(null)
+
+  useEffect(() => {
+    viewStartedAt.current = Date.now()
+    registerInteraction({
+      metric: 'feed_opened',
+      value: 1,
+      actionType: 'feed_engagement',
+    })
+
+    return () => {
+      if (viewStartedAt.current) {
+        const duration = (Date.now() - viewStartedAt.current) / 1000
+        registerInteraction({
+          metric: 'feed_screen_time',
+          value: Number.isFinite(duration) ? duration : 0,
+          actionType: 'feed_engagement',
+        })
+      }
+    }
+  }, [registerInteraction])
 
   useEffect(() => {
     viewStartedAt.current = Date.now()
