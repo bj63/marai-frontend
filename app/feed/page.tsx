@@ -6,6 +6,7 @@ import { Heart, Loader2, MessageCircle, Music, Sparkles, ToggleLeft, ToggleRight
 import MoodCard from '@/components/MoodCard'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { useMoaStore } from '@/lib/store'
+import { sendFriendRequest } from '@/lib/api'
 import { useDesignTheme } from '@/components/design/DesignThemeProvider'
 import { FriendList, type FriendListEntry } from '@/components/social/FriendList'
 import RelationshipTimeline from '@/components/social/RelationshipTimeline'
@@ -33,7 +34,7 @@ import {
 } from '@/lib/socialDataStore'
 
 export default function FeedPage() {
-  const { status, user } = useAuth()
+  const { status, user, session } = useAuth()
   const { setMood: setGlobalMood, federationId } = useMoaStore()
   const {
     registerInteraction,
@@ -42,7 +43,6 @@ export default function FeedPage() {
     adaptiveEnabled,
     setAdaptiveEnabled,
   } = useDesignTheme()
-  const { registerInteraction } = useDesignTheme()
 
   const [feed, setFeed] = useState<FeedPostWithEngagement[]>([])
   const [loadingFeed, setLoadingFeed] = useState(true)
@@ -61,30 +61,13 @@ export default function FeedPage() {
 
   const [socialSnapshot, setSocialSnapshot] = useState<SocialSnapshot | null>(null)
   const [friendSuggestions, setFriendSuggestions] = useState<SocialSuggestion[]>([])
+  const [friendRequestStates, setFriendRequestStates] = useState<
+    Record<string, { status: 'idle' | 'loading' | 'sent' | 'error'; message?: string }>
+  >({})
   const [timelineEvents, setTimelineEvents] = useState<RelationshipTimelineEvent[]>([])
   const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([])
   const [loadingSocial, setLoadingSocial] = useState(true)
   const [socialNotice, setSocialNotice] = useState<string | null>(null)
-
-  useEffect(() => {
-    viewStartedAt.current = Date.now()
-    registerInteraction({
-      metric: 'feed_opened',
-      value: 1,
-      actionType: 'feed_engagement',
-    })
-
-    return () => {
-      if (viewStartedAt.current) {
-        const duration = (Date.now() - viewStartedAt.current) / 1000
-        registerInteraction({
-          metric: 'feed_screen_time',
-          value: Number.isFinite(duration) ? duration : 0,
-          actionType: 'feed_engagement',
-        })
-      }
-    }
-  }, [registerInteraction])
 
   useEffect(() => {
     viewStartedAt.current = Date.now()
@@ -193,17 +176,30 @@ export default function FeedPage() {
 
   const friendEntries = useMemo<FriendListEntry[]>(
     () =>
-      friendSuggestions.map((suggestion) => ({
-        id: suggestion.id,
-        name: suggestion.name,
-        avatarUrl: suggestion.avatarUrl,
-        tagline: `${suggestion.tagline} • ${suggestion.compatibility}% sync • Shared: ${suggestion.sharedEmotions.join(
-          ' • ',
-        )}`,
-        isAICompanion: suggestion.isAICompanion,
-        online: suggestion.online,
-      })),
-    [friendSuggestions],
+      friendSuggestions.map((suggestion) => {
+        const state = friendRequestStates[suggestion.id] ?? { status: 'idle' as const }
+        const shared = suggestion.sharedEmotions.join(', ')
+        const taglineParts = [
+          suggestion.tagline,
+          `${suggestion.compatibility}% sync`,
+          shared ? `Shared: ${shared}` : null,
+        ].filter((part): part is string => Boolean(part && part.trim().length > 0))
+
+        return {
+          id: suggestion.id,
+          name: suggestion.name,
+          avatarUrl: suggestion.avatarUrl,
+          tagline: taglineParts.join(' • '),
+          isAICompanion: suggestion.isAICompanion,
+          online: suggestion.online,
+          status: state.status,
+          statusMessage:
+            state.status === 'error' || state.status === 'sent'
+              ? state.message ?? null
+              : null,
+        }
+      }),
+    [friendRequestStates, friendSuggestions],
   )
 
   const trustMetrics = socialSnapshot?.trust
@@ -427,8 +423,9 @@ export default function FeedPage() {
     void flushFeedback()
   }
 
-  const handleSelectSuggestion = (friend: FriendListEntry) => {
+  const handleSelectSuggestion = async (friend: FriendListEntry) => {
     const suggestion = friendSuggestions.find((entry) => entry.id === friend.id)
+
     registerInteraction({
       metric: 'friend_suggestion_opened',
       value: suggestion?.compatibility,
@@ -438,7 +435,58 @@ export default function FeedPage() {
         sharedEmotions: suggestion?.sharedEmotions,
       },
     })
-    setSocialNotice(`Logged interest in ${friend.name}. Amaris will refine future harmonies.`)
+
+    if (!suggestion) {
+      setSocialNotice('This suggestion has expired. Refresh to see the latest harmonies.')
+      return
+    }
+
+    const currentState = friendRequestStates[friend.id]
+    if (currentState?.status === 'loading' || currentState?.status === 'sent') {
+      return
+    }
+
+    if (!session?.access_token || !user?.id) {
+      setFriendRequestStates((previous) => ({
+        ...previous,
+        [friend.id]: { status: 'error', message: 'Sign in to send friend requests.' },
+      }))
+      setSocialNotice('Sign in to send friend requests and build your network.')
+      return
+    }
+
+    if (suggestion.isAICompanion) {
+      setFriendRequestStates((previous) => ({
+        ...previous,
+        [friend.id]: { status: 'sent', message: `${friend.name} is already synced as an AI companion.` },
+      }))
+      setSocialNotice(`${friend.name} is already synced as an AI companion.`)
+      return
+    }
+
+    setFriendRequestStates((previous) => ({
+      ...previous,
+      [friend.id]: { status: 'loading' },
+    }))
+
+    try {
+      await sendFriendRequest(friend.id, session.access_token)
+      setFriendRequestStates((previous) => ({
+        ...previous,
+        [friend.id]: { status: 'sent', message: `Sent a friend request to ${friend.name}.` },
+      }))
+      setSocialNotice(`Sent a friend request to ${friend.name}.`)
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Request could not be sent. Try again soon.'
+      setFriendRequestStates((previous) => ({
+        ...previous,
+        [friend.id]: { status: 'error', message },
+      }))
+      setSocialNotice(message)
+    }
   }
 
   return (

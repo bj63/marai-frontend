@@ -638,3 +638,47 @@ export async function postDesignFeedback(payload: DesignFeedbackPayload, accessT
 
   return handleApiResponse<DesignFeedbackResponse>(response, 'Submit design feedback')
 }
+
+export type FriendProfile = {
+  userId: string
+  displayName: string
+  avatarUrl: string
+  personalitySummary?: string
+  trustMetrics?: Record<string, unknown>
+  isOnline?: boolean
+}
+
+export type FriendConnection = {
+  connectionId: number
+  friendId: string
+  friendSince: string
+  friendshipStatus: string
+  profile: FriendProfile | null
+}
+
+export type FriendRequest = {
+  id: number
+  senderId: string
+  receiverId: string
+  status: 'pending' | 'accepted' | 'rejected' | 'cancelled'
+  createdAt: string
+  updatedAt: string
+}
+
+export async function sendFriendRequest(targetUserId: string, accessToken?: string | null) {
+  const normalized = targetUserId.trim()
+  if (!normalized) {
+    throw new Error('Target user ID is required to send a friend request.')
+  }
+
+  const response = await fetch(`${resolveApiBase()}/api/friend-requests`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeaders(accessToken),
+    },
+    body: JSON.stringify({ targetUserId: normalized }),
+  })
+
+  return handleApiResponse<FriendRequest>(response, 'Send friend request')
+}
