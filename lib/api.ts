@@ -1,11 +1,18 @@
-const DEFAULT_API_BASE = 'http://localhost:5000'
+const DEFAULT_API_FALLBACKS = ['http://127.0.0.1:8000', 'http://localhost:8000', 'http://localhost:5000'] as const
+const API_ENV_KEYS = ['NEXT_PUBLIC_API_BASE', 'NEXT_PUBLIC_API_URL', 'NEXT_PUBLIC_MOA_API_URL'] as const
+const DEFAULT_EMOTION = 'reflective'
+const DEFAULT_COLOR = 'hsl(180,85%,60%)'
 
 function resolveApiBase() {
-  const configuredBase = process.env.NEXT_PUBLIC_API_BASE?.trim()
-  if (configuredBase && configuredBase.length > 0) {
-    return configuredBase.replace(/\/$/, '')
+  for (const key of API_ENV_KEYS) {
+    const value = process.env[key]?.trim()
+    if (value) {
+      return value.replace(/\/$/, '')
+    }
   }
-  return DEFAULT_API_BASE
+
+  const fallback = DEFAULT_API_FALLBACKS.find((base) => base && base.length > 0)
+  return (fallback ?? 'http://localhost:5000').replace(/\/$/, '')
 }
 
 async function handleApiResponse<T>(response: Response, context: string): Promise<T> {
@@ -30,26 +37,326 @@ async function handleApiResponse<T>(response: Response, context: string): Promis
   throw new Error(errorMessage)
 }
 
-export async function analyzeMessage(message: string) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function pickString(values: Array<unknown>): string | null {
+  for (const value of values) {
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      if (trimmed.length > 0) {
+        return trimmed
+      }
+    }
+  }
+  return null
+}
+
+function pickNumber(values: Array<unknown>): number | null {
+  for (const value of values) {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value
+    }
+    if (typeof value === 'string') {
+      const parsed = Number(value)
+      if (!Number.isNaN(parsed)) {
+        return parsed
+      }
+    }
+  }
+  return null
+}
+
+function normaliseNumericRecord(value: unknown): Record<string, number> {
+  if (!isRecord(value)) return {}
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .map(([key, raw]) => {
+        const numeric = pickNumber([raw])
+        return numeric === null ? null : [key, numeric]
+      })
+      .filter((entry): entry is [string, number] => Array.isArray(entry)),
+  )
+}
+
+export interface AnalyzeTimelineEntry {
+  emotion: string
+  color: string
+  personality?: Record<string, number>
+  summary?: string | null
+  timestamp?: string | null
+  intensity?: number | null
+}
+
+export interface AnalyzeInsight {
+  id?: string
+  label: string
+  detail?: string | null
+  weight?: number | null
+  emotion?: string | null
+}
+
+export interface AnalyzeAttachment {
+  id?: string
+  type?: string | null
+  title?: string | null
+  description?: string | null
+  url?: string | null
+}
+
+export interface AnalyzeAudioCue {
+  emotion?: string | null
+  intensity?: number | null
+  url?: string | null
+  title?: string | null
+}
+
+export interface AnalyzeResponse {
+  emotion: string
+  scores: Record<string, number>
+  personality: Record<string, number>
+  color: string
+  aura: string
+  timeline: AnalyzeTimelineEntry[]
+  reply?: string | null
+  summary?: string | null
+  reasoning?: string | null
+  insights?: AnalyzeInsight[]
+  attachments?: AnalyzeAttachment[]
+  audioCue?: AnalyzeAudioCue | null
+  federationId?: string | null
+  cognitiveMap?: Record<string, number>
+  metadata?: Record<string, unknown>
+}
+
+export interface AnalyzeMessageOptions {
+  userId?: string
+  federationId?: string | null
+  walletAddress?: string | null
+  personality?: Record<string, number> | null
+  relationshipContext?: Record<string, unknown>
+  includeTimeline?: boolean
+  toneOverride?: string | null
+  metadata?: Record<string, unknown>
+}
+
+type RawAnalyzeResponse = Record<string, unknown>
+
+function normaliseTimeline(value: unknown): AnalyzeTimelineEntry[] {
+  if (!Array.isArray(value)) return []
+
+  return value
+    .map((entry) => {
+      if (!isRecord(entry)) return null
+
+      const emotion =
+        pickString([entry.emotion, entry.core_emotion, entry.label, entry.state, entry.feeling]) ?? DEFAULT_EMOTION
+      const color = pickString([entry.color, entry.aura, entry.hex, entry.hue]) ?? DEFAULT_COLOR
+      const summary = pickString([entry.summary, entry.note, entry.narrative, entry.story])
+      const timestamp = pickString([entry.timestamp, entry.ts, entry.occurred_at, entry.updated_at])
+      const intensity = pickNumber([entry.intensity, entry.score, entry.weight])
+      const personality = normaliseNumericRecord(entry.personality ?? entry.traits)
+
+      return {
+        emotion,
+        color,
+        personality: Object.keys(personality).length > 0 ? personality : undefined,
+        summary: summary ?? null,
+        timestamp: timestamp ?? null,
+        intensity: intensity ?? null,
+      }
+    })
+    .filter((entry): entry is AnalyzeTimelineEntry => entry !== null)
+}
+
+function normaliseInsights(value: unknown): AnalyzeInsight[] {
+  if (!Array.isArray(value)) return []
+
+  return value
+    .map((entry, index) => {
+      if (typeof entry === 'string') {
+        const trimmed = entry.trim()
+        if (trimmed.length === 0) return null
+        return { id: `insight-${index}`, label: trimmed }
+      }
+
+      if (!isRecord(entry)) return null
+
+      const label = pickString([entry.label, entry.title, entry.summary, entry.insight])
+      if (!label) return null
+
+      const detail = pickString([entry.detail, entry.description, entry.reasoning, entry.context])
+      const weight = pickNumber([entry.weight, entry.score, entry.intensity, entry.confidence])
+      const emotion = pickString([entry.emotion, entry.tone])
+
+      return {
+        id: pickString([entry.id, entry.key, entry.slug]) ?? `insight-${index}`,
+        label,
+        detail: detail ?? null,
+        weight: weight ?? null,
+        emotion: emotion ?? null,
+      }
+    })
+    .filter((entry): entry is AnalyzeInsight => entry !== null)
+}
+
+function normaliseAttachments(...values: unknown[]): AnalyzeAttachment[] {
+  const attachments: AnalyzeAttachment[] = []
+
+  values.forEach((value) => {
+    if (!value) return
+    const list = Array.isArray(value) ? value : [value]
+
+    list.forEach((entry, index) => {
+      if (typeof entry === 'string') {
+        const trimmed = entry.trim()
+        if (trimmed.length === 0) return
+        attachments.push({
+          id: `attachment-${attachments.length}`,
+          type: 'link',
+          title: 'Attachment',
+          url: trimmed,
+        })
+        return
+      }
+
+      if (!isRecord(entry)) return
+
+      const title = pickString([entry.title, entry.name, entry.label])
+      const description = pickString([entry.description, entry.detail, entry.subtitle, entry.context])
+      const type = pickString([entry.type, entry.kind, entry.category])
+      const url = pickString([entry.url, entry.href, entry.link, entry.track_url, entry.audio_url])
+
+      if (!title && !description && !url) return
+
+      attachments.push({
+        id: pickString([entry.id, entry.key, entry.slug]) ?? `attachment-${attachments.length}`,
+        type: type ?? null,
+        title: title ?? null,
+        description: description ?? null,
+        url: url ?? null,
+      })
+    })
+  })
+
+  return attachments
+}
+
+function normaliseAudioCue(value: unknown): AnalyzeAudioCue | null {
+  if (!value) return null
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    return trimmed.length > 0 ? { emotion: trimmed } : null
+  }
+
+  if (!isRecord(value)) return null
+
+  const emotion = pickString([value.emotion, value.tone, value.label, value.state])
+  const intensity = pickNumber([value.intensity, value.strength, value.score])
+  const url = pickString([value.url, value.track_url, value.audio_url])
+  const title = pickString([value.title, value.name])
+
+  if (!emotion && !url && !title) {
+    return null
+  }
+
+  return {
+    emotion: emotion ?? null,
+    intensity: intensity ?? null,
+    url: url ?? null,
+    title: title ?? null,
+  }
+}
+
+function normaliseAnalyzeResponse(raw: RawAnalyzeResponse): AnalyzeResponse {
+  const analysis = isRecord(raw.analysis) ? raw.analysis : null
+
+  const emotion =
+    pickString([
+      raw.emotion,
+      raw.core_emotion,
+      analysis?.emotion,
+      analysis?.core_emotion,
+      analysis?.tone,
+      analysis?.primary_emotion,
+    ]) ?? DEFAULT_EMOTION
+
+  const color = pickString([raw.color, analysis?.color, analysis?.aura_color]) ?? DEFAULT_COLOR
+  const aura = pickString([raw.aura, analysis?.aura, analysis?.color]) ?? color
+
+  const scores = normaliseNumericRecord(raw.scores ?? analysis?.scores)
+  const personality = normaliseNumericRecord(raw.personality ?? analysis?.personality)
+  const timeline = normaliseTimeline(raw.timeline ?? analysis?.timeline ?? analysis?.history)
+  const reply = pickString([raw.reply, raw.response, raw.mirai_reply, analysis?.reply, analysis?.response])
+  const summary = pickString([raw.summary, analysis?.summary, analysis?.headline])
+  const reasoning = pickString([raw.reasoning, raw.explanation, analysis?.reasoning, analysis?.insight])
+  const insights = normaliseInsights(raw.insights ?? analysis?.insights ?? analysis?.emotion_insights)
+  const attachments = normaliseAttachments(raw.attachments, analysis?.attachments, raw.music_recommendations, analysis?.music)
+  const audioCue = normaliseAudioCue(raw.audio_cue ?? analysis?.audio_cue ?? raw.sonic_signature ?? raw.soundscape)
+  const federationId = pickString([raw.federation_id, raw.federationId, analysis?.federation_id, analysis?.federationId])
+  const cognitiveMap = normaliseNumericRecord(raw.cognitive_map ?? analysis?.cognitive_map ?? analysis?.emotion_vector)
+  const metadata = isRecord(raw.metadata) ? raw.metadata : undefined
+
+  return {
+    emotion,
+    scores,
+    personality,
+    color,
+    aura,
+    timeline,
+    reply: reply ?? null,
+    summary: summary ?? null,
+    reasoning: reasoning ?? null,
+    insights: insights.length > 0 ? insights : undefined,
+    attachments: attachments.length > 0 ? attachments : undefined,
+    audioCue,
+    federationId: federationId ?? null,
+    cognitiveMap: Object.keys(cognitiveMap).length > 0 ? cognitiveMap : undefined,
+    metadata,
+  }
+}
+
+export async function analyzeMessage(message: string, options: AnalyzeMessageOptions = {}) {
   const trimmedMessage = message.trim()
   if (!trimmedMessage) {
     throw new Error('Message cannot be empty.')
   }
 
+  const basePayload: Record<string, unknown> = {
+    message: trimmedMessage,
+  }
+
+  const payloadEntries: Array<[string, unknown]> = [
+    ['user_id', options.userId?.trim() ?? undefined],
+    ['federation_id', options.federationId?.trim() ?? undefined],
+    ['wallet', options.walletAddress?.trim() ?? undefined],
+    ['relationship_context', options.relationshipContext],
+    ['include_timeline', options.includeTimeline],
+    ['tone_override', options.toneOverride],
+    ['metadata', options.metadata],
+  ]
+
+  if (options.personality && Object.keys(options.personality).length > 0) {
+    payloadEntries.push(['personality', options.personality])
+  }
+
+  payloadEntries.forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      basePayload[key] = value
+    }
+  })
+
   const res = await fetch(`${resolveApiBase()}/api/analyze`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: trimmedMessage }),
+    body: JSON.stringify(basePayload),
   })
 
-  return handleApiResponse<{
-    emotion: string
-    scores: Record<string, number>
-    personality: Record<string, number>
-    color: string
-    aura: string
-    timeline?: { emotion: string; color: string; personality?: Record<string, number> }[]
-  }>(res, 'Analysis')
+  const raw = await handleApiResponse<RawAnalyzeResponse>(res, 'Analysis')
+  return normaliseAnalyzeResponse(raw)
 }
 
 export type GenerateImageRequest = {
