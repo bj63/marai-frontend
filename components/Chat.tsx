@@ -3,8 +3,19 @@
 import { useState } from 'react'
 import { useAddress } from '@thirdweb-dev/react'
 import CharacterAvatar from './CharacterAvatar'
-import TimelineCard, { TimelineEntry } from './TimelineCard'
-import { analyzeMessage, evolveRelationalEntity, type RelationalEntityResponse } from '@/lib/api'
+import TimelineCard from './TimelineCard'
+import { playEmotion, type EmotionKey } from './AudioEngine'
+import {
+  analyzeMessage,
+  evolveRelationalEntity,
+  type AnalyzeAttachment,
+  type AnalyzeAudioCue,
+  type AnalyzeInsight,
+  type AnalyzeMediaDream,
+  type AnalyzeTimelineEntry,
+  type RelationalEntityResponse,
+} from '@/lib/api'
+import { useMoaStore, type Personality as StorePersonality } from '@/lib/store'
 import { handleError } from '@/lib/errorHandler'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { useDesignTheme } from '@/components/design/DesignThemeProvider'
@@ -12,7 +23,29 @@ import { useDesignTheme } from '@/components/design/DesignThemeProvider'
 interface ChatMessage {
   you: string
   mirai: string
+  emotion: string
   color: string
+  summary?: string | null
+  reasoning?: string | null
+  insights?: AnalyzeInsight[]
+  attachments?: AnalyzeAttachment[]
+  audioCue?: AnalyzeAudioCue | null
+  mediaDreams?: AnalyzeMediaDream[]
+}
+
+const PLAYABLE_EMOTIONS: EmotionKey[] = ['joy', 'calm', 'anger', 'sadness', 'curiosity']
+const PERSONALITY_KEYS: Array<keyof StorePersonality> = [
+  'empathy',
+  'creativity',
+  'confidence',
+  'curiosity',
+  'humor',
+  'energy',
+]
+
+function isPlayableEmotion(value: string | null | undefined): value is EmotionKey {
+  if (!value) return false
+  return PLAYABLE_EMOTIONS.includes(value as EmotionKey)
 }
 
 const DEFAULT_COLOR = 'hsl(180,85%,60%)'
@@ -23,7 +56,7 @@ export default function Chat() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [color, setColor] = useState(DEFAULT_COLOR)
   const [intensity, setIntensity] = useState(DEFAULT_INTENSITY)
-  const [timeline, setTimeline] = useState<TimelineEntry[]>([])
+  const [timeline, setTimeline] = useState<AnalyzeTimelineEntry[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [entityError, setEntityError] = useState<string | null>(null)
@@ -33,6 +66,31 @@ export default function Chat() {
   const { user } = useAuth()
   const { submitEmotionContext, registerInteraction } = useDesignTheme()
   const walletAddress = useAddress()
+  const federationId = useMoaStore((state) => state.federationId)
+  const setFederationId = useMoaStore((state) => state.setFederationId)
+  const storePersonality = useMoaStore((state) => state.personality)
+  const updateStorePersonality = useMoaStore((state) => state.setPersonality)
+  const setGlobalMood = useMoaStore((state) => state.setMood)
+
+  const formatDuration = (seconds?: number | null) => {
+    if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds <= 0) {
+      return null
+    }
+
+    const totalSeconds = Math.round(seconds)
+    const minutes = Math.floor(totalSeconds / 60)
+    const remainingSeconds = totalSeconds % 60
+
+    if (minutes <= 0) {
+      return `${totalSeconds}s`
+    }
+
+    if (remainingSeconds === 0) {
+      return `${minutes}m`
+    }
+
+    return `${minutes}m ${remainingSeconds.toString().padStart(2, '0')}s`
+  }
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
@@ -44,13 +102,22 @@ export default function Chat() {
     setInput('')
 
     try {
-      const data = await analyzeMessage(currentInput)
+      const data = await analyzeMessage(currentInput, {
+        userId: user?.id,
+        federationId,
+        walletAddress: walletAddress ?? undefined,
+        personality: storePersonality,
+        relationshipContext: entityState?.entityId
+          ? {
+              target_user_id: entityState.entityId,
+              connection_type: 'relational-entity',
+            }
+          : undefined,
+      })
       const nextColor = typeof data.color === 'string' && data.color.length > 0 ? data.color : DEFAULT_COLOR
       const emotion = typeof data.emotion === 'string' ? data.emotion : 'reflective'
       const emotionScore =
-        typeof data.emotion === 'string' && data.scores && typeof data.scores[data.emotion] === 'number'
-          ? data.scores[data.emotion]
-          : DEFAULT_INTENSITY
+        typeof data.scores?.[emotion] === 'number' ? data.scores[emotion] : DEFAULT_INTENSITY
       const confidence = Math.min(1, Math.max(0, emotionScore))
       const relationshipContext = entityState?.entityId
         ? {
@@ -58,11 +125,55 @@ export default function Chat() {
             connection_type: 'relational-entity',
           }
         : undefined
+      const miraiMessage = data.reply ?? data.summary ?? emotion
 
-      setMessages((prev) => [...prev, { you: currentInput, mirai: emotion, color: nextColor }])
+      setMessages((prev) => [
+        ...prev,
+        {
+          you: currentInput,
+          mirai: miraiMessage,
+          emotion,
+          color: nextColor,
+          summary: data.summary,
+          reasoning: data.reasoning,
+          insights: data.insights,
+          attachments: data.attachments,
+          audioCue: data.audioCue,
+          mediaDreams: data.mediaDreams,
+        },
+      ])
       setColor(nextColor)
       setIntensity(emotionScore)
       setTimeline(data.timeline ?? [])
+
+      if (data.audioCue && isPlayableEmotion(data.audioCue.emotion ?? null)) {
+        try {
+          playEmotion(data.audioCue.emotion as EmotionKey, Math.max(0, Math.min(data.audioCue.intensity ?? emotionScore, 1)))
+        } catch (audioError) {
+          console.error('Chat.playEmotion', audioError)
+        }
+      }
+
+      if (data.personality && Object.keys(data.personality).length > 0) {
+        const nextPersonality: StorePersonality = { ...storePersonality }
+        let mutated = false
+
+        PERSONALITY_KEYS.forEach((trait) => {
+          const value = data.personality?.[trait]
+          if (typeof value === 'number' && Number.isFinite(value)) {
+            nextPersonality[trait] = Math.max(0, Math.min(value, 1))
+            mutated = true
+          }
+        })
+
+        if (mutated) {
+          updateStorePersonality(nextPersonality)
+        }
+      }
+      if (data.federationId && !federationId) {
+        setFederationId(data.federationId)
+      }
+      setGlobalMood(emotion)
 
       await submitEmotionContext({
         user_id: user?.id,
@@ -164,9 +275,169 @@ export default function Chat() {
               <p className="text-sm leading-relaxed">
                 <strong className="text-brand-mist/80">You:</strong> {message.you}
               </p>
+              <div className="mt-1 flex items-center justify-between text-[0.65rem] uppercase tracking-[0.4em] text-brand-mist/40">
+                <span>Mirai resonance</span>
+                <span className="text-brand-mist/60">{message.emotion}</span>
+              </div>
               <p className="text-sm leading-relaxed">
                 <strong className="text-brand-mist/80">Mirai:</strong> {message.mirai}
               </p>
+              {message.summary && (
+                <p className="mt-2 text-xs leading-relaxed text-brand-mist/70">{message.summary}</p>
+              )}
+              {message.reasoning && (
+                <p className="mt-2 text-[0.7rem] leading-relaxed text-brand-mist/60">{message.reasoning}</p>
+              )}
+              {message.insights && message.insights.length > 0 && (
+                <ul className="mt-3 space-y-1 text-[0.7rem] text-brand-mist/65">
+                  {message.insights.map((insight, insightIndex) => (
+                    <li key={insight.id ?? `${message.you}-${index}-insight-${insightIndex}`} className="flex gap-2">
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-brand-magnolia" />
+                      <div className="flex flex-1 flex-col gap-0.5">
+                        <span className="font-semibold text-brand-mist/80">{insight.label}</span>
+                        {insight.detail && <span className="text-brand-mist/55">{insight.detail}</span>}
+                      </div>
+                      {typeof insight.weight === 'number' && (
+                        <span className="self-start text-[0.6rem] uppercase tracking-[0.35em] text-brand-mist/40">
+                          {Math.round(insight.weight * 100)}%
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {message.audioCue && (message.audioCue.title || message.audioCue.url || message.audioCue.intensity) && (
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-brand-mist/10 px-3 py-2 text-[0.7rem] text-brand-mist/75">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-white">{message.audioCue.title ?? 'Audio cue'}</span>
+                    <span className="text-[0.65rem] text-brand-mist/55">
+                      Mood: {message.audioCue.emotion ?? 'harmonic'}
+                      {typeof message.audioCue.intensity === 'number'
+                        ? ` · Intensity ${Math.round(Math.max(0, Math.min(message.audioCue.intensity, 1)) * 100)}%`
+                        : ''}
+                    </span>
+                  </div>
+                  {message.audioCue.url ? (
+                    <a
+                      href={message.audioCue.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-full border border-brand-magnolia/60 px-3 py-1 text-[0.6rem] uppercase tracking-[0.4em] text-brand-magnolia transition hover:bg-brand-magnolia hover:text-[#0b1022]"
+                    >
+                      Listen
+                    </a>
+                  ) : null}
+                </div>
+              )}
+              {message.mediaDreams && message.mediaDreams.length > 0 && (
+                <div className="mt-3 space-y-3">
+                  {message.mediaDreams.map((dream) => {
+                    const hasPoster = Boolean(dream.posterUrl)
+                    const durationLabel = formatDuration(dream.durationSeconds)
+                    const detailParts: string[] = []
+                    const typeLabel = dream.type?.toString().trim()
+                    if (typeLabel) {
+                      detailParts.push(typeLabel)
+                    }
+                    if (durationLabel) {
+                      detailParts.push(durationLabel)
+                    }
+                    const detailText = detailParts.join(' · ')
+                    const actionHref = dream.mediaUrl ?? dream.shareUrl ?? undefined
+
+                    return (
+                      <div
+                        key={dream.id}
+                        className="overflow-hidden rounded-2xl border border-white/10 bg-black/20 shadow-inner"
+                      >
+                        {hasPoster ? (
+                          <div className="relative h-44 w-full overflow-hidden">
+                            <img
+                              src={dream.posterUrl ?? undefined}
+                              alt={dream.title ?? 'Media dream poster'}
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#050914] via-[#050914]/20 to-transparent" />
+                            <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1 p-4">
+                              <span className="text-sm font-semibold text-white">{dream.title ?? 'Media Dream'}</span>
+                              {dream.prompt && (
+                                <span className="text-xs leading-snug text-brand-mist/75">{dream.prompt}</span>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="px-4 pt-4">
+                            <span className="text-sm font-semibold text-white">{dream.title ?? 'Media Dream'}</span>
+                            {dream.prompt && (
+                              <p className="mt-1 text-xs leading-snug text-brand-mist/70">{dream.prompt}</p>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex flex-col gap-3 px-4 py-3 text-[0.7rem] text-brand-mist/70 md:flex-row md:items-center md:justify-between">
+                          <div className="flex flex-col gap-1">
+                            {!hasPoster && !dream.prompt && (
+                              <span className="text-sm font-semibold text-white">{dream.title ?? 'Media Dream'}</span>
+                            )}
+                            {dream.description && (
+                              <span className="text-[0.7rem] leading-snug text-brand-mist/60">{dream.description}</span>
+                            )}
+                            {detailText && (
+                              <span className="text-[0.6rem] uppercase tracking-[0.45em] text-brand-mist/35">{detailText}</span>
+                            )}
+                          </div>
+                          {actionHref ? (
+                            <a
+                              href={actionHref}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center rounded-full border border-brand-magnolia/70 px-4 py-1 text-[0.6rem] uppercase tracking-[0.45em] text-brand-magnolia transition hover:bg-brand-magnolia hover:text-[#0b1022]"
+                            >
+                              View Dream
+                            </a>
+                          ) : null}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              {message.attachments && message.attachments.length > 0 && (
+                <div className="mt-3 space-y-2 text-[0.7rem]">
+                  {message.attachments.map((attachment, attachmentIndex) => {
+                    const key = attachment.id ?? `${message.you}-${index}-attachment-${attachmentIndex}`
+                    const content = (
+                      <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-brand-mist/75 transition hover:border-brand-magnolia/60 hover:text-white">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-semibold text-white">
+                            {attachment.title ?? 'Attachment'}
+                          </span>
+                          {attachment.description && (
+                            <span className="text-[0.65rem] text-brand-mist/55">{attachment.description}</span>
+                          )}
+                        </div>
+                        <span className="text-[0.6rem] uppercase tracking-[0.45em] text-brand-mist/40">
+                          {(attachment.type ?? 'View').toString()}
+                        </span>
+                      </div>
+                    )
+
+                    return attachment.url ? (
+                      <a
+                        key={key}
+                        href={attachment.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block"
+                      >
+                        {content}
+                      </a>
+                    ) : (
+                      <div key={key}>{content}</div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           ))}
           {error && <p className="error-message text-sm text-brand-cypress/80">{error}</p>}
