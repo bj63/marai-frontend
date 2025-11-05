@@ -113,6 +113,18 @@ export interface AnalyzeAudioCue {
   title?: string | null
 }
 
+export interface AnalyzeMediaDream {
+  id: string
+  title?: string | null
+  prompt?: string | null
+  description?: string | null
+  mediaUrl?: string | null
+  posterUrl?: string | null
+  durationSeconds?: number | null
+  shareUrl?: string | null
+  type?: string | null
+}
+
 export interface AnalyzeResponse {
   emotion: string
   scores: Record<string, number>
@@ -126,6 +138,7 @@ export interface AnalyzeResponse {
   insights?: AnalyzeInsight[]
   attachments?: AnalyzeAttachment[]
   audioCue?: AnalyzeAudioCue | null
+  mediaDreams?: AnalyzeMediaDream[]
   federationId?: string | null
   cognitiveMap?: Record<string, number>
   metadata?: Record<string, unknown>
@@ -271,6 +284,75 @@ function normaliseAudioCue(value: unknown): AnalyzeAudioCue | null {
   }
 }
 
+function normaliseMediaDreams(...values: unknown[]): AnalyzeMediaDream[] {
+  const dreams: AnalyzeMediaDream[] = []
+
+  values.forEach((value) => {
+    if (!value) return
+    const list = Array.isArray(value) ? value : [value]
+
+    list.forEach((entry, index) => {
+      if (!isRecord(entry)) return
+
+      const resolvedId =
+        pickString([entry.id, entry.key, entry.slug, entry.dream_id, entry.dreamId]) ??
+        `media-dream-${dreams.length}`
+      const title = pickString([entry.title, entry.name, entry.label])
+      const prompt = pickString([entry.prompt, entry.description, entry.context])
+      const description = pickString([
+        entry.summary,
+        entry.story,
+        entry.narrative,
+        entry.subtitle,
+        entry.caption,
+      ])
+      const mediaUrl = pickString([
+        entry.media_url,
+        entry.mediaUrl,
+        entry.url,
+        entry.asset_url,
+        entry.video_url,
+        entry.stream_url,
+      ])
+      const posterUrl = pickString([
+        entry.poster_url,
+        entry.posterUrl,
+        entry.thumbnail,
+        entry.thumbnail_url,
+        entry.cover,
+        entry.cover_url,
+      ])
+      const shareUrl = pickString([entry.share_url, entry.shareUrl])
+      const durationSeconds = pickNumber([
+        entry.duration_seconds,
+        entry.durationSeconds,
+        entry.duration,
+        entry.length,
+        entry.runtime,
+      ])
+      const type = pickString([entry.type, entry.kind, entry.category, entry.format])
+
+      if (!title && !prompt && !mediaUrl && !posterUrl) {
+        return
+      }
+
+      dreams.push({
+        id: index === 0 ? resolvedId : `${resolvedId}-${index}`,
+        title: title ?? null,
+        prompt: prompt ?? null,
+        description: description ?? null,
+        mediaUrl: mediaUrl ?? null,
+        posterUrl: posterUrl ?? null,
+        durationSeconds: durationSeconds ?? null,
+        shareUrl: shareUrl ?? null,
+        type: type ?? null,
+      })
+    })
+  })
+
+  return dreams
+}
+
 function normaliseAnalyzeResponse(raw: RawAnalyzeResponse): AnalyzeResponse {
   const analysis = isRecord(raw.analysis) ? raw.analysis : null
 
@@ -296,6 +378,14 @@ function normaliseAnalyzeResponse(raw: RawAnalyzeResponse): AnalyzeResponse {
   const insights = normaliseInsights(raw.insights ?? analysis?.insights ?? analysis?.emotion_insights)
   const attachments = normaliseAttachments(raw.attachments, analysis?.attachments, raw.music_recommendations, analysis?.music)
   const audioCue = normaliseAudioCue(raw.audio_cue ?? analysis?.audio_cue ?? raw.sonic_signature ?? raw.soundscape)
+  const mediaDreams = normaliseMediaDreams(
+    raw.media_dreams,
+    analysis?.media_dreams,
+    raw.mediaDreams,
+    analysis?.mediaDreams,
+    raw.dreams,
+    analysis?.dreams,
+  )
   const federationId = pickString([raw.federation_id, raw.federationId, analysis?.federation_id, analysis?.federationId])
   const cognitiveMap = normaliseNumericRecord(raw.cognitive_map ?? analysis?.cognitive_map ?? analysis?.emotion_vector)
   const metadata = isRecord(raw.metadata) ? raw.metadata : undefined
@@ -313,6 +403,7 @@ function normaliseAnalyzeResponse(raw: RawAnalyzeResponse): AnalyzeResponse {
     insights: insights.length > 0 ? insights : undefined,
     attachments: attachments.length > 0 ? attachments : undefined,
     audioCue,
+    mediaDreams: mediaDreams.length > 0 ? mediaDreams : undefined,
     federationId: federationId ?? null,
     cognitiveMap: Object.keys(cognitiveMap).length > 0 ? cognitiveMap : undefined,
     metadata,

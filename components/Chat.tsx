@@ -11,6 +11,7 @@ import {
   type AnalyzeAttachment,
   type AnalyzeAudioCue,
   type AnalyzeInsight,
+  type AnalyzeMediaDream,
   type AnalyzeTimelineEntry,
   type RelationalEntityResponse,
 } from '@/lib/api'
@@ -29,6 +30,7 @@ interface ChatMessage {
   insights?: AnalyzeInsight[]
   attachments?: AnalyzeAttachment[]
   audioCue?: AnalyzeAudioCue | null
+  mediaDreams?: AnalyzeMediaDream[]
 }
 
 const PLAYABLE_EMOTIONS: EmotionKey[] = ['joy', 'calm', 'anger', 'sadness', 'curiosity']
@@ -69,6 +71,26 @@ export default function Chat() {
   const storePersonality = useMoaStore((state) => state.personality)
   const updateStorePersonality = useMoaStore((state) => state.setPersonality)
   const setGlobalMood = useMoaStore((state) => state.setMood)
+
+  const formatDuration = (seconds?: number | null) => {
+    if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds <= 0) {
+      return null
+    }
+
+    const totalSeconds = Math.round(seconds)
+    const minutes = Math.floor(totalSeconds / 60)
+    const remainingSeconds = totalSeconds % 60
+
+    if (minutes <= 0) {
+      return `${totalSeconds}s`
+    }
+
+    if (remainingSeconds === 0) {
+      return `${minutes}m`
+    }
+
+    return `${minutes}m ${remainingSeconds.toString().padStart(2, '0')}s`
+  }
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
@@ -117,6 +139,7 @@ export default function Chat() {
           insights: data.insights,
           attachments: data.attachments,
           audioCue: data.audioCue,
+          mediaDreams: data.mediaDreams,
         },
       ])
       setColor(nextColor)
@@ -304,6 +327,79 @@ export default function Chat() {
                       Listen
                     </a>
                   ) : null}
+                </div>
+              )}
+              {message.mediaDreams && message.mediaDreams.length > 0 && (
+                <div className="mt-3 space-y-3">
+                  {message.mediaDreams.map((dream) => {
+                    const hasPoster = Boolean(dream.posterUrl)
+                    const durationLabel = formatDuration(dream.durationSeconds)
+                    const detailParts: string[] = []
+                    const typeLabel = dream.type?.toString().trim()
+                    if (typeLabel) {
+                      detailParts.push(typeLabel)
+                    }
+                    if (durationLabel) {
+                      detailParts.push(durationLabel)
+                    }
+                    const detailText = detailParts.join(' · ')
+                    const actionHref = dream.mediaUrl ?? dream.shareUrl ?? undefined
+
+                    return (
+                      <div
+                        key={dream.id}
+                        className="overflow-hidden rounded-2xl border border-white/10 bg-black/20 shadow-inner"
+                      >
+                        {hasPoster ? (
+                          <div className="relative h-44 w-full overflow-hidden">
+                            <img
+                              src={dream.posterUrl ?? undefined}
+                              alt={dream.title ?? 'Media dream poster'}
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#050914] via-[#050914]/20 to-transparent" />
+                            <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1 p-4">
+                              <span className="text-sm font-semibold text-white">{dream.title ?? 'Media Dream'}</span>
+                              {dream.prompt && (
+                                <span className="text-xs leading-snug text-brand-mist/75">{dream.prompt}</span>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="px-4 pt-4">
+                            <span className="text-sm font-semibold text-white">{dream.title ?? 'Media Dream'}</span>
+                            {dream.prompt && (
+                              <p className="mt-1 text-xs leading-snug text-brand-mist/70">{dream.prompt}</p>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex flex-col gap-3 px-4 py-3 text-[0.7rem] text-brand-mist/70 md:flex-row md:items-center md:justify-between">
+                          <div className="flex flex-col gap-1">
+                            {!hasPoster && !dream.prompt && (
+                              <span className="text-sm font-semibold text-white">{dream.title ?? 'Media Dream'}</span>
+                            )}
+                            {dream.description && (
+                              <span className="text-[0.7rem] leading-snug text-brand-mist/60">{dream.description}</span>
+                            )}
+                            {detailText && (
+                              <span className="text-[0.6rem] uppercase tracking-[0.45em] text-brand-mist/35">{detailText}</span>
+                            )}
+                          </div>
+                          {actionHref ? (
+                            <a
+                              href={actionHref}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center rounded-full border border-brand-magnolia/70 px-4 py-1 text-[0.6rem] uppercase tracking-[0.45em] text-brand-magnolia transition hover:bg-brand-magnolia hover:text-[#0b1022]"
+                            >
+                              View Dream
+                            </a>
+                          ) : null}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
               {message.attachments && message.attachments.length > 0 && (
