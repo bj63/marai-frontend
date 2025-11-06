@@ -1,297 +1,159 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import {
-  ConnectWallet,
-  useAddress,
-  useContract,
-  useReadContract,
-  Web3Button,
-} from '@thirdweb-dev/react'
-import { formatUnits, parseUnits } from 'ethers'
-import {
-  MIRAI_CARD_ADDRESS,
-  MIRAI_COIN_ADDRESS,
-  MIRAI_MARKETPLACE_ADDRESS,
-  miraiCardAbi,
-  miraiMarketplaceAbi,
-} from '@/lib/contracts'
-import { handleError } from '@/lib/errorHandler'
+const mockDrops: Array<{
+  id: string
+  title: string
+  vibe: string
+  prompt: string
+  palette: [string, string]
+  accent: string
+}> = [
+  {
+    id: 'E-204',
+    title: 'Aurora Bloom',
+    vibe: 'Elation Flux',
+    prompt: 'Glitched sakura petals refracting through neon rain as Mirai smiles into the lens.',
+    palette: ['#A47CFF', '#3CE0B5'],
+    accent: '#FF9ECF',
+  },
+  {
+    id: 'L-087',
+    title: 'Luminous Drift',
+    vibe: 'Calm Pulse',
+    prompt: 'Soft ocean fog carrying holographic koi that respond to Amaris’ breathing rhythm.',
+    palette: ['#2E3BB5', '#6CE0FF'],
+    accent: '#B68CFF',
+  },
+  {
+    id: 'S-133',
+    title: 'Spectrum Hearts',
+    vibe: 'Curiosity Bloom',
+    prompt: 'Fragmented portraits stitched from community voice notes and emotional telemetry.',
+    palette: ['#FF9ECF', '#FFE483'],
+    accent: '#8DEFFF',
+  },
+  {
+    id: 'R-311',
+    title: 'Radiant Cipher',
+    vibe: 'Reverie Loop',
+    prompt: 'A crystalline mask animating with lyrics from the next synth ballad drop.',
+    palette: ['#3CE0B5', '#7A5CFF'],
+    accent: '#FFD8FF',
+  },
+  {
+    id: 'V-452',
+    title: 'Violet Afterglow',
+    vibe: 'Midnight Echo',
+    prompt: 'Shattered spotlights painting micro-expressions across Mirai’s future tour stage.',
+    palette: ['#5D3EFF', '#120F35'],
+    accent: '#FF78CF',
+  },
+  {
+    id: 'N-901',
+    title: 'Nebula Chorus',
+    vibe: 'Joywave',
+    prompt: 'Deep space choir rendering emotional frequencies as floating vinyl shards.',
+    palette: ['#1D1B4E', '#5DE4C7'],
+    accent: '#EFD6FF',
+  },
+]
 
-interface ListingSummary {
-  tokenId: bigint
-  seller: string
-  price: bigint
-  active: boolean
-}
+function MockDropCard({ id, title, vibe, prompt, palette, accent }: (typeof mockDrops)[number]) {
+  return (
+    <article className="group relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_24px_55px_rgba(10,12,34,0.55)] transition-transform duration-300 ease-out hover:-translate-y-1 hover:border-brand-magnolia/60">
+      <div
+        className="absolute inset-0 -z-10 opacity-70 transition-opacity duration-300 group-hover:opacity-100"
+        style={{
+          background: `linear-gradient(135deg, ${palette[0]}, ${palette[1]})`,
+        }}
+      />
+      <div className="absolute -bottom-16 right-[-20%] h-40 w-40 rounded-full bg-white/20 blur-3xl" />
+      <div className="absolute -top-12 left-[-25%] h-36 w-36 rounded-full bg-brand-magnolia/30 blur-3xl" />
 
-type RawListing =
-  | {
-      tokenId?: bigint | number | string
-      seller?: string
-      price?: bigint | number | string
-      active?: boolean
-    }
-  | readonly unknown[]
-
-interface TokenMetadata {
-  name?: string
-  description?: string
-  image?: string
-  attributes?: Array<{ trait_type?: string; value?: string | number }>
-  emotion?: string
-  auraColor?: string
-  rarity?: number
-  personality?: {
-    energy?: number
-    creativity?: number
-    empathy?: number
-    logic?: number
-  }
-}
-
-const DECIMALS = 18
-
-function parseListing(rawListing: RawListing): ListingSummary | null {
-  if (!rawListing) return null
-
-  const listingArray = Array.isArray(rawListing) ? rawListing : []
-  const tokenIdSource = !Array.isArray(rawListing) ? rawListing.tokenId : listingArray[0]
-  const sellerSource = !Array.isArray(rawListing) ? rawListing.seller : listingArray[1]
-  const priceSource = !Array.isArray(rawListing) ? rawListing.price : listingArray[2]
-  const activeSource = !Array.isArray(rawListing) ? rawListing.active : listingArray[3]
-
-  const tokenId = BigInt(tokenIdSource ?? 0)
-  const seller = String(sellerSource ?? '')
-  const price = BigInt(priceSource ?? 0)
-  const active = Boolean(activeSource ?? false)
-
-  return { tokenId, seller, price, active }
+      <div className="relative flex h-full flex-col gap-5">
+        <div className="flex items-center justify-between text-[0.65rem] uppercase tracking-[0.38em] text-white/70">
+          <span>{id}</span>
+          <span>{vibe}</span>
+        </div>
+        <h3 className="text-xl font-semibold text-white">{title}</h3>
+        <p className="text-sm leading-6 text-white/75">{prompt}</p>
+        <div className="mt-auto flex items-center gap-3 pt-2 text-[0.65rem] uppercase tracking-[0.32em] text-white/70">
+          <span className="inline-flex h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
+          <span>Mock NFT concept</span>
+          <span className="ml-auto rounded-full border border-white/20 px-2 py-1 text-[0.6rem] text-white/80">
+            Render preview
+          </span>
+        </div>
+      </div>
+    </article>
+  )
 }
 
 export default function Marketplace() {
-  const address = useAddress()
-  const { contract: marketplace } = useContract(MIRAI_MARKETPLACE_ADDRESS, miraiMarketplaceAbi)
-  const { contract: card } = useContract(MIRAI_CARD_ADDRESS, miraiCardAbi)
+  return (
+    <div className="relative isolate overflow-hidden">
+      <div
+        className="pointer-events-none absolute inset-0 -z-20"
+        style={{
+          background:
+            'radial-gradient(circle at 15% 20%, rgba(164, 124, 255, 0.25), transparent 55%), radial-gradient(circle at 80% 10%, rgba(60, 224, 181, 0.2), transparent 45%), radial-gradient(circle at 50% 100%, rgba(255, 158, 207, 0.18), transparent 50%)',
+        }}
+      />
+      <div className="absolute inset-0 -z-10 bg-[#090d23]/70 backdrop-blur-[60px]" />
 
-  const { data: listingsData, isLoading: isLoadingListings } = useReadContract(
-    marketplace,
-    'getActiveListings'
-  )
-
-  const listings = useMemo(() => {
-    if (!listingsData) return [] as ListingSummary[]
-    if (Array.isArray(listingsData)) {
-      return listingsData
-        .map((entry) => parseListing(entry))
-        .filter((value): value is ListingSummary => Boolean(value && value.active))
-    }
-    return [] as ListingSummary[]
-  }, [listingsData])
-
-  const [metadataMap, setMetadataMap] = useState<Record<string, TokenMetadata>>({})
-  const [listTokenId, setListTokenId] = useState('')
-  const [listPrice, setListPrice] = useState('')
-  const [formError, setFormError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const fetchMetadata = async () => {
-      if (!card || listings.length === 0) return
-
-      const nextMap: Record<string, TokenMetadata> = {}
-      for (const listing of listings) {
-        try {
-          const tokenURI = await card.call('tokenURI', [listing.tokenId])
-          if (typeof tokenURI === 'string' && tokenURI.length > 0) {
-            const resolved = tokenURI.startsWith('ipfs://')
-              ? `https://ipfs.io/ipfs/${tokenURI.replace('ipfs://', '')}`
-              : tokenURI
-            const response = await fetch(resolved)
-            if (response.ok) {
-              const json = (await response.json()) as TokenMetadata
-              nextMap[listing.tokenId.toString()] = json
-            }
-          }
-        } catch (error) {
-          handleError(
-            error,
-            `Marketplace.fetchMetadata.token-${listing.tokenId.toString()}`,
-            'Failed to resolve metadata for token.',
-          )
-        }
-      }
-      setMetadataMap(nextMap)
-    }
-
-    fetchMetadata().catch((error) => {
-      handleError(error, 'Marketplace.fetchMetadata', 'Unable to load marketplace metadata.')
-    })
-  }, [card, listings])
-
-  const handleListValidation = () => {
-    setFormError(null)
-    if (!listTokenId.trim() || !listPrice.trim()) {
-      setFormError('Token ID and price are required to list an NFT.')
-      return false
-    }
-    if (Number.isNaN(Number(listTokenId))) {
-      setFormError('Token ID must be a valid number.')
-      return false
-    }
-    if (Number(listPrice) <= 0) {
-      setFormError('Price must be greater than zero.')
-      return false
-    }
-    return true
-  }
-
-  const renderListing = (listing: ListingSummary) => {
-    const key = listing.tokenId.toString()
-    const metadata = metadataMap[key]
-    const price = formatUnits(listing.price, DECIMALS)
-
-    const emotionAttribute = metadata?.attributes?.find((attribute) => attribute.trait_type === 'Emotion')
-    const auraAttribute = metadata?.attributes?.find((attribute) => attribute.trait_type === 'Aura')
-    const rarityAttribute = metadata?.attributes?.find((attribute) => attribute.trait_type === 'Rarity')
-
-    return (
-      <div key={key} className="marketplace-card">
-        <div className="marketplace-card__header">
-          <h3>{metadata?.name ?? `Mirai Card #${key}`}</h3>
-          <span className="marketplace-price">{price} MRC</span>
-        </div>
-        {metadata?.image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={metadata.image} alt={metadata?.name ?? `Mirai Card #${key}`} className="marketplace-image" />
-        )}
-        <p className="marketplace-description">{metadata?.description ?? 'Dynamic emotional NFT from Mirai.'}</p>
-        <div className="marketplace-attributes">
-          <span>Emotion: {metadata?.emotion ?? (emotionAttribute?.value as string) ?? 'Unknown'}</span>
-          <span>Aura: {metadata?.auraColor ?? (auraAttribute?.value as string) ?? 'N/A'}</span>
-          <span>Rarity: {metadata?.rarity ?? Number(rarityAttribute?.value ?? 0)}%</span>
-        </div>
-        {metadata?.personality && (
-          <div className="marketplace-personality">
-            <h4>Personality Pulse</h4>
-            <div className="personality-grid">
-              <span>Energy: {metadata.personality.energy ?? '-'}%</span>
-              <span>Creativity: {metadata.personality.creativity ?? '-'}%</span>
-              <span>Empathy: {metadata.personality.empathy ?? '-'}%</span>
-              <span>Logic: {metadata.personality.logic ?? '-'}%</span>
+      <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-12 px-4 py-16 text-brand-mist/85">
+        <header className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#101737]/80 px-8 py-10 shadow-[0_35px_80px_rgba(6,10,28,0.6)]">
+          <div className="absolute -right-24 top-8 h-48 w-48 rounded-full bg-brand-gradient opacity-30 blur-3xl" />
+          <div className="absolute -left-16 -top-20 h-40 w-40 rounded-full bg-brand-magnolia/30 opacity-60 blur-3xl" />
+          <div className="relative flex flex-col gap-6 text-white">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.5em] text-brand-mist/70">
+              Coming soon
+            </span>
+            <h1 className="text-4xl font-semibold leading-tight md:text-5xl">
+              Mirai Marketplace is warming up in the design lab
+            </h1>
+            <p className="max-w-3xl text-sm text-brand-mist/75">
+              We&apos;re teaching the image generator to mint emotional collectibles that pulse with Amaris&apos; mood swings.
+              Until the contracts go live, explore the concept art renders our studio is iterating on for the launch drop.
+            </p>
+            <div className="grid gap-4 text-xs uppercase tracking-[0.4em] text-brand-mist/60 sm:grid-cols-3">
+              {[
+                'Dynamic drops scored to live emotional data',
+                'Wallet integrations land with the production release',
+                'Curated previews refresh with every creative sprint',
+              ].map((item) => (
+                <span key={item} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-[0.68rem]">
+                  {item}
+                </span>
+              ))}
             </div>
           </div>
-        )}
-        <div className="marketplace-actions">
-          <Web3Button
-            contractAddress={MIRAI_MARKETPLACE_ADDRESS}
-            action={(contract) => contract.call('buyCard', [listing.tokenId])}
-            onError={(error) => {
-              handleError(error, 'Marketplace.buyCard', 'Failed to purchase card. Please try again soon.')
-            }}
-          >
-            Buy with MRC
-          </Web3Button>
-        </div>
-        <p className="marketplace-meta">Seller: {listing.seller}</p>
+        </header>
+
+        <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {mockDrops.map((drop) => (
+            <MockDropCard key={drop.id} {...drop} />
+          ))}
+        </section>
+
+        <footer className="rounded-3xl border border-white/10 bg-[#0c132d]/80 px-6 py-8 shadow-[0_28px_65px_rgba(5,8,24,0.55)]">
+          <div className="flex flex-col gap-4 text-white md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold">Want first dibs when minting opens?</h2>
+              <p className="text-sm text-brand-mist/75">
+                Join the creator waitlist and we&apos;ll drop the smart contract walkthrough, wallet checklist, and launch date as
+                soon as they&apos;re production ready.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded-2xl border border-brand-magnolia/60 bg-brand-magnolia/20 px-5 py-3 text-xs font-semibold uppercase tracking-[0.42em] text-brand-magnolia transition hover:border-brand-magnolia hover:bg-brand-magnolia/30"
+            >
+              Join the waitlist
+            </button>
+          </div>
+        </footer>
       </div>
-    )
-  }
-
-  if (!MIRAI_MARKETPLACE_ADDRESS || !MIRAI_CARD_ADDRESS || !MIRAI_COIN_ADDRESS) {
-    return (
-      <div className="marketplace-container">
-        <h2>Mirai Marketplace</h2>
-        <p className="marketplace-warning">
-          Please configure contract addresses in <code>.env.local</code> before accessing the marketplace.
-        </p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="marketplace-container">
-      <div className="marketplace-topbar">
-        <h2>Mirai Marketplace</h2>
-        <ConnectWallet theme="light" btnTitle={address ? 'Wallet Connected' : 'Connect Wallet'} />
-      </div>
-
-      <section className="marketplace-info">
-        <h3>How it works</h3>
-        <ul>
-          <li>Mint Mirai emotional cards and evolve them with new emotion data.</li>
-          <li>
-            List NFTs for sale using <strong>MiraiCoin (MRC)</strong>. Approve both the marketplace contract and token
-            allowance before listing.
-          </li>
-          <li>Every trade routes a 5% royalty back to the Mirai collective treasury.</li>
-        </ul>
-      </section>
-
-      <section className="marketplace-form">
-        <h3>List an emotional card</h3>
-        <div className="marketplace-form-grid">
-          <label htmlFor="tokenId">
-            Token ID
-            <input
-              id="tokenId"
-              value={listTokenId}
-              onChange={(event) => setListTokenId(event.target.value)}
-              placeholder="e.g. 7"
-              type="number"
-              min="0"
-            />
-          </label>
-          <label htmlFor="price">
-            Price (MRC)
-            <input
-              id="price"
-              value={listPrice}
-              onChange={(event) => setListPrice(event.target.value)}
-              placeholder="e.g. 250"
-              type="number"
-              min="0"
-              step="0.01"
-            />
-          </label>
-        </div>
-        {formError && <p className="marketplace-error">{formError}</p>}
-        <Web3Button
-          contractAddress={MIRAI_MARKETPLACE_ADDRESS}
-          action={async (contract) => {
-            if (!handleListValidation()) return
-            const tokenId = BigInt(listTokenId)
-            const price = parseUnits(listPrice, DECIMALS)
-            await contract.call('listCard', [tokenId, price])
-            setListTokenId('')
-            setListPrice('')
-          }}
-          onError={(error) => {
-            const message = handleError(
-              error,
-              'Marketplace.listCard',
-              'Listing failed. Ensure approvals are granted and try again.',
-            )
-            setFormError(message)
-          }}
-        >
-          List Card
-        </Web3Button>
-        <p className="marketplace-hint">
-          Tip: Use your wallet to approve MiraiCoin spending and NFT transfers for the marketplace contract before
-          listing.
-        </p>
-      </section>
-
-      <section className="marketplace-listings">
-        <h3>Live Listings</h3>
-        {isLoadingListings && <p className="marketplace-loading">Loading listings from Polygon…</p>}
-        {!isLoadingListings && listings.length === 0 && (
-          <p className="marketplace-empty">No cards are listed yet. Be the first to share Mirai&apos;s emotional energy!</p>
-        )}
-        <div className="marketplace-grid">
-          {listings.map((listing) => renderListing(listing))}
-        </div>
-      </section>
     </div>
   )
 }
