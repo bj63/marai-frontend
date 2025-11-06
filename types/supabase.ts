@@ -30,6 +30,26 @@ export interface FeedPost {
   music_url: string | null
   color: string | null
   created_at: string
+  metadata?: FeedAutopostMetadata | Record<string, unknown> | null
+}
+
+export interface FeedAutopostMetadata {
+  creativeType?: string | null
+  title?: string | null
+  summary?: string | null
+  body?: string | null
+  inspirations?: string[]
+  hashtags?: string[]
+  audience?: string | null
+  adaptiveProfile?: Record<string, unknown> | null
+  feedHints?: unknown
+  callToAction?: { label?: string | null; url?: string | null } | null
+  assetUrl?: string | null
+  posterUrl?: string | null
+  mediaUrl?: string | null
+  durationSeconds?: number | null
+  scheduledAt?: string | null
+  connectionDream?: Record<string, unknown> | null
 }
 
 export interface FeedComment {
