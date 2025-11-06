@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import {
+  createGenericAutopost,
+  listAutoposts,
+  type AutopostAudience,
+  type AutopostCallToAction,
+} from '@/lib/autopostQueue.server'
 import { createGenericAutopost, listAutoposts, type AutopostAudience } from '@/lib/autopostQueue.server'
 
 export const runtime = 'nodejs'
@@ -34,6 +40,27 @@ const toStringArray = (value: unknown): string[] | null => {
   return null
 }
 
+const parseCallToAction = (value: unknown, fallbackLabel?: unknown, fallbackUrl?: unknown): AutopostCallToAction | null => {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const record = value as Record<string, unknown>
+    const label = typeof record.label === 'string' ? record.label.trim() : null
+    const url = typeof record.url === 'string' ? record.url.trim() : null
+    if (label || url) {
+      return { label: label || null, url: url || null }
+    }
+  }
+
+  const label = typeof fallbackLabel === 'string' ? fallbackLabel.trim() : ''
+  const url = typeof fallbackUrl === 'string' ? fallbackUrl.trim() : ''
+  if (!label && !url) {
+    return null
+  }
+  return {
+    label: label || null,
+    url: url || null,
+  }
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status') as 'scheduled' | 'publishing' | 'published' | null
@@ -56,6 +83,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Request body must be a JSON object.' }, { status: 400 })
     }
 
+    const {
+      body,
+      mood,
+      mediaUrl,
+      posterUrl,
+      metadata,
+      scheduledAt,
+      audience,
+      hashtags,
+      callToAction,
+      callToActionLabel,
+      callToActionUrl,
+    } = payload as Record<string, unknown>
     const { body, mood, mediaUrl, posterUrl, metadata, scheduledAt, audience, hashtags, callToActionLabel, callToActionUrl } =
       payload as Record<string, unknown>
 
@@ -67,6 +107,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'scheduledAt must be a valid ISO timestamp.' }, { status: 400 })
     }
 
+    const parsedCallToAction = parseCallToAction(callToAction, callToActionLabel, callToActionUrl)
     const entry = createGenericAutopost({
       body: body.trim(),
       mood: typeof mood === 'string' ? mood : null,
@@ -76,6 +117,9 @@ export async function POST(request: NextRequest) {
       scheduledAt,
       audience: typeof audience === 'string' ? (audience as AutopostAudience) : null,
       hashtags: toStringArray(hashtags) ?? undefined,
+      callToAction: parsedCallToAction,
+      callToActionLabel: parsedCallToAction?.label ?? null,
+      callToActionUrl: parsedCallToAction?.url ?? null,
       callToActionLabel: typeof callToActionLabel === 'string' ? callToActionLabel : null,
       callToActionUrl: typeof callToActionUrl === 'string' ? callToActionUrl : null,
     })
