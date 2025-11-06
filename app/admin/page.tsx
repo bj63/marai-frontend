@@ -3,7 +3,9 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { Loader2, PlusCircle, ShieldCheck, Trash2, Users } from 'lucide-react'
 import Link from 'next/link'
+import AutopostPanel from '@/components/admin/AutopostPanel'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { getApiBaseUrl } from '@/lib/api'
 import { addTeamMember, getTeamMembers, removeTeamMember, type TeamMember } from '@/lib/supabaseApi'
 
 interface TeamFormState {
@@ -34,13 +36,15 @@ const loginLabels: Record<TeamMember['login_method'], string> = {
 }
 
 export default function AdminPage() {
-  const { user, status } = useAuth()
+  const { user, status, session } = useAuth()
   const [members, setMembers] = useState<TeamMember[]>([])
   const [loadingMembers, setLoadingMembers] = useState(true)
   const [formState, setFormState] = useState<TeamFormState>(defaultFormState)
   const [formFeedback, setFormFeedback] = useState<string | null>(null)
   const [savingMember, setSavingMember] = useState(false)
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null)
+  const apiBaseUrl = useMemo(() => getApiBaseUrl(), [])
+  const authToken = session?.access_token
 
   useEffect(() => {
     let active = true
@@ -342,6 +346,16 @@ export default function AdminPage() {
             </p>
           </div>
         </aside>
+      </section>
+
+      <section className="mt-10">
+        {authToken ? (
+          <AutopostPanel apiBaseUrl={apiBaseUrl} authToken={authToken} />
+        ) : (
+          <div className="rounded-2xl border border-white/10 bg-[#101737]/80 p-6 text-sm text-brand-mist/70">
+            Connect your Supabase session to unlock autopost scheduling controls.
+          </div>
+        )}
       </section>
     </div>
   )
