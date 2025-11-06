@@ -1,5 +1,7 @@
 'use client'
 
+import MarketplaceAvatarPreview from './MarketplaceAvatarPreview'
+
 const mockDrops: Array<{
   id: string
   title: string
@@ -129,6 +131,8 @@ export default function Marketplace() {
             </div>
           </div>
         </header>
+
+        <MarketplaceAvatarPreview />
 
         <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {mockDrops.map((drop) => (

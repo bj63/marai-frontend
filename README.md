@@ -18,6 +18,7 @@ Users can interact with emotional avatars, view dynamic visuals, and later conne
 - **API Integration** – Connects to MOA_AI_V3 backend for chat, emotion, and image generation.  
 - **Social Feed (Planned)** – Emotion-based posts and relational NFTs.
 - **Marketplace Concepts** – Coming soon gallery showcasing AI-generated mock NFTs.
+- **Avatar Mint Preview** – Marketplace renders your personalized NFT mockup using live avatar data.
 - **Responsive UI** – Fully mobile-optimized experience.  
 - **Cloud Ready** – Deployable on Vercel in one click.
 
@@ -175,6 +176,7 @@ The app requires the **MOA_AI_V3** backend to be running on Render, Railway, or 
 ## 🔄 Recent Updates
 
 * 🎨 Marketplace page now showcases concept art while the feature is in development
+* 🪪 Avatar mint preview mirrors your current profile inside the marketplace placeholder
 * ✨ Refactored API client for reliability
 * 💫 Improved emotion → avatar visual synchronization
 * 📱 Enhanced responsive layout and animations
