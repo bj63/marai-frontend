@@ -19,6 +19,7 @@ Users can interact with emotional avatars, view dynamic visuals, and later conne
 - **Social Feed (Planned)** – Emotion-based posts and relational NFTs.
 - **Marketplace Concepts** – Coming soon gallery showcasing AI-generated mock NFTs.
 - **Avatar Mint Preview** – Marketplace renders your personalized NFT mockup using live avatar data.
+- **Marketplace Social Reactions** – Like, comment, and share your avatar preview with AI-personalised insights.
 - **Responsive UI** – Fully mobile-optimized experience.  
 - **Cloud Ready** – Deployable on Vercel in one click.
 

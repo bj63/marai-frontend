@@ -1,5 +1,8 @@
 'use client'
 
+import { useMemo, useState } from 'react'
+import { Heart, MessageCircle, Share2, Sparkles } from 'lucide-react'
+
 import MarketplaceAvatarPreview from './MarketplaceAvatarPreview'
 
 const mockDrops: Array<{
@@ -61,6 +64,40 @@ const mockDrops: Array<{
 ]
 
 function MockDropCard({ id, title, vibe, prompt, palette, accent }: (typeof mockDrops)[number]) {
+  const [liked, setLiked] = useState(false)
+  const [showInsight, setShowInsight] = useState(false)
+  const [shareToast, setShareToast] = useState<'idle' | 'copied' | 'error'>('idle')
+  const initialReactions = useMemo(() => {
+    const base = 220
+    const idSeed = id.charCodeAt(0) + id.charCodeAt(id.length - 1)
+    return {
+      likes: base + idSeed,
+      comments: Math.max(12, Math.round(idSeed / 3)),
+    }
+  }, [id])
+
+  const [likes, setLikes] = useState(initialReactions.likes)
+  const [comments] = useState(initialReactions.comments)
+
+  const toggleLike = () => {
+    setLiked((next) => {
+      const updated = !next
+      setLikes((count) => count + (updated ? 1 : -1))
+      return updated
+    })
+  }
+
+  const handleShare = async () => {
+    const summary = `${title} – ${vibe}\n${prompt}`
+    try {
+      await navigator?.clipboard?.writeText(summary)
+      setShareToast('copied')
+    } catch (error) {
+      setShareToast('error')
+    }
+    setTimeout(() => setShareToast('idle'), 2200)
+  }
+
   return (
     <article className="group relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_24px_55px_rgba(10,12,34,0.55)] transition-transform duration-300 ease-out hover:-translate-y-1 hover:border-brand-magnolia/60">
       <div
@@ -77,14 +114,64 @@ function MockDropCard({ id, title, vibe, prompt, palette, accent }: (typeof mock
           <span>{id}</span>
           <span>{vibe}</span>
         </div>
-        <h3 className="text-xl font-semibold text-white">{title}</h3>
-        <p className="text-sm leading-6 text-white/75">{prompt}</p>
+        <div className="space-y-2">
+          <h3 className="text-xl font-semibold text-white">{title}</h3>
+          <p className="text-sm leading-6 text-white/75">{prompt}</p>
+          <div className="flex items-center gap-2 text-[0.6rem] uppercase tracking-[0.32em] text-white/70">
+            <Sparkles className="h-3 w-3" />
+            <span>AI staged lighting preset</span>
+          </div>
+        </div>
         <div className="mt-auto flex items-center gap-3 pt-2 text-[0.65rem] uppercase tracking-[0.32em] text-white/70">
           <span className="inline-flex h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
           <span>Mock NFT concept</span>
-          <span className="ml-auto rounded-full border border-white/20 px-2 py-1 text-[0.6rem] text-white/80">
-            Render preview
-          </span>
+          <button
+            type="button"
+            onClick={handleShare}
+            className="ml-auto inline-flex items-center gap-1 rounded-full border border-white/20 px-2 py-1 text-[0.6rem] text-white/80 transition hover:border-white/40 hover:bg-white/10"
+          >
+            <Share2 className="h-3 w-3" />
+            Share
+          </button>
+        </div>
+        <div className="flex items-center justify-between rounded-2xl border border-white/15 bg-black/20 px-4 py-2 text-[0.65rem] uppercase tracking-[0.32em] text-white/80 backdrop-blur">
+          <button
+            type="button"
+            onClick={toggleLike}
+            className="inline-flex items-center gap-2 text-[0.65rem] uppercase tracking-[0.32em] text-white/80 transition hover:text-white"
+            aria-pressed={liked}
+          >
+            <Heart className={`h-4 w-4 transition ${liked ? 'fill-current text-brand-magnolia' : ''}`} />
+            {likes}
+          </button>
+          <div className="flex items-center gap-2">
+            <MessageCircle className="h-4 w-4" />
+            {comments}
+          </div>
+          <div className="relative">
+            <button
+              type="button"
+              onMouseEnter={() => setShowInsight(true)}
+              onMouseLeave={() => setShowInsight(false)}
+              className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2 py-1 text-[0.6rem] text-white/80 transition hover:border-white/40 hover:bg-white/10"
+            >
+              Insight
+            </button>
+            <div
+              className={`absolute right-0 top-full z-20 mt-2 w-52 rounded-2xl border border-white/20 bg-[#0b1129]/95 p-3 text-[0.6rem] leading-5 text-white/80 shadow-[0_12px_30px_rgba(5,8,25,0.5)] transition duration-200 ${
+                showInsight ? 'opacity-100' : 'pointer-events-none opacity-0'
+              }`}
+            >
+              Synth designers flagged this drop for fans who match the <span className="font-semibold">{vibe}</span> vibe.
+            </div>
+          </div>
+        </div>
+        {shareToast !== 'idle' && (
+          <div
+            className={`mt-3 rounded-2xl border border-white/20 px-3 py-2 text-[0.6rem] uppercase tracking-[0.32em] ${shareToast === 'copied' ? 'bg-brand-mint/20 text-brand-mist' : 'bg-[#2b1b2b]/70 text-[#ffc6ff]'}`}
+          >
+            {shareToast === 'copied' ? 'Concept copied to clipboard' : 'Clipboard share unavailable'}
+          </div>
         </div>
       </div>
     </article>
