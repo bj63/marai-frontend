@@ -25,6 +25,7 @@ import MoodCard from '@/components/MoodCard'
 import FollowButton from '@/components/profile/FollowButton'
 import EvolutionCard, { type EmotionSnapshot } from '@/components/EvolutionCard'
 import { evolveRelationalEntity } from '@/lib/api'
+import { buildEmojiAvatar } from '@/lib/avatar'
 
 type TraitKey = keyof StorePersonality
 
@@ -90,12 +91,6 @@ const traitCopy: Record<TraitKey, { label: string; helper: string }> = {
 }
 
 const clamp = (value: number) => Math.min(1, Math.max(0, value))
-
-function buildEmojiAvatar(emoji: string, accent: string) {
-  const sanitizedAccent = accent && /^#([0-9A-Fa-f]{3}){1,2}$/.test(accent) ? accent : '#6366F1'
-  const svg = `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" rx="32" ry="32" fill="${sanitizedAccent}"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="64">${emoji}</text></svg>`
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
-}
 
 function resolveTone(mood: string | null | undefined) {
   if (!mood) {

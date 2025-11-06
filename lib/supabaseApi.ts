@@ -1,155 +1,49 @@
-import { supabase } from './supabaseClient'
+import { supabase, isSupabaseConfigured } from './supabaseClient'
 import { recordSupabaseFailure, recordSupabaseSuccess, reportError } from './observability'
+import offlineSupabaseApi from './supabaseOfflineApi'
+import type {
+  AuthResult,
+  CaptionSuggestionResult,
+  ConversationSummary,
+  DesignDNA,
+  DirectMessage,
+  FeedComment,
+  FeedPost,
+  FeedPostWithEngagement,
+  FollowProfile,
+  MiraiProfile,
+  Notification,
+  OnboardingState,
+  Personality,
+  SearchEntityType,
+  SearchResult,
+  TeamMember,
+  UserDesignProfile,
+  UserSettings,
+} from '@/types/supabase'
 
-export interface MiraiProfile {
-  id: string
-  user_id: string
-  name: string
-  avatar: string
-  color: string
-  created_at: string
-}
+export type {
+  AuthResult,
+  CaptionSuggestionResult,
+  ConversationSummary,
+  DesignDNA,
+  DirectMessage,
+  FeedComment,
+  FeedPost,
+  FeedPostWithEngagement,
+  FollowProfile,
+  MiraiProfile,
+  Notification,
+  OnboardingState,
+  Personality,
+  SearchEntityType,
+  SearchResult,
+  TeamMember,
+  UserDesignProfile,
+  UserSettings,
+} from '@/types/supabase'
 
-export interface Personality {
-  id: string
-  user_id: string
-  empathy: number
-  humor: number
-  confidence: number
-  creativity: number
-  curiosity: number
-  loyalty?: number
-  trust?: number
-  energy: number
-  updated_at: string
-}
-
-export interface FeedPost {
-  id: string
-  user_id: string
-  mirai_name: string | null
-  mood: string | null
-  message: string | null
-  music_url: string | null
-  color: string | null
-  created_at: string
-}
-
-export interface FeedComment {
-  id: string
-  post_id: string
-  user_id: string
-  body: string
-  created_at: string
-  author_name: string | null
-  author_avatar: string | null
-}
-
-export interface FeedPostWithEngagement extends FeedPost {
-  likes_count: number
-  comments: FeedComment[]
-  viewer_has_liked: boolean
-}
-
-export interface FollowProfile extends MiraiProfile {
-  handle: string | null
-  bio: string | null
-  is_following?: boolean
-}
-
-export interface OnboardingState {
-  user_id: string
-  completed: boolean
-  current_step: string | null
-  completed_at: string | null
-}
-
-export interface Notification {
-  id: string
-  user_id: string
-  title: string
-  body: string
-  type: string
-  created_at: string
-  read_at: string | null
-  metadata?: Record<string, unknown>
-}
-
-export interface ConversationSummary {
-  id: string
-  title: string
-  updated_at: string
-  last_message_preview: string | null
-}
-
-export interface DirectMessage {
-  id: string
-  conversation_id: string
-  sender_id: string
-  body: string
-  created_at: string
-  sender_name: string | null
-  sender_avatar: string | null
-}
-
-export type SearchEntityType = 'profile' | 'post'
-
-export interface SearchResult {
-  id: string
-  type: SearchEntityType
-  title: string
-  subtitle: string | null
-  href: string
-}
-
-export interface UserSettings {
-  id: string
-  user_id: string
-  profile_visibility: 'public' | 'private'
-  share_activity: boolean
-  preferred_login: 'password' | 'google' | 'magic-link' | 'wallet' | null
-  wallet_address: string | null
-  created_at: string
-  updated_at: string
-}
-
-export interface DesignDNA {
-  layout: string | null
-  theme_tokens: Record<string, string>
-  palette: Record<string, string>
-  motion: Record<string, unknown>
-  soundscape: Record<string, unknown>
-  depth: unknown
-  font: string | null
-}
-
-export interface UserDesignProfile {
-  id: string
-  user_id: string
-  design_dna: DesignDNA | null
-  evolution_stage: string | null
-  preferred_emotion: string | null
-  created_at: string
-  updated_at: string
-}
-
-export interface CaptionSuggestionResult {
-  caption: string
-}
-
-export interface TeamMember {
-  id: string
-  email: string
-  name: string | null
-  role: 'founder' | 'admin' | 'collaborator'
-  login_method: 'password' | 'magic-link' | 'google' | 'wallet'
-  status: 'active' | 'invited'
-  created_at: string
-}
-
-export interface AuthResult {
-  error?: unknown
-}
+const offlineMode = !isSupabaseConfigured
 
 type MetricsMetadata = Record<string, unknown> | undefined
 
@@ -177,6 +71,10 @@ async function trackSupabase<T>(
 }
 
 export async function getProfile(userId: string): Promise<MiraiProfile | null> {
+  if (offlineMode) {
+    return offlineSupabaseApi.getProfile(userId)
+  }
+
   const { data } = await trackSupabase('getProfile', () =>
     supabase.from('mirai_profile').select('*').eq('user_id', userId).maybeSingle(),
     { userId },
@@ -189,6 +87,10 @@ export async function saveProfile(
   userId: string,
   profile: Partial<MiraiProfile>,
 ): Promise<{ profile: MiraiProfile | null; error?: unknown }> {
+  if (offlineMode) {
+    return offlineSupabaseApi.saveProfile(userId, profile)
+  }
+
   const payload = { user_id: userId, ...profile }
   const result = await trackSupabase('saveProfile', () =>
     supabase.from('mirai_profile').upsert(payload, { onConflict: 'user_id' }).select().single(),
@@ -199,6 +101,10 @@ export async function saveProfile(
 }
 
 export async function getPersonality(userId: string): Promise<Personality | null> {
+  if (offlineMode) {
+    return offlineSupabaseApi.getPersonality(userId)
+  }
+
   const { data } = await trackSupabase('getPersonality', () =>
     supabase.from('personality').select('*').eq('user_id', userId).maybeSingle(),
     { userId },
@@ -211,6 +117,10 @@ export async function savePersonality(
   userId: string,
   traits: Partial<Personality>,
 ): Promise<{ personality: Personality | null; error?: unknown }> {
+  if (offlineMode) {
+    return offlineSupabaseApi.savePersonality(userId, traits)
+  }
+
   const payload = {
     user_id: userId,
     ...traits,
@@ -226,6 +136,10 @@ export async function savePersonality(
 }
 
 export async function updateUserMetadata(metadata: Record<string, unknown>): Promise<AuthResult> {
+  if (offlineMode) {
+    return offlineSupabaseApi.updateUserMetadata(metadata)
+  }
+
   const result = await trackSupabase('updateUserMetadata', () => supabase.auth.updateUser({ data: metadata }), {
     keys: Object.keys(metadata),
   })
@@ -234,6 +148,10 @@ export async function updateUserMetadata(metadata: Record<string, unknown>): Pro
 }
 
 export async function getFollowingFeed(viewerId: string): Promise<FeedPostWithEngagement[]> {
+  if (offlineMode) {
+    return offlineSupabaseApi.getFollowingFeed(viewerId)
+  }
+
   const { data } = await trackSupabase(
     'getFollowingFeed',
     () => supabase.rpc('fetch_following_feed', { viewer_id: viewerId }),
@@ -249,6 +167,10 @@ export async function getFollowingFeed(viewerId: string): Promise<FeedPostWithEn
 }
 
 export async function getFeedWithEngagement(viewerId?: string): Promise<FeedPostWithEngagement[]> {
+  if (offlineMode) {
+    return offlineSupabaseApi.getFeedWithEngagement(viewerId)
+  }
+
   const { data } = await trackSupabase(
     'getFeedWithEngagement',
     () => supabase.rpc('fetch_feed_with_engagement', { viewer_id: viewerId ?? null }),
@@ -267,6 +189,10 @@ export async function getFeedForUser(
   userId: string,
   viewerId?: string,
 ): Promise<FeedPostWithEngagement[]> {
+  if (offlineMode) {
+    return offlineSupabaseApi.getFeedForUser(userId, viewerId)
+  }
+
   const { data } = await trackSupabase(
     'getFeedForUser',
     () => supabase.rpc('fetch_profile_feed', { target_user_id: userId, viewer_id: viewerId ?? null }),
@@ -282,6 +208,10 @@ export async function getFeedForUser(
 }
 
 export async function likePost(postId: string, userId: string): Promise<AuthResult> {
+  if (offlineMode) {
+    return offlineSupabaseApi.likePost(postId, userId)
+  }
+
   const result = await trackSupabase(
     'likePost',
     () => supabase.from('feed_likes').upsert({ post_id: postId, user_id: userId }),
@@ -292,6 +222,10 @@ export async function likePost(postId: string, userId: string): Promise<AuthResu
 }
 
 export async function unlikePost(postId: string, userId: string): Promise<AuthResult> {
+  if (offlineMode) {
+    return offlineSupabaseApi.unlikePost(postId, userId)
+  }
+
   const result = await trackSupabase(
     'unlikePost',
     () => supabase.from('feed_likes').delete().eq('post_id', postId).eq('user_id', userId),
@@ -306,6 +240,10 @@ export async function addComment(
   userId: string,
   body: string,
 ): Promise<{ comment: FeedComment | null; error?: unknown }> {
+  if (offlineMode) {
+    return offlineSupabaseApi.addComment(postId, userId, body)
+  }
+
   const result = await trackSupabase(
     'addComment',
     () =>
@@ -323,6 +261,10 @@ export async function addComment(
 export async function createPost(
   post: Omit<FeedPost, 'id' | 'created_at'>,
 ): Promise<{ post: FeedPost | null; error?: unknown }> {
+  if (offlineMode) {
+    return offlineSupabaseApi.createPost(post)
+  }
+
   const result = await trackSupabase(
     'createPost',
     () => supabase.from('feed_posts').insert([post]).select().single(),
@@ -336,6 +278,10 @@ export async function generateCaptionSuggestion(payload: {
   mood: string
   message: string
 }): Promise<{ suggestion: CaptionSuggestionResult | null; error?: unknown }> {
+  if (offlineMode) {
+    return offlineSupabaseApi.generateCaptionSuggestion(payload)
+  }
+
   const startedAt = Date.now()
   try {
     const { data, error } = await supabase.functions.invoke<CaptionSuggestionResult>('generate-caption', {
@@ -358,6 +304,10 @@ export async function generateCaptionSuggestion(payload: {
 }
 
 export async function getFollowers(userId: string): Promise<FollowProfile[]> {
+  if (offlineMode) {
+    return offlineSupabaseApi.getFollowers(userId)
+  }
+
   const { data } = await trackSupabase(
     'getFollowers',
     () => supabase.from('followers_view').select('*').eq('target_id', userId).order('created_at', { ascending: false }),
@@ -368,6 +318,10 @@ export async function getFollowers(userId: string): Promise<FollowProfile[]> {
 }
 
 export async function getFollowing(userId: string): Promise<FollowProfile[]> {
+  if (offlineMode) {
+    return offlineSupabaseApi.getFollowing(userId)
+  }
+
   const { data } = await trackSupabase(
     'getFollowing',
     () => supabase.from('following_view').select('*').eq('follower_id', userId).order('created_at', { ascending: false }),
@@ -378,6 +332,10 @@ export async function getFollowing(userId: string): Promise<FollowProfile[]> {
 }
 
 export async function followProfile(followerId: string, targetId: string): Promise<AuthResult> {
+  if (offlineMode) {
+    return offlineSupabaseApi.followProfile(followerId, targetId)
+  }
+
   const result = await trackSupabase(
     'followProfile',
     () => supabase.from('follows').upsert({ follower_id: followerId, following_id: targetId }),
@@ -388,6 +346,10 @@ export async function followProfile(followerId: string, targetId: string): Promi
 }
 
 export async function unfollowProfile(followerId: string, targetId: string): Promise<AuthResult> {
+  if (offlineMode) {
+    return offlineSupabaseApi.unfollowProfile(followerId, targetId)
+  }
+
   const result = await trackSupabase(
     'unfollowProfile',
     () => supabase.from('follows').delete().eq('follower_id', followerId).eq('following_id', targetId),
@@ -398,6 +360,10 @@ export async function unfollowProfile(followerId: string, targetId: string): Pro
 }
 
 export async function getOnboardingState(userId: string): Promise<OnboardingState | null> {
+  if (offlineMode) {
+    return offlineSupabaseApi.getOnboardingState(userId)
+  }
+
   const { data } = await trackSupabase(
     'getOnboardingState',
     () => supabase.from('onboarding_state').select('*').eq('user_id', userId).maybeSingle(),
@@ -411,6 +377,10 @@ export async function upsertOnboardingState(
   userId: string,
   state: Partial<OnboardingState>,
 ): Promise<{ state: OnboardingState | null; error?: unknown }> {
+  if (offlineMode) {
+    return offlineSupabaseApi.upsertOnboardingState(userId, state)
+  }
+
   const payload = { user_id: userId, ...state }
   const result = await trackSupabase(
     'upsertOnboardingState',
@@ -422,6 +392,10 @@ export async function upsertOnboardingState(
 }
 
 export async function getUserSettings(userId: string): Promise<UserSettings | null> {
+  if (offlineMode) {
+    return offlineSupabaseApi.getUserSettings(userId)
+  }
+
   const { data } = await trackSupabase(
     'getUserSettings',
     () => supabase.from('user_settings').select('*').eq('user_id', userId).maybeSingle(),
@@ -435,6 +409,10 @@ export async function saveUserSettings(
   userId: string,
   settings: Partial<UserSettings>,
 ): Promise<AuthResult> {
+  if (offlineMode) {
+    return offlineSupabaseApi.saveUserSettings(userId, settings)
+  }
+
   const payload = { user_id: userId, ...settings }
   const result = await trackSupabase(
     'saveUserSettings',
@@ -446,6 +424,10 @@ export async function saveUserSettings(
 }
 
 export async function getUserDesignProfile(userId: string): Promise<UserDesignProfile | null> {
+  if (offlineMode) {
+    return offlineSupabaseApi.getUserDesignProfile(userId)
+  }
+
   const { data } = await trackSupabase(
     'getUserDesignProfile',
     () => supabase.from('user_design_profile').select('*').eq('user_id', userId).maybeSingle(),
@@ -459,6 +441,10 @@ export async function saveUserDesignProfile(
   userId: string,
   profile: Partial<UserDesignProfile> & { design_dna?: DesignDNA | null },
 ): Promise<{ profile: UserDesignProfile | null; error?: unknown }> {
+  if (offlineMode) {
+    return offlineSupabaseApi.saveUserDesignProfile(userId, profile)
+  }
+
   const payload = { user_id: userId, ...profile }
   const result = await trackSupabase(
     'saveUserDesignProfile',
@@ -470,6 +456,10 @@ export async function saveUserDesignProfile(
 }
 
 export async function getNotifications(userId: string): Promise<Notification[]> {
+  if (offlineMode) {
+    return offlineSupabaseApi.getNotifications(userId)
+  }
+
   const { data } = await trackSupabase(
     'getNotifications',
     () => supabase.from('notifications').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
@@ -480,6 +470,10 @@ export async function getNotifications(userId: string): Promise<Notification[]> 
 }
 
 export async function markNotificationRead(id: string): Promise<AuthResult> {
+  if (offlineMode) {
+    return offlineSupabaseApi.markNotificationRead(id)
+  }
+
   const result = await trackSupabase(
     'markNotificationRead',
     () => supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', id),
@@ -490,6 +484,10 @@ export async function markNotificationRead(id: string): Promise<AuthResult> {
 }
 
 export async function markAllNotificationsRead(userId: string): Promise<AuthResult> {
+  if (offlineMode) {
+    return offlineSupabaseApi.markAllNotificationsRead(userId)
+  }
+
   const result = await trackSupabase(
     'markAllNotificationsRead',
     () =>
@@ -505,6 +503,10 @@ export async function markAllNotificationsRead(userId: string): Promise<AuthResu
 }
 
 export async function getConversations(userId: string): Promise<ConversationSummary[]> {
+  if (offlineMode) {
+    return offlineSupabaseApi.getConversations(userId)
+  }
+
   const { data } = await trackSupabase(
     'getConversations',
     () => supabase.from('conversations_view').select('*').eq('member_id', userId).order('updated_at', { ascending: false }),
@@ -515,6 +517,10 @@ export async function getConversations(userId: string): Promise<ConversationSumm
 }
 
 export async function getConversationMessages(conversationId: string): Promise<DirectMessage[]> {
+  if (offlineMode) {
+    return offlineSupabaseApi.getConversationMessages(conversationId)
+  }
+
   const { data } = await trackSupabase(
     'getConversationMessages',
     () => supabase.from('messages_view').select('*').eq('conversation_id', conversationId).order('created_at', { ascending: true }),
@@ -529,6 +535,10 @@ export async function sendMessage(
   senderId: string,
   body: string,
 ): Promise<{ message: DirectMessage | null; error?: unknown }> {
+  if (offlineMode) {
+    return offlineSupabaseApi.sendMessage(conversationId, senderId, body)
+  }
+
   const result = await trackSupabase(
     'sendMessage',
     () =>
@@ -544,6 +554,10 @@ export async function sendMessage(
 }
 
 export async function getTeamMembers(): Promise<TeamMember[]> {
+  if (offlineMode) {
+    return offlineSupabaseApi.getTeamMembers()
+  }
+
   const { data } = await trackSupabase('getTeamMembers', () => supabase.from('team_members').select('*').order('created_at', {
     ascending: true,
   }))
@@ -557,6 +571,10 @@ export async function addTeamMember(payload: {
   role: TeamMember['role']
   login_method: TeamMember['login_method']
 }): Promise<{ member: TeamMember | null; error?: unknown }> {
+  if (offlineMode) {
+    return offlineSupabaseApi.addTeamMember(payload)
+  }
+
   const result = await trackSupabase(
     'addTeamMember',
     () => supabase.from('team_members').insert([payload]).select('*').single(),
@@ -567,11 +585,19 @@ export async function addTeamMember(payload: {
 }
 
 export async function removeTeamMember(id: string): Promise<AuthResult> {
+  if (offlineMode) {
+    return offlineSupabaseApi.removeTeamMember(id)
+  }
+
   const result = await trackSupabase('removeTeamMember', () => supabase.from('team_members').delete().eq('id', id), { id })
   return result.error ? { error: result.error } : {}
 }
 
 export async function searchDirectory(query: string): Promise<SearchResult[]> {
+  if (offlineMode) {
+    return offlineSupabaseApi.searchDirectory(query)
+  }
+
   const { data } = await trackSupabase(
     'searchDirectory',
     () => supabase.rpc('search_directory', { search_query: query }),
@@ -582,6 +608,10 @@ export async function searchDirectory(query: string): Promise<SearchResult[]> {
 }
 
 export async function requestMagicLink(email: string): Promise<AuthResult> {
+  if (offlineMode) {
+    return offlineSupabaseApi.requestMagicLink(email)
+  }
+
   const result = await trackSupabase('requestMagicLink', () => supabase.auth.signInWithOtp({ email }), { email })
   return result.error ? { error: result.error } : {}
 }
@@ -591,6 +621,10 @@ export async function signUpWithPassword(
   password: string,
   username: string,
 ): Promise<AuthResult> {
+  if (offlineMode) {
+    return offlineSupabaseApi.signUpWithPassword(email, password, username)
+  }
+
   const result = await trackSupabase(
     'signUpWithPassword',
     () =>
@@ -608,6 +642,10 @@ export async function signUpWithPassword(
 }
 
 export async function signInWithPassword(email: string, password: string): Promise<AuthResult> {
+  if (offlineMode) {
+    return offlineSupabaseApi.signInWithPassword(email, password)
+  }
+
   const result = await trackSupabase(
     'signInWithPassword',
     () => supabase.auth.signInWithPassword({ email, password }),
@@ -618,6 +656,10 @@ export async function signInWithPassword(email: string, password: string): Promi
 }
 
 export async function signInWithGoogle(): Promise<AuthResult> {
+  if (offlineMode) {
+    return offlineSupabaseApi.signInWithGoogle()
+  }
+
   const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined
   const result = await trackSupabase(
     'signInWithGoogle',
@@ -635,5 +677,10 @@ export async function signInWithGoogle(): Promise<AuthResult> {
 }
 
 export async function signOut(): Promise<void> {
+  if (offlineMode) {
+    await offlineSupabaseApi.signOut()
+    return
+  }
+
   await trackSupabase('signOut', () => supabase.auth.signOut())
 }

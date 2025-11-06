@@ -16,7 +16,10 @@ Users can interact with emotional avatars, view dynamic visuals, and later conne
 - **Emotional Avatar Display** – Avatars react to emotion data from the backend.  
 - **Supabase Auth** – Secure user registration and login.  
 - **API Integration** – Connects to MOA_AI_V3 backend for chat, emotion, and image generation.  
-- **Social Feed (Planned)** – Emotion-based posts and relational NFTs.  
+- **Social Feed (Planned)** – Emotion-based posts and relational NFTs.
+- **Marketplace Concepts** – Coming soon gallery showcasing AI-generated mock NFTs.
+- **Avatar Mint Preview** – Marketplace renders your personalized NFT mockup using live avatar data.
+- **Marketplace Social Reactions** – Like, comment, and share your avatar preview with AI-personalised insights.
 - **Responsive UI** – Fully mobile-optimized experience.  
 - **Cloud Ready** – Deployable on Vercel in one click.
 
@@ -101,13 +104,17 @@ yarn install
 
 ### 3️⃣ Add environment variables
 
-Create a `.env.local` file in the project root:
+Create a `.env.local` file in the project root (optional for offline stubs):
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=<your_supabase_url>
 NEXT_PUBLIC_SUPABASE_KEY=<your_supabase_key>
 NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
 ```
+
+#### Running without Supabase
+
+If you are just designing the UI and do not have the Supabase credentials handy, leave the Supabase variables unset. The app will automatically enter an **offline test mode** that seeds mock profiles, feeds, notifications, and conversations so every page renders without hitting the live API.
 
 ### 4️⃣ Run the development server
 
@@ -116,6 +123,10 @@ npm run dev
 ```
 
 App runs at 👉 **[http://localhost:3000](http://localhost:3000)**
+
+> 📌 **Dependency install tips**
+>
+> The project depends on scoped packages such as `@nomicfoundation/hardhat-toolbox`. If `npm install` returns a `403` from the npm registry, double-check that the npm account in use has verified its email address and is pointing at the public registry. Additional remediation steps are documented in [docs/npm-troubleshooting.md](./docs/npm-troubleshooting.md).
 
 ---
 
@@ -165,10 +176,13 @@ The app requires the **MOA_AI_V3** backend to be running on Render, Railway, or 
 
 ## 🔄 Recent Updates
 
+* 🎨 Marketplace page now showcases concept art while the feature is in development
+* 🪪 Avatar mint preview mirrors your current profile inside the marketplace placeholder
 * ✨ Refactored API client for reliability
 * 💫 Improved emotion → avatar visual synchronization
 * 📱 Enhanced responsive layout and animations
 * 🔧 Added better Supabase session handling
+* 🪪 Documented npm account verification steps for new installs
 * 🧩 Prepared social feed scaffolding
 
 ---
