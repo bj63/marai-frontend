@@ -180,11 +180,11 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-12 text-brand-mist/80">
-      <header className="flex flex-col gap-2 text-white">
-        <p className="text-[0.7rem] uppercase tracking-[0.35em] text-brand-mist/60">Messages</p>
-        <h1 className="text-3xl font-semibold">Coordinate with your collaborators</h1>
-        <p className="text-sm text-brand-mist/70">Share context, drop quick updates, and align on decisions alongside Amaris.</p>
+    <div className="page-shell" data-width="wide">
+      <header className="section-header text-white">
+        <p className="section-label text-brand-mist/60">Messages</p>
+        <h1 className="section-title text-3xl">Coordinate with your collaborators</h1>
+        <p className="section-description text-brand-mist/70">Share context, drop quick updates, and align on decisions alongside Amaris.</p>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[280px,1fr]">

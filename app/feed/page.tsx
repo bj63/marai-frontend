@@ -490,13 +490,11 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-12">
-      <header className="flex flex-col gap-3">
-        <span className="text-xs uppercase tracking-[0.35em] text-[color-mix(in srgb,var(--design-neutral) 55%,#94a3b8)]">
-          Emotive feed
-        </span>
-        <h1 className="text-3xl font-semibold text-white">Broadcast how your bond is evolving</h1>
-        <p className="text-sm text-[color-mix(in srgb,var(--design-neutral) 75%,#cbd5f5)]">
+    <div className="page-shell" data-width="wide">
+      <header className="section-header">
+        <span className="section-label">Emotive feed</span>
+        <h1 className="section-title text-3xl">Broadcast how your bond is evolving</h1>
+        <p className="section-description text-[color-mix(in srgb,var(--design-neutral) 75%,#cbd5f5)]">
           Post moods, soundscapes, and reflections. Amaris tracks every micro-interaction to evolve your design DNA and relational signature in real time.
         </p>
       </header>

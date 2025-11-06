@@ -15,6 +15,10 @@ function resolveApiBase() {
   return (fallback ?? 'http://localhost:5000').replace(/\/$/, '')
 }
 
+export function getApiBaseUrl() {
+  return resolveApiBase()
+}
+
 async function handleApiResponse<T>(response: Response, context: string): Promise<T> {
   if (response.ok) {
     return response.json() as Promise<T>

@@ -100,11 +100,11 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-12 text-brand-mist/80">
-      <header className="flex flex-col gap-2 text-white">
-        <p className="text-[0.7rem] uppercase tracking-[0.35em] text-brand-mist/60">Settings</p>
-        <h1 className="text-3xl font-semibold">Control how MarAI shows up for you</h1>
-        <p className="text-sm text-brand-mist/70">Adjust privacy, sharing, and wallet configuration to match your operating model.</p>
+    <div className="page-shell" data-width="narrow">
+      <header className="section-header text-white">
+        <p className="section-label text-brand-mist/60">Settings</p>
+        <h1 className="section-title text-3xl">Control how MarAI shows up for you</h1>
+        <p className="section-description text-brand-mist/70">Adjust privacy, sharing, and wallet configuration to match your operating model.</p>
       </header>
 
       {feedback ? (
