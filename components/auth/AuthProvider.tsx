@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabaseClient'
+import { supabase, isSupabaseConfigured, getOfflineSession } from '@/lib/supabaseClient'
 import { reportError } from '@/lib/observability'
 import {
   requestMagicLink,
@@ -37,13 +37,42 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null)
-  const [status, setStatus] = useState<AuthStatus>('loading')
+  const offlineSession = isSupabaseConfigured ? null : getOfflineSession()
+  const [session, setSession] = useState<Session | null>(offlineSession)
+  const [status, setStatus] = useState<AuthStatus>(offlineSession ? 'authenticated' : 'loading')
   const [settings, setSettings] = useState<UserSettings | null>(null)
   const [designProfile, setDesignProfile] = useState<UserDesignProfile | null>(null)
   const [accountHydrated, setAccountHydrated] = useState(false)
 
+  const hydrateForUser = useCallback(async (userId: string) => {
+    try {
+      const [fetchedSettings, fetchedDesignProfile] = await Promise.all([
+        getUserSettings(userId),
+        getUserDesignProfile(userId),
+      ])
+
+      setSettings(fetchedSettings)
+      setDesignProfile(fetchedDesignProfile)
+      setAccountHydrated(true)
+    } catch (error) {
+      reportError('AuthProvider.hydrateForUser', error, { userId })
+      setAccountHydrated(false)
+    }
+  }, [])
+
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setSession(getOfflineSession())
+      setStatus('authenticated')
+      const userId = offlineSession?.user?.id
+      if (userId) {
+        hydrateForUser(userId).catch((error) => {
+          reportError('AuthProvider.offlineHydrate', error, { userId })
+        })
+      }
+      return
+    }
+
     let active = true
 
     const resolveSession = async () => {
@@ -88,23 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       active = false
       subscription.unsubscribe()
     }
-  }, [])
-
-  const hydrateForUser = useCallback(async (userId: string) => {
-    try {
-      const [fetchedSettings, fetchedDesignProfile] = await Promise.all([
-        getUserSettings(userId),
-        getUserDesignProfile(userId),
-      ])
-
-      setSettings(fetchedSettings)
-      setDesignProfile(fetchedDesignProfile)
-      setAccountHydrated(true)
-    } catch (error) {
-      reportError('AuthProvider.hydrateForUser', error, { userId })
-      setAccountHydrated(false)
-    }
-  }, [])
+  }, [hydrateForUser, offlineSession])
 
   const refreshAccountData = useCallback(async () => {
     const userId = session?.user?.id
@@ -208,9 +221,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     setStatus('loading')
-    await signOutFromSupabase()
-    setSession(null)
-    setStatus('unauthenticated')
+    if (isSupabaseConfigured) {
+      await signOutFromSupabase()
+      setSession(null)
+      setStatus('unauthenticated')
+    } else {
+      const offline = getOfflineSession()
+      setSession(offline)
+      setStatus('authenticated')
+    }
     setSettings(null)
     setDesignProfile(null)
     setAccountHydrated(false)
