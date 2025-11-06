@@ -161,6 +161,76 @@ const normaliseHashtag = (value: string): string => {
   return trimmed.startsWith('#') ? trimmed : `#${trimmed}`
 }
 
+const imageExtensions = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'])
+const videoExtensions = new Set(['mp4', 'webm', 'mov', 'm4v'])
+
+const getAssetType = (url: string): 'image' | 'video' | 'unknown' => {
+  const withoutQuery = url.split('?')[0] ?? url
+  const extension = withoutQuery.split('.').pop()?.toLowerCase()
+  if (!extension) return 'unknown'
+  if (imageExtensions.has(extension)) return 'image'
+  if (videoExtensions.has(extension)) return 'video'
+  return 'unknown'
+}
+
+interface AssetPreviewProps {
+  url: string
+  posterUrl?: string | null
+  typeHint?: string | null
+}
+
+function AssetPreview({ url, posterUrl, typeHint }: AssetPreviewProps) {
+  const [isLoading, setIsLoading] = useState(true)
+  const [hasError, setHasError] = useState(false)
+
+  if (!isSafeExternalUrl(url)) return null
+
+  const hintedType = typeHint
+    ? typeHint.toLowerCase().includes('video')
+      ? 'video'
+      : typeHint.toLowerCase().includes('image')
+        ? 'image'
+        : null
+    : null
+
+  const assetType = hintedType ?? getAssetType(url)
+
+  return (
+    <div className="flex flex-col gap-2">
+      {assetType === 'image' ? (
+        <img
+          src={url}
+          alt="Creative asset"
+          className={`max-h-48 w-full rounded-lg object-cover ${isLoading ? 'animate-pulse bg-[#101737]' : ''}`}
+          onLoad={() => setIsLoading(false)}
+          onError={() => {
+            setIsLoading(false)
+            setHasError(true)
+          }}
+        />
+      ) : null}
+      {assetType === 'video' || assetType === 'unknown' ? (
+        <video
+          src={url}
+          poster={posterUrl ?? undefined}
+          controls
+          className="max-h-56 w-full rounded-lg"
+          onLoadedData={() => setIsLoading(false)}
+          onError={() => {
+            setIsLoading(false)
+            setHasError(true)
+          }}
+        />
+      ) : null}
+      {hasError ? (
+        <div className="rounded-lg border border-red-400/40 bg-red-500/10 p-3 text-center text-xs text-red-200">
+          Failed to load asset preview
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 const isSafeExternalUrl = (url?: string | null): url is string => {
   if (!url) return false
   try {
@@ -246,6 +316,11 @@ const mergeAutopostDetails = (entry: AutopostEntry): AutopostDetails | null => {
 
 interface AutopostMetadataViewProps {
   entry: AutopostEntry
+  details?: AutopostDetails | null
+}
+
+function AutopostMetadataView({ entry, details: providedDetails }: AutopostMetadataViewProps) {
+  const details = providedDetails ?? mergeAutopostDetails(entry)
 }
 
 function AutopostMetadataView({ entry }: AutopostMetadataViewProps) {
@@ -266,11 +341,37 @@ function AutopostMetadataView({ entry }: AutopostMetadataViewProps) {
   const primaryAssets = dedupeStrings([details?.assetUrl ?? null, details?.mediaUrl ?? null]).filter((href) =>
     isSafeExternalUrl(href),
   )
+  const primaryAssetUrl = primaryAssets[0] ?? null
   const posterUrl = details?.posterUrl ?? null
   const scheduledAtOverride =
     details?.scheduledAt && details.scheduledAt !== entry.scheduledAt ? details.scheduledAt : null
   const durationSeconds = details?.durationSeconds ?? null
   const audience = details?.audience ?? null
+  const connectionDreamDetails =
+    details?.connectionDream && typeof details.connectionDream === 'object' && !Array.isArray(details.connectionDream)
+      ? (details.connectionDream as Record<string, unknown>)
+      : null
+  const connectionDreamUsers = Array.isArray(connectionDreamDetails?.usersInvolved)
+    ? (connectionDreamDetails?.usersInvolved as unknown[])
+        .map((value) => (typeof value === 'string' ? value : null))
+        .filter((value): value is string => Boolean(value && value.trim().length > 0))
+    : []
+  const connectionDreamIntensity =
+    typeof connectionDreamDetails?.intensity === 'number'
+      ? Math.min(1, Math.max(0, connectionDreamDetails.intensity))
+      : null
+  const connectionDreamLabel =
+    typeof connectionDreamDetails?.label === 'string'
+      ? connectionDreamDetails.label
+      : typeof connectionDreamDetails?.title === 'string'
+        ? connectionDreamDetails.title
+        : null
+  const connectionDreamSummary =
+    typeof connectionDreamDetails?.summary === 'string'
+      ? connectionDreamDetails.summary
+      : typeof connectionDreamDetails?.description === 'string'
+        ? connectionDreamDetails.description
+        : null
 
   return (
     <div className="flex flex-col gap-3 text-sm text-brand-mist">
@@ -329,6 +430,9 @@ function AutopostMetadataView({ entry }: AutopostMetadataViewProps) {
       {primaryAssets.length > 0 ? (
         <div className="space-y-1">
           <p className="text-[0.7rem] uppercase tracking-[0.32em] text-brand-mist/60">Creative asset</p>
+          {primaryAssetUrl ? (
+            <AssetPreview url={primaryAssetUrl} posterUrl={posterUrl} typeHint={details?.creativeType ?? null} />
+          ) : null}
           {primaryAssets.map((href) => (
             <a
               key={href}
@@ -345,6 +449,7 @@ function AutopostMetadataView({ entry }: AutopostMetadataViewProps) {
       {posterUrl && isSafeExternalUrl(posterUrl) ? (
         <div className="space-y-1">
           <p className="text-[0.7rem] uppercase tracking-[0.32em] text-brand-mist/60">Poster</p>
+          <AssetPreview url={posterUrl} posterUrl={posterUrl} typeHint="image" />
           <a href={posterUrl} target="_blank" rel="noopener noreferrer" className="break-words text-brand-magnolia underline">
             {posterUrl}
           </a>
@@ -385,6 +490,38 @@ function AutopostMetadataView({ entry }: AutopostMetadataViewProps) {
           </pre>
         </div>
       ) : null}
+      {connectionDreamDetails ? (
+        <div className="space-y-2 rounded-xl border border-white/10 bg-[#0b1126]/70 p-3">
+          <p className="text-[0.7rem] uppercase tracking-[0.32em] text-brand-mist/60">Connection dream</p>
+          {connectionDreamLabel ? <p className="text-sm font-semibold text-white">{connectionDreamLabel}</p> : null}
+          {connectionDreamSummary ? <p className="text-sm text-brand-mist/90">{connectionDreamSummary}</p> : null}
+          {connectionDreamUsers.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-2 text-xs text-brand-mist/80">
+              {connectionDreamUsers.map((user) => (
+                <span key={user} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#101737]/80 px-3 py-1">
+                  {user}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          {connectionDreamIntensity !== null ? (
+            <div className="flex items-center gap-3 text-xs text-brand-mist/80">
+              <span>Intensity</span>
+              <div className="h-2 w-24 rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-brand-magnolia transition-all"
+                  style={{ width: `${Math.round(connectionDreamIntensity * 100)}%` }}
+                />
+              </div>
+              <span className="text-brand-magnolia">{Math.round(connectionDreamIntensity * 100)}%</span>
+            </div>
+          ) : null}
+          {connectionDream ? (
+            <details className="rounded-lg border border-white/10 bg-[#080f24]/70 p-3 text-xs text-brand-mist/70">
+              <summary className="cursor-pointer text-sm font-semibold text-white">Dream metadata</summary>
+              <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap">{connectionDream}</pre>
+            </details>
+          ) : null}
       {connectionDream ? (
         <div className="space-y-1">
           <p className="text-[0.7rem] uppercase tracking-[0.32em] text-brand-mist/60">Connection dream</p>
@@ -408,6 +545,14 @@ const STATUS_OPTIONS: Array<{ label: string; value: AutopostStatus | 'all' }> = 
   { label: 'Scheduled', value: 'scheduled' },
   { label: 'Publishing', value: 'publishing' },
   { label: 'Published', value: 'published' },
+]
+
+const CREATIVE_FILTER_OPTIONS: Array<{ label: string; value: CreativeType | 'all' }> = [
+  { label: 'All creative types', value: 'all' },
+  { label: 'Poem drops', value: 'poem' },
+  { label: 'Story drops', value: 'story' },
+  { label: 'Connection dreams', value: 'dreamVideo' },
+  { label: 'Image art', value: 'imageArt' },
 ]
 
 export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostPanelProps) {
@@ -443,16 +588,81 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
   const [creativeCallToActionUrl, setCreativeCallToActionUrl] = useState('')
   const [creativeSubmitting, setCreativeSubmitting] = useState(false)
   const [creativeResponse, setCreativeResponse] = useState<AutopostEntry | null>(null)
+  const [creativeFormErrors, setCreativeFormErrors] = useState<Record<string, string>>({})
 
   const [releaseUntilLocal, setReleaseUntilLocal] = useState(defaultReleaseLocal())
   const [releasing, setReleasing] = useState(false)
 
   const initialStatus = statusFilter ?? 'all'
   const [statusOption, setStatusOption] = useState<AutopostStatus | 'all'>(initialStatus)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [creativeTypeFilter, setCreativeTypeFilter] = useState<CreativeType | 'all'>('all')
+  const [selectedEntries, setSelectedEntries] = useState<number[]>([])
+  const [bulkPublishing, setBulkPublishing] = useState(false)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
 
   const headers = useMemo(() => buildHeaders(authToken), [authToken])
   const creativeResponseDetails = creativeResponse ? mergeAutopostDetails(creativeResponse) : null
+  const queueWithDetails = useMemo(
+    () => queue.map((entry) => ({ entry, details: mergeAutopostDetails(entry) })),
+    [queue],
+  )
+  const filteredQueue = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    const typeFilter = creativeTypeFilter === 'all' ? null : creativeTypeFilter.toLowerCase()
+    return queueWithDetails.filter(({ entry, details }) => {
+      const candidateType = (details?.creativeType ?? entry.creativeType ?? '').toLowerCase()
+      if (typeFilter && candidateType !== typeFilter) {
+        return false
+      }
+
+      if (!term) {
+        return true
+      }
+
+      const textSources: Array<string | null | undefined> = [
+        entry.title,
+        entry.summary,
+        entry.body,
+        details?.title,
+        details?.summary,
+        details?.body,
+      ]
+      const collectionSources: string[] = [
+        ...(details?.hashtags ?? []),
+        ...(details?.inspirations ?? []),
+      ]
+
+      return (
+        textSources.some((value) => typeof value === 'string' && value.toLowerCase().includes(term)) ||
+        collectionSources.some((value) => value.toLowerCase().includes(term))
+      )
+    })
+  }, [queueWithDetails, creativeTypeFilter, searchTerm])
+  const filteredEntryIds = useMemo(() => filteredQueue.map(({ entry }) => entry.id), [filteredQueue])
+  const allFilteredSelected = filteredEntryIds.length > 0 && filteredEntryIds.every((id) => selectedEntries.includes(id))
+  const selectionCount = selectedEntries.length
+  const hasSelection = selectionCount > 0
+
+  useEffect(() => {
+    if (statusFilter && statusFilter !== statusOption) {
+      setStatusOption(statusFilter)
+    }
+  }, [statusFilter, statusOption])
+
+  useEffect(() => {
+    setSelectedEntries((previous) => previous.filter((id) => queue.some((entry) => entry.id === id)))
+  }, [queue])
+
+  const loadQueue = useCallback(
+    async (options?: { cursor?: string }) => {
+      const cursor = options?.cursor
+      const isLoadMore = Boolean(cursor)
+      if (isLoadMore) {
+        setLoadingMore(true)
+      } else {
+        setLoading(true)
+      }
 
   useEffect(() => {
     if (statusFilter && statusFilter !== statusOption) {
@@ -519,6 +729,18 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
   useEffect(() => {
     void loadQueue()
   }, [loadQueue])
+
+  useEffect(() => {
+    if (statusOption !== 'scheduled' && statusOption !== 'publishing') {
+      return
+    }
+
+    const interval = window.setInterval(() => {
+      void loadQueue()
+    }, 30_000)
+
+    return () => window.clearInterval(interval)
+  }, [statusOption, loadQueue])
 
   const handleStatusChange = (value: AutopostStatus | 'all') => {
     setStatusOption(value)
@@ -594,6 +816,77 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
     }
   }
 
+  const clearCreativeError = useCallback((field: string) => {
+    setCreativeFormErrors((previous) => {
+      if (!previous[field]) {
+        return previous
+      }
+      const { [field]: _removed, ...rest } = previous
+      return rest
+    })
+  }, [])
+
+  const validateCreativeForm = useCallback(() => {
+    const errors: Record<string, string> = {}
+
+    if (!creativeTitle.trim()) {
+      errors.title = 'Title is required.'
+    }
+
+    if (!creativeSummary.trim()) {
+      errors.summary = 'Summary is required.'
+    }
+
+    if (creativeDelaySeconds.trim()) {
+      const parsed = Number(creativeDelaySeconds)
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        errors.delaySeconds = 'Delay must be zero or a positive number.'
+      }
+    }
+
+    if (creativeDurationSeconds.trim()) {
+      const parsed = Number(creativeDurationSeconds)
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        errors.durationSeconds = 'Duration must be a positive number.'
+      }
+    }
+
+    const ctaLabel = creativeCallToActionLabel.trim()
+    const ctaUrl = creativeCallToActionUrl.trim()
+
+    if (ctaLabel && !ctaUrl) {
+      errors.callToActionUrl = 'CTA URL is required when a label is provided.'
+    }
+
+    if (ctaUrl && !ctaLabel) {
+      errors.callToActionLabel = 'CTA label is required when a URL is provided.'
+    }
+
+    if (ctaUrl && !isSafeExternalUrl(ctaUrl)) {
+      errors.callToActionUrl = 'CTA URL must be a valid http(s) link.'
+    }
+
+    setCreativeFormErrors(errors)
+
+    if (Object.keys(errors).length > 0) {
+      setError('Fix the highlighted fields before scheduling the creative drop.')
+      return false
+    }
+
+    setError(null)
+    return true
+  }, [
+    creativeTitle,
+    creativeSummary,
+    creativeDelaySeconds,
+    creativeDurationSeconds,
+    creativeCallToActionLabel,
+    creativeCallToActionUrl,
+  ])
+
+  const handleCreativeSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!validateCreativeForm()) {
   const handleCreativeSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!creativeTitle.trim() || !creativeSummary.trim()) {
@@ -602,6 +895,7 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
     }
 
     const delaySeconds = creativeDelaySeconds.trim() ? Number(creativeDelaySeconds) : undefined
+    const durationSeconds = creativeDurationSeconds.trim() ? Number(creativeDurationSeconds) : undefined
     if (delaySeconds !== undefined && (!Number.isFinite(delaySeconds) || delaySeconds < 0)) {
       setError('Delay seconds must be zero or a positive number.')
       return
@@ -667,6 +961,7 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
       setCreativeDelaySeconds('3600')
       setCreativeCallToActionLabel('')
       setCreativeCallToActionUrl('')
+      setCreativeFormErrors({})
       await loadQueue()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to schedule creative autopost')
@@ -723,6 +1018,133 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
     }
   }
 
+  const toggleEntrySelection = useCallback((entryId: number) => {
+    setSelectedEntries((previous) =>
+      previous.includes(entryId)
+        ? previous.filter((id) => id !== entryId)
+        : [...previous, entryId],
+    )
+  }, [])
+
+  const toggleSelectAll = useCallback(() => {
+    if (filteredEntryIds.length === 0) {
+      return
+    }
+
+    setSelectedEntries((previous) => {
+      const everySelected = filteredEntryIds.every((id) => previous.includes(id))
+      if (everySelected) {
+        return previous.filter((id) => !filteredEntryIds.includes(id))
+      }
+      const merged = new Set(previous)
+      filteredEntryIds.forEach((id) => merged.add(id))
+      return Array.from(merged)
+    })
+  }, [filteredEntryIds])
+
+  const clearSelection = useCallback(() => {
+    setSelectedEntries([])
+  }, [])
+
+  const handleBulkPublish = useCallback(async () => {
+    const entriesToPublish = [...selectedEntries]
+    if (entriesToPublish.length === 0) {
+      return
+    }
+
+    setBulkPublishing(true)
+    setError(null)
+    setInfoMessage(null)
+
+    try {
+      const publishRequests = entriesToPublish.map(async (id) => {
+        const response = await fetch(`${apiBaseUrl}/api/autoposts/${id}/publish`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ publishedAt: new Date().toISOString() }),
+        })
+        const payload = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          throw new Error(payload.error || `Failed to publish autopost ${id} (${response.status})`)
+        }
+        return unwrapAutopostPayload(payload)
+      })
+
+      const results = await Promise.allSettled(publishRequests)
+      let successCount = 0
+      const failures: string[] = []
+
+      results.forEach((result, index) => {
+        const entryId = entriesToPublish[index]
+        if (result.status === 'fulfilled') {
+          successCount += 1
+        } else {
+          const reason = result.reason instanceof Error ? result.reason.message : 'unknown error'
+          failures.push(`#${entryId}: ${reason}`)
+        }
+      })
+
+      if (successCount > 0) {
+        setInfoMessage(`Published ${successCount} autopost${successCount === 1 ? '' : 's'}.`)
+      }
+
+      if (failures.length > 0) {
+        setError(
+          `Failed to publish ${failures.length} autopost${failures.length === 1 ? '' : 's'} (${failures.join(', ')}).`,
+        )
+      }
+
+      setSelectedEntries((previous) => previous.filter((id) => !entriesToPublish.includes(id)))
+      await loadQueue()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to publish the selected autoposts')
+    } finally {
+      setBulkPublishing(false)
+    }
+  }, [selectedEntries, apiBaseUrl, headers, loadQueue])
+
+  const handleExportQueue = useCallback(() => {
+    if (filteredQueue.length === 0) {
+      setInfoMessage('No autoposts match the current filters to export.')
+      return
+    }
+
+    try {
+      if (typeof window === 'undefined') {
+        return
+      }
+
+      const data = filteredQueue.map(({ entry, details }) => ({
+        id: entry.id,
+        status: entry.status,
+        scheduledAt: entry.scheduledAt,
+        updatedAt: entry.updatedAt,
+        creativeType: details?.creativeType ?? entry.creativeType ?? null,
+        title: details?.title ?? entry.title ?? null,
+        summary: details?.summary ?? entry.summary ?? null,
+        body: details?.body ?? entry.body ?? null,
+        audience: entry.audience ?? details?.audience ?? null,
+        hashtags: details?.hashtags ?? entry.hashtags ?? [],
+        inspirations: details?.inspirations ?? entry.inspirations ?? [],
+        callToAction: details?.callToAction ?? entry.callToAction ?? null,
+      }))
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `autopost-queue-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      setInfoMessage(`Exported ${data.length} autopost${data.length === 1 ? '' : 's'} to JSON.`)
+      setError(null)
+    } catch (err) {
+      setError('Unable to export autopost queue.')
+    }
+  }, [filteredQueue])
+
   const publishNow = async (entry: AutopostEntry) => {
     setError(null)
     setInfoMessage(null)
@@ -740,6 +1162,7 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
       const outcome = updated?.status === 'published' ? 'published' : 'queued for publish'
       setInfoMessage(`Autopost ${entry.id} ${outcome}.`)
       await loadQueue()
+      setSelectedEntries((previous) => previous.filter((id) => id !== entry.id))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to publish autopost')
     }
@@ -755,6 +1178,67 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
             Review scheduled drops, monitor connection dreams, and push a story live when the feed is ready.
           </p>
         </div>
+        <div className="flex flex-col gap-3 sm:items-end sm:text-right">
+          <div className="flex flex-wrap gap-3 sm:justify-end">
+            <label className="flex flex-col gap-1 text-xs uppercase tracking-[0.3em] text-brand-mist/70">
+              Filter queue
+              <select
+                value={statusOption}
+                onChange={(event) => handleStatusChange(event.target.value as AutopostStatus | 'all')}
+                className="rounded-full border border-white/10 bg-[#0b1126] px-3 py-2 text-sm font-semibold text-white focus:border-brand-magnolia/50 focus:outline-none"
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-xs uppercase tracking-[0.3em] text-brand-mist/70">
+              Creative type
+              <select
+                value={creativeTypeFilter}
+                onChange={(event) => setCreativeTypeFilter(event.target.value as CreativeType | 'all')}
+                className="rounded-full border border-white/10 bg-[#0b1126] px-3 py-2 text-sm font-semibold text-white focus:border-brand-magnolia/50 focus:outline-none"
+              >
+                {CREATIVE_FILTER_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="flex flex-wrap gap-3 sm:justify-end">
+            <label className="flex flex-col gap-1 text-xs uppercase tracking-[0.3em] text-brand-mist/70">
+              Search queue
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Title, summary, hashtag…"
+                className="w-full rounded-full border border-white/10 bg-[#0b1126] px-3 py-2 text-sm text-white placeholder:text-brand-mist/50 focus:border-brand-magnolia/50 focus:outline-none"
+                autoComplete="off"
+              />
+            </label>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => void loadQueue()}
+                className="inline-flex items-center justify-center rounded-md border border-white/10 bg-[#161f3e] px-4 py-2 text-sm font-semibold text-white transition hover:border-brand-magnolia/50 hover:text-brand-magnolia"
+              >
+                Refresh queue
+              </button>
+              <button
+                type="button"
+                onClick={handleExportQueue}
+                disabled={filteredQueue.length === 0}
+                className="inline-flex items-center justify-center rounded-md border border-brand-magnolia/40 bg-brand-magnolia/10 px-4 py-2 text-sm font-semibold text-brand-magnolia transition hover:border-brand-magnolia/60 hover:bg-brand-magnolia/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Export JSON
+              </button>
+            </div>
+          </div>
         <div className="flex flex-col gap-3 sm:items-end">
           <label className="flex flex-col gap-1 text-xs uppercase tracking-[0.3em] text-brand-mist/70">
             Filter queue
@@ -925,6 +1409,20 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
               <input
                 type="text"
                 value={creativeTitle}
+                onChange={(event) => {
+                  setCreativeTitle(event.target.value)
+                  clearCreativeError('title')
+                }}
+                placeholder="Connection dream: Midnight analog"
+                className={`rounded-full border bg-[#0b1126] px-3 py-2 text-sm text-white placeholder:text-brand-mist/50 focus:outline-none ${
+                  creativeFormErrors.title
+                    ? 'border-red-400 focus:border-red-300'
+                    : 'border-white/10 focus:border-brand-magnolia/50'
+                }`}
+              />
+              {creativeFormErrors.title ? (
+                <span className="text-xs text-red-300">{creativeFormErrors.title}</span>
+              ) : null}
                 onChange={(event) => setCreativeTitle(event.target.value)}
                 placeholder="Connection dream: Midnight analog"
                 className="rounded-full border border-white/10 bg-[#0b1126] px-3 py-2 text-sm text-white placeholder:text-brand-mist/50 focus:border-brand-magnolia/50 focus:outline-none"
@@ -934,6 +1432,20 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
               Summary
               <textarea
                 value={creativeSummary}
+                onChange={(event) => {
+                  setCreativeSummary(event.target.value)
+                  clearCreativeError('summary')
+                }}
+                placeholder="Describe the drop so the adaptive profile knows how to position it."
+                className={`min-h-[120px] rounded-xl border bg-[#0b1126] p-3 text-sm text-white placeholder:text-brand-mist/50 focus:outline-none ${
+                  creativeFormErrors.summary
+                    ? 'border-red-400 focus:border-red-300'
+                    : 'border-white/10 focus:border-brand-magnolia/50'
+                }`}
+              />
+              {creativeFormErrors.summary ? (
+                <span className="text-xs text-red-300">{creativeFormErrors.summary}</span>
+              ) : null}
                 onChange={(event) => setCreativeSummary(event.target.value)}
                 placeholder="Describe the drop so the adaptive profile knows how to position it."
                 className="min-h-[120px] rounded-xl border border-white/10 bg-[#0b1126] p-3 text-sm text-white placeholder:text-brand-mist/50 focus:border-brand-magnolia/50 focus:outline-none"
@@ -955,6 +1467,19 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
                   type="number"
                   min={0}
                   value={creativeDelaySeconds}
+                  onChange={(event) => {
+                    setCreativeDelaySeconds(event.target.value)
+                    clearCreativeError('delaySeconds')
+                  }}
+                  className={`rounded-full border bg-[#0b1126] px-3 py-2 text-sm text-white focus:outline-none ${
+                    creativeFormErrors.delaySeconds
+                      ? 'border-red-400 focus:border-red-300'
+                      : 'border-white/10 focus:border-brand-magnolia/50'
+                  }`}
+                />
+                {creativeFormErrors.delaySeconds ? (
+                  <span className="text-xs text-red-300">{creativeFormErrors.delaySeconds}</span>
+                ) : null}
                   onChange={(event) => setCreativeDelaySeconds(event.target.value)}
                   className="rounded-full border border-white/10 bg-[#0b1126] px-3 py-2 text-sm text-white focus:border-brand-magnolia/50 focus:outline-none"
                 />
@@ -979,6 +1504,19 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
                   type="number"
                   min={1}
                   value={creativeDurationSeconds}
+                  onChange={(event) => {
+                    setCreativeDurationSeconds(event.target.value)
+                    clearCreativeError('durationSeconds')
+                  }}
+                  className={`rounded-full border bg-[#0b1126] px-3 py-2 text-sm text-white focus:outline-none ${
+                    creativeFormErrors.durationSeconds
+                      ? 'border-red-400 focus:border-red-300'
+                      : 'border-white/10 focus:border-brand-magnolia/50'
+                  }`}
+                />
+                {creativeFormErrors.durationSeconds ? (
+                  <span className="text-xs text-red-300">{creativeFormErrors.durationSeconds}</span>
+                ) : null}
                   onChange={(event) => setCreativeDurationSeconds(event.target.value)}
                   className="rounded-full border border-white/10 bg-[#0b1126] px-3 py-2 text-sm text-white focus:border-brand-magnolia/50 focus:outline-none"
                 />
@@ -1022,6 +1560,21 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
                 <input
                   type="text"
                   value={creativeCallToActionLabel}
+                  onChange={(event) => {
+                    setCreativeCallToActionLabel(event.target.value)
+                    clearCreativeError('callToActionLabel')
+                    clearCreativeError('callToActionUrl')
+                  }}
+                  placeholder="Experience"
+                  className={`rounded-full border bg-[#0b1126] px-3 py-2 text-sm text-white placeholder:text-brand-mist/50 focus:outline-none ${
+                    creativeFormErrors.callToActionLabel
+                      ? 'border-red-400 focus:border-red-300'
+                      : 'border-white/10 focus:border-brand-magnolia/50'
+                  }`}
+                />
+                {creativeFormErrors.callToActionLabel ? (
+                  <span className="text-xs text-red-300">{creativeFormErrors.callToActionLabel}</span>
+                ) : null}
                   onChange={(event) => setCreativeCallToActionLabel(event.target.value)}
                   placeholder="Experience"
                   className="rounded-full border border-white/10 bg-[#0b1126] px-3 py-2 text-sm text-white placeholder:text-brand-mist/50 focus:border-brand-magnolia/50 focus:outline-none"
@@ -1032,6 +1585,21 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
                 <input
                   type="url"
                   value={creativeCallToActionUrl}
+                  onChange={(event) => {
+                    setCreativeCallToActionUrl(event.target.value)
+                    clearCreativeError('callToActionUrl')
+                    clearCreativeError('callToActionLabel')
+                  }}
+                  placeholder="https://mirai.ai/dream"
+                  className={`rounded-full border bg-[#0b1126] px-3 py-2 text-sm text-white placeholder:text-brand-mist/50 focus:outline-none ${
+                    creativeFormErrors.callToActionUrl
+                      ? 'border-red-400 focus:border-red-300'
+                      : 'border-white/10 focus:border-brand-magnolia/50'
+                  }`}
+                />
+                {creativeFormErrors.callToActionUrl ? (
+                  <span className="text-xs text-red-300">{creativeFormErrors.callToActionUrl}</span>
+                ) : null}
                   onChange={(event) => setCreativeCallToActionUrl(event.target.value)}
                   placeholder="https://mirai.ai/dream"
                   className="rounded-full border border-white/10 bg-[#0b1126] px-3 py-2 text-sm text-white placeholder:text-brand-mist/50 focus:border-brand-magnolia/50 focus:outline-none"
@@ -1056,6 +1624,7 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
                   Scheduled {formatDateTime(creativeResponseDetails?.scheduledAt ?? creativeResponse.scheduledAt)}
                 </p>
               </div>
+              <AutopostMetadataView entry={creativeResponse} details={creativeResponseDetails} />
               <AutopostMetadataView entry={creativeResponse} />
             </article>
           ) : null}
@@ -1092,11 +1661,103 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
         </div>
       </form>
 
+      {queue.length > 0 ? (
+        <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#0d142c]/70 p-4 text-sm text-brand-mist">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-brand-mist/70">
+              <input
+                type="checkbox"
+                checked={allFilteredSelected}
+                onChange={toggleSelectAll}
+                disabled={filteredQueue.length === 0}
+                className="h-4 w-4 rounded border-white/30 bg-transparent text-brand-magnolia focus:ring-brand-magnolia disabled:cursor-not-allowed disabled:opacity-40"
+              />
+              Select filtered
+            </label>
+            <span className="text-xs text-brand-mist/70">
+              {hasSelection ? `${selectionCount} selected` : 'No selections'}
+            </span>
+            {filteredQueue.length !== queue.length ? (
+              <span className="text-xs text-brand-mist/60">
+                Showing {filteredQueue.length} of {queue.length}
+              </span>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => void handleBulkPublish()}
+              disabled={!hasSelection || bulkPublishing}
+              className="inline-flex items-center justify-center rounded-md bg-emerald-400/90 px-4 py-2 text-sm font-semibold text-[#03161f] transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {bulkPublishing ? 'Publishing…' : 'Publish selected'}
+            </button>
+            <button
+              type="button"
+              onClick={clearSelection}
+              disabled={!hasSelection || bulkPublishing}
+              className="inline-flex items-center justify-center rounded-md border border-white/10 bg-transparent px-4 py-2 text-sm font-semibold text-white transition hover:border-brand-magnolia/40 hover:text-brand-magnolia disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Clear selection
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid gap-4">
         {loading ? <p className="text-sm text-brand-mist/70">Loading autopost queue…</p> : null}
         {!loading && queue.length === 0 ? (
           <p className="text-sm text-brand-mist/70">No autoposts yet. Schedule one above to get started.</p>
         ) : null}
+        {!loading && queue.length > 0 && filteredQueue.length === 0 ? (
+          <p className="text-sm text-brand-mist/70">No autoposts match the current filters.</p>
+        ) : null}
+        {filteredQueue.map(({ entry, details }) => {
+          const isSelected = selectedEntries.includes(entry.id)
+          const headline =
+            details?.title ??
+            details?.summary ??
+            entry.title ??
+            entry.summary ??
+            entry.body ??
+            `Autopost #${entry.id}`
+          const creativeLabel = details?.creativeType ?? entry.creativeType ?? null
+          const scheduledDisplay = formatDateTime(details?.scheduledAt ?? entry.scheduledAt)
+          const updatedDisplay = formatDateTime(entry.updatedAt)
+          const mediaHref = entry.mediaUrl ?? entry.assetUrl ?? details?.mediaUrl ?? details?.assetUrl ?? null
+          const posterHref = entry.posterUrl ?? details?.posterUrl ?? null
+          const audienceLabel = details?.audience ?? entry.audience ?? null
+
+          return (
+            <article key={entry.id} className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#0d142c]/70 p-5">
+              <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleEntrySelection(entry.id)}
+                    disabled={bulkPublishing}
+                    className="mt-1 h-4 w-4 rounded border-white/30 bg-transparent text-brand-magnolia focus:ring-brand-magnolia disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label={`Select autopost ${entry.id}`}
+                  />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[0.65rem] uppercase tracking-[0.32em] text-brand-mist/60">Autopost #{entry.id}</span>
+                    <h4 className="text-lg font-semibold text-white">{headline}</h4>
+                    {creativeLabel ? (
+                      <span className="text-[0.65rem] uppercase tracking-[0.32em] text-brand-mist/60">
+                        Creative: {creativeLabel}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+                <span className="inline-flex items-center justify-center rounded-full border border-white/10 bg-[#16204b] px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.32em] text-brand-mist">
+                  {entry.status}
+                </span>
+              </header>
+              <dl className="grid gap-2 text-xs text-brand-mist/80 sm:grid-cols-2">
+                <div className="flex flex-col">
+                  <dt className="font-semibold text-brand-mist">Scheduled</dt>
+                  <dd>{scheduledDisplay}</dd>
         {queue.map((entry) => (
           <article key={entry.id} className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#0d142c]/70 p-5">
             <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1122,12 +1783,50 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
                   <dt className="font-semibold text-brand-mist">Media</dt>
                   <dd className="break-all text-brand-magnolia">{entry.mediaUrl ?? entry.assetUrl}</dd>
                 </div>
-              ) : null}
-              {entry.posterUrl ? (
                 <div className="flex flex-col">
-                  <dt className="font-semibold text-brand-mist">Poster</dt>
-                  <dd className="break-all text-brand-magnolia">{entry.posterUrl}</dd>
+                  <dt className="font-semibold text-brand-mist">Last updated</dt>
+                  <dd>{updatedDisplay}</dd>
                 </div>
+                {audienceLabel ? (
+                  <div className="flex flex-col">
+                    <dt className="font-semibold text-brand-mist">Audience</dt>
+                    <dd>{audienceLabel}</dd>
+                  </div>
+                ) : null}
+                {mediaHref ? (
+                  <div className="flex flex-col">
+                    <dt className="font-semibold text-brand-mist">Media</dt>
+                    <dd className="break-all text-brand-magnolia">{mediaHref}</dd>
+                  </div>
+                ) : null}
+                {posterHref ? (
+                  <div className="flex flex-col">
+                    <dt className="font-semibold text-brand-mist">Poster</dt>
+                    <dd className="break-all text-brand-magnolia">{posterHref}</dd>
+                  </div>
+                ) : null}
+              </dl>
+              <AutopostMetadataView entry={entry} details={details} />
+              {entry.publishedPost ? (
+                <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-[#101737]/80 p-3">
+                  <p className="text-[0.65rem] uppercase tracking-[0.32em] text-brand-mist/60">Published post</p>
+                  <p className="text-sm text-brand-mist">{entry.publishedPost.body}</p>
+                </div>
+              ) : null}
+              {entry.status === 'scheduled' ? (
+                <div className="flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => void publishNow(entry)}
+                    className="inline-flex items-center justify-center rounded-md bg-emerald-400/90 px-4 py-2 text-sm font-semibold text-[#03161f] transition hover:bg-emerald-300"
+                  >
+                    Publish now
+                  </button>
+                </div>
+              ) : null}
+            </article>
+          )
+        })}
               ) : null}
             </dl>
             <AutopostMetadataView entry={entry} />
