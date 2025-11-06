@@ -14,7 +14,10 @@ const resolveEnv = (primary: string | undefined, fallback?: string | undefined) 
 }
 
 const supabaseUrl = resolveEnv(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_URL)
-const supabaseAnonKey = resolveEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, process.env.SUPABASE_KEY)
+const supabaseAnonKey = resolveEnv(
+  process.env.NEXT_PUBLIC_SUPABASE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  process.env.SUPABASE_KEY ?? process.env.SUPABASE_ANON_KEY,
+)
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 
