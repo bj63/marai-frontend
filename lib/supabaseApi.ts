@@ -6,6 +6,7 @@ export interface MiraiProfile {
   user_id: string
   name: string
   avatar: string
+  avatar_url?: string
   color: string
   created_at: string
 }

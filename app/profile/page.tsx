@@ -23,6 +23,8 @@ import {
 } from '@/lib/supabaseApi'
 import MoodCard from '@/components/MoodCard'
 import FollowButton from '@/components/profile/FollowButton'
+import Image from 'next/image'
+import { ProfileAvatarUploader } from '@/components/social/ProfileAvatarUploader'
 
 type TraitKey = keyof StorePersonality
 
@@ -119,6 +121,29 @@ export default function ProfilePage() {
   const [followers, setFollowers] = useState<FollowProfile[]>([])
   const [following, setFollowing] = useState<FollowProfile[]>([])
   const [connectionsLoading, setConnectionsLoading] = useState(true)
+  const [profileRecord, setProfileRecord] = useState<MiraiProfile | null>(null)
+
+  const handleAvatarUpload = async (file: File) => {
+    if (!user?.id) return
+    const { data, error } = await supabase.storage.from('avatars').upload(`${user.id}/${file.name}`, file)
+    if (error) {
+      reportError('ProfilePage.handleAvatarUpload', error)
+      return
+    }
+    const { publicURL } = supabase.storage.from('avatars').getPublicUrl(data.path)
+    if (!publicURL) return
+    setProfileRecord((prev) => (prev ? { ...prev, avatar_url: publicURL } : null))
+    await saveProfile(user.id, { avatar_url: publicURL })
+  }
+
+  const handleAvatarRemove = async () => {
+    if (!user?.id || !profileRecord?.avatar_url) return
+    const fileName = profileRecord.avatar_url.split('/').pop()
+    if (!fileName) return
+    await supabase.storage.from('avatars').remove([`${user.id}/${fileName}`])
+    setProfileRecord((prev) => (prev ? { ...prev, avatar_url: undefined } : null))
+    await saveProfile(user.id, { avatar_url: undefined })
+  }
 
   const founderNameFallback = useMemo(() => {
     if (!user) return ''
@@ -144,17 +169,19 @@ export default function ProfilePage() {
 
     let active = true
 
+import { supabase } from '@/lib/supabaseClient'
     const hydrateProfile = async () => {
       setLoading(true)
       setFeedback(null)
 
-      const [profileRecord, personalityRecord] = await Promise.all([
+      const [profileData, personalityRecord] = await Promise.all([
         getProfile(user.id),
         getPersonality(user.id),
       ])
 
       if (!active) return
 
+      setProfileRecord(profileData)
       const nextTraits = mapPersonality(personalityRecord)
       setTraits(nextTraits)
       setStorePersonality(nextTraits)
@@ -217,7 +244,7 @@ export default function ProfilePage() {
     return () => {
       active = false
     }
-  }, [status, user?.id])
+  }, [status, user?.id, profileRecord])
 
   const handleCopyFederationId = async () => {
     if (!federationId) return
@@ -394,6 +421,15 @@ export default function ProfilePage() {
                 <p className="text-xs text-brand-mist/60">Pick a name, emoji, and colour that your network recognises.</p>
               </div>
 
+              <div className="flex flex-col gap-1 text-sm">
+                <span className="text-brand-mist/70">Avatar</span>
+                <ProfileAvatarUploader
+                  avatarUrl={profileRecord?.avatar_url}
+                  onUpload={handleAvatarUpload}
+                  onRemove={handleAvatarRemove}
+                />
+              </div>
+
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-brand-mist/70">Mirai name</span>
                 <input
@@ -474,13 +510,30 @@ export default function ProfilePage() {
             </button>
           </div>
 
+import Image from 'next/image'
+import { ProfileAvatarUploader } from '@/components/social/ProfileAvatarUploader'
           <motion.div
             className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/5 p-6 text-center text-brand-mist"
             style={{ borderTop: `4px solid ${profileForm.color}` }}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <div className="text-5xl">{profileForm.avatar}</div>
+            <div className="relative h-32 w-32 self-center rounded-full border-2 border-white/10 bg-gray-800">
+              {profileRecord?.avatar_url ? (
+                <Image
+                  src={profileRecord.avatar_url}
+                  alt="Profile avatar"
+                  fill
+                  unoptimized
+                  sizes="128px"
+                  className="rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-5xl">
+                  {profileForm.avatar}
+                </div>
+              )}
+            </div>
             <div className="flex flex-col gap-1">
               <span className="text-lg font-semibold text-white">{profileForm.name || founderNameFallback || 'Your Mirai'}</span>
               <span className="text-xs uppercase tracking-[0.3em] text-brand-mist/60">Preview</span>

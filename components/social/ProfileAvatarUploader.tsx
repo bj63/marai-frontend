@@ -1,100 +1,60 @@
 'use client'
 
+import { useState } from 'react'
 import Image from 'next/image'
-import { useEffect, useRef, useState, type ChangeEvent } from 'react'
+import { UploadCloud, X } from 'lucide-react'
 
-export interface ProfileAvatarUploaderProps {
+interface ProfileAvatarUploaderProps {
   avatarUrl?: string
-  onUpload?: (file: File) => Promise<string | void> | string | void
-  onRemove?: () => Promise<void> | void
+  onUpload: (file: File) => void
+  onRemove: () => void
 }
 
 export function ProfileAvatarUploader({ avatarUrl, onUpload, onRemove }: ProfileAvatarUploaderProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | undefined>(avatarUrl)
-  const [objectUrl, setObjectUrl] = useState<string | undefined>()
-  const [isUploading, setIsUploading] = useState(false)
 
-  useEffect(() => {
-    return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl)
-      }
-    }
-  }, [objectUrl])
-
-  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (!file) return
-
-    const previewUrl = URL.createObjectURL(file)
-    setPreview(previewUrl)
-    setObjectUrl(previewUrl)
-
-    try {
-      setIsUploading(true)
-      const result = await onUpload?.(file)
-      if (typeof result === 'string') {
-        setPreview(result)
-        setObjectUrl(undefined)
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setPreview(reader.result as string)
       }
-    } finally {
-      setIsUploading(false)
+      reader.readAsDataURL(file)
+      onUpload(file)
     }
   }
 
-  async function handleRemove() {
-    if (objectUrl) {
-      URL.revokeObjectURL(objectUrl)
-      setObjectUrl(undefined)
-    }
+  const handleRemove = () => {
     setPreview(undefined)
-    await onRemove?.()
-    inputRef.current?.focus()
+    onRemove()
   }
 
   return (
-    <div className="flex flex-col items-center gap-4 text-white">
-      <div className="relative h-28 w-28 overflow-hidden rounded-3xl border border-dashed border-white/30 bg-white/10">
+    <div className="flex items-center gap-4">
+      <div className="relative h-28 w-28 rounded-full border-2 border-dashed border-white/20 bg-gray-800">
         {preview ? (
-          <Image src={preview} alt="Profile avatar" fill unoptimized sizes="112px" className="object-cover" />
+          <>
+            <Image src={preview} alt="Profile avatar" fill unoptimized sizes="112px" className="rounded-full object-cover" />
+            <button
+              type="button"
+              onClick={handleRemove}
+              className="absolute top-0 right-0 rounded-full bg-red-500 p-1 text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </>
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-xs uppercase tracking-wide text-white/60">
-            No Avatar
-          </div>
+          <label className="flex h-full w-full cursor-pointer items-center justify-center">
+            <UploadCloud className="h-8 w-8 text-gray-500" />
+            <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+          </label>
         )}
       </div>
-
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleFileChange}
-      />
-
-      <div className="flex flex-wrap justify-center gap-3 text-sm font-medium">
-        <button
-          type="button"
-          className="rounded-full border border-white/20 px-4 py-2 text-white transition hover:border-white/40 hover:bg-white/10"
-          disabled={isUploading}
-          onClick={() => inputRef.current?.click()}
-        >
-          {isUploading ? 'Uploading…' : preview ? 'Change Avatar' : 'Upload Avatar'}
-        </button>
-
-        {preview && (
-          <button
-            type="button"
-            className="text-xs uppercase tracking-wide text-white/60 hover:text-rose-300"
-            onClick={handleRemove}
-          >
-            Remove
-          </button>
-        )}
+      <div className="text-xs text-brand-mist/60">
+        <p>Upload a custom avatar.</p>
+        <p>Recommended size: 256x256</p>
       </div>
     </div>
   )
 }
-
-export default ProfileAvatarUploader

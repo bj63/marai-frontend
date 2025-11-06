@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Loader2, MessageCircle, Send } from 'lucide-react'
+import { Loader2, MessageCircle, Send, Video } from 'lucide-react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { useDesignTheme } from '@/components/design/DesignThemeProvider'
 import {
@@ -12,6 +12,7 @@ import {
   type ConversationSummary,
   type DirectMessage,
 } from '@/lib/supabaseApi'
+import VideoCall from '@/components/VideoCall'
 
 export default function MessagesPage() {
   const { status, user } = useAuth()
@@ -23,8 +24,13 @@ export default function MessagesPage() {
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [sending, setSending] = useState(false)
   const [draft, setDraft] = useState('')
+  const [inCall, setInCall] = useState(false)
   const conversationStartRef = useRef<number | null>(null)
   const activeConversationRef = useRef<string | null>(null)
+
+  const handleToggleCall = () => {
+    setInCall((prev) => !prev)
+  }
 
   useEffect(() => {
     if (status !== 'authenticated' || !user?.id) {
@@ -233,9 +239,19 @@ export default function MessagesPage() {
                 </div>
               ) : null}
               <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 text-xs uppercase tracking-[0.32em] text-brand-mist/60">
-                <span>Thread</span>
+                <div className="flex items-center gap-2">
+                  <span>Thread</span>
+                  <button
+                    type="button"
+                    className="rounded-full p-1 transition hover:bg-white/10"
+                    onClick={handleToggleCall}
+                  >
+                    <Video className="h-4 w-4" />
+                  </button>
+                </div>
                 {loadingMessages ? <Loader2 className="h-3.5 w-3.5 animate-spin text-brand-magnolia" /> : null}
               </div>
+              {inCall && <VideoCall initiator={true} onClose={handleToggleCall} />}
               <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
                 {loadingMessages ? (
                   <div className="flex h-full items-center justify-center text-sm text-brand-mist/60">Loading messages…</div>

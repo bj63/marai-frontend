@@ -4,7 +4,8 @@ import Image from 'next/image'
 
 export interface UserProfileCardProps {
   username: string
-  avatarUrl: string
+  avatarUrl?: string
+  avatar?: string
   tagline?: string
   trustLevel?: number
   personalitySummary?: string
@@ -16,6 +17,7 @@ export interface UserProfileCardProps {
 export function UserProfileCard({
   username,
   avatarUrl,
+  avatar,
   tagline,
   trustLevel,
   personalitySummary,
@@ -29,8 +31,12 @@ export function UserProfileCard({
     <article className="flex flex-col gap-6 rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 to-white/5 p-6 text-white shadow-xl backdrop-blur">
       <header className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="relative h-20 w-20 overflow-hidden rounded-2xl border border-white/20">
-            <Image src={avatarUrl} alt={`${username} avatar`} fill unoptimized sizes="80px" className="object-cover" />
+          <div className="relative h-20 w-20 overflow-hidden rounded-2xl border border-white/20 flex items-center justify-center bg-gray-800">
+            {avatarUrl ? (
+              <Image src={avatarUrl} alt={`${username} avatar`} fill unoptimized sizes="80px" className="object-cover" />
+            ) : (
+              <span className="text-4xl">{avatar}</span>
+            )}
           </div>
           <div>
             <h2 className="text-2xl font-semibold">{username}</h2>
