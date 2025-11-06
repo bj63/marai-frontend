@@ -30,8 +30,12 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable} ${accent.variable}`}>
-      <body className="bg-[var(--design-background)] text-[var(--design-neutral)] antialiased transition-colors duration-300">
+      <body className="app-body text-[var(--text-subtle)] antialiased transition-colors duration-300">
         <Providers>
+          <div className="app-backdrop" aria-hidden />
+          <a href="#main-content" className="skip-link">
+            Skip to main content
+          </a>
           <div className="relative flex min-h-screen flex-col">
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
               <div className="absolute -left-20 top-[-160px] h-[360px] w-[360px] rounded-full bg-brand-gradient opacity-30 blur-3xl" />
@@ -72,7 +76,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-end md:gap-6">
                     <Link
                       href="/admin"
-                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-[#101737] px-3 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:border-brand-magnolia/50 hover:text-brand-magnolia"
+                      className="button-tertiary px-3 py-2"
                     >
                       Admin hub
                     </Link>
@@ -82,7 +86,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </header>
 
-            <div className="relative z-10 flex-1 pb-12">{children}</div>
+            <div id="main-content" role="main" className="relative z-10 flex-1 pb-12">
+              {children}
+            </div>
           </div>
         </Providers>
       </body>

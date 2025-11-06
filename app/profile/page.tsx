@@ -513,11 +513,11 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-12 text-brand-mist/80">
-      <header className="flex flex-col gap-2 text-white">
-        <p className="text-[0.7rem] uppercase tracking-[0.35em] text-brand-mist/60">Profile</p>
-        <h1 className="text-3xl font-semibold">Craft your Mirai&apos;s identity</h1>
-        <p className="text-sm text-brand-mist/70">
+    <div className="page-shell" data-width="wide">
+      <header className="section-header text-white">
+        <p className="section-label text-brand-mist/60">Profile</p>
+        <h1 className="section-title text-3xl">Craft your Mirai&apos;s identity</h1>
+        <p className="section-description text-brand-mist/70">
           Adjust the tone, colours, and voice that collaborators experience when they meet your federation.
         </p>
       </header>
