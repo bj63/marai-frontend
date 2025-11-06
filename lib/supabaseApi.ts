@@ -234,21 +234,6 @@ export async function updateUserMetadata(metadata: Record<string, unknown>): Pro
   return result.error ? { error: result.error } : {}
 }
 
-export async function getFollowingFeed(viewerId: string): Promise<FeedPostWithEngagement[]> {
-  const { data } = await trackSupabase(
-    'getFollowingFeed',
-    () => supabase.rpc('fetch_following_feed', { viewer_id: viewerId }),
-    { viewerId },
-  )
-
-  return ((data as FeedPostWithEngagement[]) ?? []).map((entry) => ({
-    ...entry,
-    likes_count: entry.likes_count ?? 0,
-    comments: entry.comments ?? [],
-    viewer_has_liked: Boolean(entry.viewer_has_liked),
-  }))
-}
-
 export async function getFeedWithEngagement(viewerId?: string): Promise<FeedPostWithEngagement[]> {
   const { data } = await trackSupabase(
     'getFeedWithEngagement',

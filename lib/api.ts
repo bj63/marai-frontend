@@ -1,5 +1,4 @@
 const DEFAULT_API_BASE = 'http://localhost:5000'
-const DEFAULT_DESIGN_API_BASE = 'http://localhost:8000'
 
 function resolveApiBase() {
   const configuredBase = process.env.NEXT_PUBLIC_API_BASE?.trim()
@@ -7,14 +6,6 @@ function resolveApiBase() {
     return configuredBase.replace(/\/$/, '')
   }
   return DEFAULT_API_BASE
-}
-
-function resolveDesignApiBase() {
-  const configuredBase = process.env.NEXT_PUBLIC_DESIGN_API_URL?.trim()
-  if (configuredBase && configuredBase.length > 0) {
-    return configuredBase.replace(/\/$/, '')
-  }
-  return DEFAULT_DESIGN_API_BASE
 }
 
 async function handleApiResponse<T>(response: Response, context: string): Promise<T> {
@@ -212,7 +203,7 @@ function buildAuthHeaders(accessToken?: string | null) {
 }
 
 export async function getDesignTheme(userId: string, accessToken?: string | null) {
-  const response = await fetch(`${resolveDesignApiBase()}/design/theme/${encodeURIComponent(userId)}`, {
+  const response = await fetch(`${resolveApiBase()}/design/theme/${encodeURIComponent(userId)}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -225,7 +216,7 @@ export async function getDesignTheme(userId: string, accessToken?: string | null
 }
 
 export async function postDesignContext(payload: DesignContextRequest, accessToken?: string | null) {
-  const response = await fetch(`${resolveDesignApiBase()}/design/context`, {
+  const response = await fetch(`${resolveApiBase()}/design/context`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -238,7 +229,7 @@ export async function postDesignContext(payload: DesignContextRequest, accessTok
 }
 
 export async function postDesignFeedback(payload: DesignFeedbackPayload, accessToken?: string | null) {
-  const response = await fetch(`${resolveDesignApiBase()}/design/feedback`, {
+  const response = await fetch(`${resolveApiBase()}/design/feedback`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

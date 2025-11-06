@@ -14,7 +14,7 @@ import {
   addComment,
   createPost,
   generateCaptionSuggestion,
-  getFollowingFeed,
+  getFeedWithEngagement,
   getProfile,
   likePost,
   type FeedPostWithEngagement,
@@ -110,13 +110,8 @@ export default function FeedPage() {
     let active = true
 
     const loadFeed = async () => {
-      if (!user?.id) {
-        setFeed([])
-        setLoadingFeed(false)
-        return
-      }
       setLoadingFeed(true)
-      const posts = await getFollowingFeed(user.id)
+      const posts = await getFeedWithEngagement(user?.id)
       if (!active) return
       setFeed(posts)
       setLoadingFeed(false)

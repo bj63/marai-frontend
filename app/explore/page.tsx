@@ -1,66 +1,100 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2 } from 'lucide-react'
-import MoodCard from '@/components/MoodCard'
+import { motion } from 'framer-motion'
+import { Compass, Loader2, Search } from 'lucide-react'
 import { useAuth } from '@/components/auth/AuthProvider'
-import { getFeedWithEngagement, type FeedPostWithEngagement } from '@/lib/supabaseApi'
+import { searchDirectory, type SearchResult } from '@/lib/supabaseApi'
 
 export default function ExplorePage() {
   const { user } = useAuth()
-  const [feed, setFeed] = useState<FeedPostWithEngagement[]>([])
-  const [loadingFeed, setLoadingFeed] = useState(true)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<SearchResult[]>([])
+  const [loading, setLoading] = useState(false)
+  const [debounced, setDebounced] = useState('')
 
   useEffect(() => {
-    let active = true
+    const id = setTimeout(() => setDebounced(query), 300)
+    return () => clearTimeout(id)
+  }, [query])
 
-    const loadFeed = async () => {
-      setLoadingFeed(true)
-      const posts = await getFeedWithEngagement(user?.id)
-      if (!active) return
-      setFeed(posts)
-      setLoadingFeed(false)
+  useEffect(() => {
+    if (!debounced.trim()) {
+      setResults([])
+      setLoading(false)
+      return
     }
 
-    loadFeed()
+    let active = true
+
+    const runSearch = async () => {
+      setLoading(true)
+      const matches = await searchDirectory(debounced)
+      if (!active) return
+      setResults(matches)
+      setLoading(false)
+    }
+
+    runSearch()
 
     return () => {
       active = false
     }
-  }, [user?.id])
+  }, [debounced])
 
   return (
-    <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-12">
-      <header className="flex flex-col gap-3">
-        <span className="text-xs uppercase tracking-[0.35em] text-[color-mix(in srgb,var(--design-neutral) 55%,#94a3b8)]">
-          Explore
-        </span>
-        <h1 className="text-3xl font-semibold text-white">Discover new companions</h1>
-        <p className="text-sm text-[color-mix(in srgb,var(--design-neutral) 75%,#cbd5f5)]">
-          See what other AIs are feeling and find new federations to follow.
-        </p>
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-12 text-brand-mist/80">
+      <header className="flex flex-col gap-2 text-white">
+        <p className="text-[0.7rem] uppercase tracking-[0.35em] text-brand-mist/60">Explore</p>
+        <h1 className="text-3xl font-semibold">Discover federations, posts, and collaborators</h1>
+        <p className="text-sm text-brand-mist/70">Search across public profiles and feed entries to grow your social graph.</p>
       </header>
 
-      <section className="space-y-4">
-        {loadingFeed ? (
-          <div className="flex items-center justify-center gap-2 rounded-3xl border border-[color-mix(in srgb,var(--design-stroke) 70%,transparent)] bg-[color-mix(in srgb,var(--design-background) 72%,#161f3b)] p-6 text-sm text-[color-mix(in srgb,var(--design-neutral) 70%,#a3b4e4)]">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading the global feed…
+      <div className="flex items-center gap-3 rounded-full border border-white/10 bg-[#101737]/70 px-4 py-3">
+        <Search className="h-4 w-4 text-brand-mist/60" />
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search profiles, posts, or tags"
+          className="flex-1 bg-transparent text-sm text-white placeholder:text-brand-mist/50 focus:outline-none"
+        />
+      </div>
+
+      <div className="space-y-3">
+        {loading ? (
+          <div className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#101737]/70 p-6 text-sm text-brand-mist/70">
+            <Loader2 className="h-4 w-4 animate-spin text-brand-magnolia" /> Scanning the network…
           </div>
-        ) : feed.length === 0 ? (
-          <p className="rounded-3xl border border-dashed border-[color-mix(in srgb,var(--design-stroke) 60%,transparent)] bg-[color-mix(in srgb,var(--design-background) 70%,#161f3b)] p-6 text-center text-sm text-[color-mix(in srgb,var(--design-neutral) 70%,#a3b4e4)]">
-            The feed is quiet right now.
-          </p>
+        ) : results.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-white/10 bg-[#0f1737]/60 p-6 text-center text-sm text-brand-mist/70">
+            {debounced
+              ? 'No matches yet. Try searching for a teammate, federation ID, or post keyword.'
+              : 'Start typing to find federations and mood posts.'}
+          </div>
         ) : (
-          feed.map((post) => (
-            <div
-              key={post.id}
-              className="rounded-3xl border border-[color-mix(in srgb,var(--design-stroke) 70%,transparent)] bg-[color-mix(in srgb,var(--design-background) 75%,#121a3a)] p-5 shadow-[0_18px_38px_rgba(5,9,25,0.45)]"
+          results.map((result) => (
+            <motion.a
+              key={result.id}
+              href={result.href}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#101737]/70 px-4 py-4 text-sm transition hover:border-brand-magnolia/40 hover:text-white"
             >
-              <MoodCard post={post} />
-            </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-xs uppercase tracking-[0.3em] text-brand-mist/60">{result.type}</span>
+                <span className="text-base font-semibold text-white">{result.title}</span>
+                {result.subtitle ? <span className="text-xs text-brand-mist/60">{result.subtitle}</span> : null}
+              </div>
+              <Compass className="h-5 w-5 text-brand-magnolia" />
+            </motion.a>
           ))
         )}
-      </section>
+      </div>
+
+      {!user ? (
+        <p className="text-center text-xs text-brand-mist/50">Sign in to follow results and save them to your roster.</p>
+      ) : null}
     </div>
   )
 }

@@ -25,6 +25,7 @@ import MoodCard from '@/components/MoodCard'
 import FollowButton from '@/components/profile/FollowButton'
 import Image from 'next/image'
 import { ProfileAvatarUploader } from '@/components/social/ProfileAvatarUploader'
+import { supabase } from '@/lib/supabaseClient'
 
 type TraitKey = keyof StorePersonality
 
@@ -169,7 +170,6 @@ export default function ProfilePage() {
 
     let active = true
 
-import { supabase } from '@/lib/supabaseClient'
     const hydrateProfile = async () => {
       setLoading(true)
       setFeedback(null)
@@ -510,8 +510,6 @@ import { supabase } from '@/lib/supabaseClient'
             </button>
           </div>
 
-import Image from 'next/image'
-import { ProfileAvatarUploader } from '@/components/social/ProfileAvatarUploader'
           <motion.div
             className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/5 p-6 text-center text-brand-mist"
             style={{ borderTop: `4px solid ${profileForm.color}` }}
