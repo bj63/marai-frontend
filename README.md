@@ -12,7 +12,8 @@ Users can interact with emotional avatars, view dynamic visuals, and later conne
 ---
 
 ## ⚙️ Features
-- **Chat Interface** – Real-time communication with the Amaris AI.  
+- **Immersive Chat Studio** – Drop-down creative palette with live media uploads, predictive moodline, and AI insights.
+- **Chat Interface** – Real-time communication with the Amaris AI.
 - **Emotional Avatar Display** – Avatars react to emotion data from the backend.  
 - **Supabase Auth** – Secure user registration and login.  
 - **API Integration** – Connects to MOA_AI_V3 backend for chat, emotion, and image generation.  
@@ -176,6 +177,7 @@ The app requires the **MOA_AI_V3** backend to be running on Render, Railway, or 
 
 ## 🔄 Recent Updates
 
+* 🧠 Reimagined chat studio with creative palette navigation, media uploads, and predictive timeline highlights
 * 🎨 Marketplace page now showcases concept art while the feature is in development
 * 🪪 Avatar mint preview mirrors your current profile inside the marketplace placeholder
 * ✨ Refactored API client for reliability
