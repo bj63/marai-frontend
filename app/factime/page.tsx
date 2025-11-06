@@ -35,6 +35,9 @@ export default function FactimeCallPage() {
     []
   )
 
+  const localVideoRef = useRef<HTMLVideoElement | null>(null)
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null)
+
   useEffect(() => {
     if (localVideoRef.current && state.localStream) {
       localVideoRef.current.srcObject = state.localStream
@@ -221,6 +224,8 @@ export default function FactimeCallPage() {
                 ) : (
                   <span>{state.connectionState === 'connected' ? 'Reconnect' : 'Start Call'}</span>
                 )}
+              >
+                {state.connectionState === 'connected' ? 'Reconnect' : 'Start Call'}
               </button>
 
               <button
@@ -234,6 +239,8 @@ export default function FactimeCallPage() {
 
               <span className="ml-auto text-sm text-slate-400" aria-live="polite">
                 {connectionLabel}
+              <span className="ml-auto text-sm text-slate-400">
+                Status: {connectionLabels[state.connectionState] ?? state.connectionState}
               </span>
             </div>
           </form>
@@ -291,6 +298,8 @@ export default function FactimeCallPage() {
                 {state.isVideoMuted ? <VideoOff className="h-4 w-4" /> : <Video className="h-4 w-4" />}
                 <span>{state.isVideoMuted ? 'Resume cam' : 'Stop cam'}</span>
               </button>
+            <div className="mt-4 flex flex-1 items-center justify-center overflow-hidden rounded-xl bg-slate-950/60">
+              <video ref={localVideoRef} className="h-full w-full object-cover" muted playsInline />
             </div>
           </div>
 
@@ -308,6 +317,8 @@ export default function FactimeCallPage() {
                   <p className="max-w-[14rem] text-xs text-slate-400">
                     Waiting for remote video&mdash;the avatar feed connects automatically once the backend sends frames.
                   </p>
+                <div className="flex h-48 w-full items-center justify-center text-sm text-slate-500">
+                  Waiting for remote video...
                 </div>
               )}
             </div>
@@ -357,6 +368,21 @@ export default function FactimeCallPage() {
                   </article>
                 )
               })
+            <p className="text-sm text-slate-400">Live transcript of both the participant and the AI avatar.</p>
+          </header>
+
+          <div className="flex max-h-80 flex-col gap-3 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-sm">
+            {state.transcripts.length === 0 ? (
+              <p className="text-slate-500">No conversation yet. Speak to the avatar or send a manual transcript below.</p>
+            ) : (
+              state.transcripts.map((entry) => (
+                <div key={entry.id} className="flex flex-col gap-1">
+                  <span className="text-xs uppercase tracking-wide text-slate-500">
+                    {entry.role === 'user' ? 'You' : 'AI'} · {new Date(entry.timestamp).toLocaleTimeString()}
+                  </span>
+                  <p className="rounded-lg bg-slate-900/80 px-3 py-2 text-slate-100">{entry.text}</p>
+                </div>
+              ))
             )}
           </div>
 
