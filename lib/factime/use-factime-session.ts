@@ -35,6 +35,8 @@ export interface FactimeSessionState {
   localStream: MediaStream | null
   remoteStream: MediaStream | null
   transcripts: TranscriptEntry[]
+  isAudioMuted: boolean
+  isVideoMuted: boolean
   lastError?: string
 }
 
@@ -42,6 +44,8 @@ export interface FactimeSessionControls {
   connect: (params: ConnectParams) => Promise<void>
   disconnect: () => void
   sendTranscript: (text: string, audioBase64?: string) => void
+  toggleAudio: () => void
+  toggleVideo: () => void
 }
 
 function parseIceServers(): RTCIceServer[] | undefined {
@@ -112,6 +116,8 @@ export function useFactimeSession(): [FactimeSessionState, FactimeSessionControl
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
   const [transcripts, setTranscripts] = useState<TranscriptEntry[]>([])
+  const [isAudioMuted, setIsAudioMuted] = useState(false)
+  const [isVideoMuted, setIsVideoMuted] = useState(false)
   const [lastError, setLastError] = useState<string>()
 
   const wsRef = useRef<WebSocket | null>(null)
@@ -120,6 +126,9 @@ export function useFactimeSession(): [FactimeSessionState, FactimeSessionControl
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastConnectParamsRef = useRef<ConnectParams | null>(null)
   const connectRef = useRef<((params: ConnectParams) => Promise<void>) | null>(null)
+  const localStreamRef = useRef<MediaStream | null>(null)
+  const audioMutedRef = useRef(false)
+  const videoMutedRef = useRef(false)
 
   const peerConfig = useMemo<RTCConfiguration | undefined>(() => {
     const iceServers = parseIceServers()
@@ -128,6 +137,18 @@ export function useFactimeSession(): [FactimeSessionState, FactimeSessionControl
     }
 
     return { iceServers }
+  }, [])
+
+  const applyAudioState = useCallback((stream: MediaStream | null, muted: boolean) => {
+    stream?.getAudioTracks().forEach((track) => {
+      track.enabled = !muted
+    })
+  }, [])
+
+  const applyVideoState = useCallback((stream: MediaStream | null, muted: boolean) => {
+    stream?.getVideoTracks().forEach((track) => {
+      track.enabled = !muted
+    })
   }, [])
 
   const cleanup = useCallback(() => {
@@ -142,6 +163,7 @@ export function useFactimeSession(): [FactimeSessionState, FactimeSessionControl
 
     localStream?.getTracks().forEach((track) => track.stop())
     setLocalStream(null)
+    localStreamRef.current = null
 
     remoteMediaRef.current = null
     setRemoteStream(null)
@@ -150,6 +172,10 @@ export function useFactimeSession(): [FactimeSessionState, FactimeSessionControl
       clearTimeout(reconnectTimerRef.current)
       reconnectTimerRef.current = null
     }
+    setIsAudioMuted(false)
+    setIsVideoMuted(false)
+    audioMutedRef.current = false
+    videoMutedRef.current = false
   }, [localStream])
 
   const disconnect = useCallback(() => {
@@ -323,6 +349,9 @@ export function useFactimeSession(): [FactimeSessionState, FactimeSessionControl
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
         setLocalStream(stream)
+        localStreamRef.current = stream
+        applyAudioState(stream, audioMutedRef.current)
+        applyVideoState(stream, videoMutedRef.current)
 
         await setupWebSocket(params, stream)
       } catch (error) {
@@ -331,6 +360,7 @@ export function useFactimeSession(): [FactimeSessionState, FactimeSessionControl
         setLastError(error instanceof Error ? error.message : 'Unknown error obtaining media devices.')
       }
     },
+    [applyAudioState, applyVideoState, setupWebSocket]
     [setupWebSocket]
   )
 
@@ -362,6 +392,27 @@ export function useFactimeSession(): [FactimeSessionState, FactimeSessionControl
     setTranscripts((prev) => [...prev, { id: generateId('user'), role: 'user', text, timestamp: Date.now() }])
   }, [])
 
+  const toggleAudio = useCallback(() => {
+    setIsAudioMuted((prev) => {
+      const next = !prev
+      audioMutedRef.current = next
+      applyAudioState(localStreamRef.current, next)
+      return next
+    })
+  }, [applyAudioState])
+
+  const toggleVideo = useCallback(() => {
+    setIsVideoMuted((prev) => {
+      const next = !prev
+      videoMutedRef.current = next
+      applyVideoState(localStreamRef.current, next)
+      return next
+    })
+  }, [applyVideoState])
+
+  return [
+    { connectionState, localStream, remoteStream, transcripts, isAudioMuted, isVideoMuted, lastError },
+    { connect, disconnect, sendTranscript, toggleAudio, toggleVideo },
   return [
     { connectionState, localStream, remoteStream, transcripts, lastError },
     { connect, disconnect, sendTranscript },
