@@ -12,6 +12,11 @@ export interface EmotionSignal {
   confidence: number
 }
 
+export interface AutopostCallToAction {
+  label?: string | null
+  url?: string | null
+}
+
 export interface FeedPostRecord {
   id: number
   authorId: string
@@ -159,6 +164,13 @@ const cloneAutopost = (entry: AutopostRecord): AutopostRecord => ({
   callToAction: entry.callToAction ? { ...entry.callToAction } : null,
   publishedPost: entry.publishedPost ? cloneFeedPost(entry.publishedPost) : null,
 })
+const PAGE_SIZE = 25
+
+const autopostQueue: AutopostRecord[] = []
+const feedPosts: FeedPostRecord[] = []
+
+let autopostSequence = 1
+let feedSequence = 1
 
 const toNumber = (value: string | null | undefined): number | null => {
   if (!value) return null
@@ -170,6 +182,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 
 const normaliseHashtags = (values: string[] | null | undefined): string[] | null => {
+const normaliseArray = (values: string[] | null | undefined): string[] | null => {
   if (!values || values.length === 0) {
     return null
   }
@@ -195,6 +208,24 @@ const ensurePosterUrl = (posterUrl: string | null | undefined, fallback?: string
   }
   if (fallback && fallback.trim().length > 0) {
     return fallback
+  const result: string[] = []
+  values.forEach((value) => {
+    const trimmed = value.trim()
+    if (!trimmed) return
+    const normalised = trimmed.startsWith('#') ? trimmed : `#${trimmed}`
+    if (seen.has(normalised)) return
+    seen.add(normalised)
+    result.push(normalised)
+  })
+  return result.length > 0 ? result : null
+}
+
+const ensurePosterUrl = (posterUrl: string | null | undefined, mediaUrl: string | null | undefined) => {
+  if (posterUrl && posterUrl.trim().length > 0) {
+    return posterUrl
+  }
+  if (mediaUrl && mediaUrl.trim().length > 0) {
+    return mediaUrl
   }
   return null
 }
@@ -227,6 +258,55 @@ const createAutopost = (input: CreateAutopostInput): AutopostRecord => {
     mediaUrl: mediaCandidate,
     posterUrl: posterCandidate,
     durationSeconds: ensureDuration(input.durationSeconds ?? null, mediaCandidate),
+const ensureDuration = (durationSeconds: number | null | undefined) => {
+  if (durationSeconds && durationSeconds > 0) {
+    return durationSeconds
+  }
+  return 30
+}
+
+const cloneMetadata = (metadata: Record<string, unknown> | null | undefined) => {
+  if (!metadata) return null
+  return JSON.parse(JSON.stringify(metadata))
+}
+
+export const listAutoposts = ({ status, cursor, limit }: ListOptions) => {
+  const safeLimit = limit && limit > 0 ? Math.min(limit, 100) : PAGE_SIZE
+  const sorted = [...autopostQueue].sort((a, b) => b.id - a.id)
+  const filtered = typeof status === 'string'
+    ? sorted.filter((entry) => entry.status === status)
+    : sorted
+
+  let startIndex = 0
+  const cursorId = toNumber(cursor)
+  if (cursorId) {
+    const cursorPosition = filtered.findIndex((entry) => entry.id === cursorId)
+    if (cursorPosition >= 0) {
+      startIndex = cursorPosition + 1
+    }
+  }
+
+  const page = filtered.slice(startIndex, startIndex + safeLimit)
+  const nextCursor = page.length === safeLimit ? String(page[page.length - 1]?.id ?? '') : null
+
+  return {
+    entries: page,
+    nextCursor,
+  }
+}
+
+const createAutopost = (input: CreateAutopostInput): AutopostRecord => {
+  const now = new Date().toISOString()
+  const entry: AutopostRecord = {
+    id: autopostSequence++,
+    ownerId: input.ownerId ?? DEFAULT_OWNER,
+    body: input.body,
+    mood: input.mood ?? null,
+    emotionState: input.emotionState ?? null,
+    assetUrl: input.assetUrl ?? null,
+    mediaUrl: input.mediaUrl ?? null,
+    posterUrl: ensurePosterUrl(input.posterUrl, input.mediaUrl ?? input.assetUrl ?? null),
+    durationSeconds: ensureDuration(input.durationSeconds),
     metadata: cloneMetadata(input.metadata),
     status: 'scheduled',
     scheduledAt: input.scheduledAt,
@@ -241,6 +321,10 @@ const createAutopost = (input: CreateAutopostInput): AutopostRecord => {
     audience: input.audience ?? null,
     hashtags: normaliseHashtags(input.hashtags) ?? null,
     callToAction: input.callToAction ? { ...input.callToAction } : null,
+    inspirations: input.inspirations ?? null,
+    audience: input.audience ?? null,
+    hashtags: normaliseArray(input.hashtags) ?? null,
+    callToAction: input.callToAction ?? null,
     callToActionLabel: input.callToActionLabel ?? input.callToAction?.label ?? null,
     callToActionUrl: input.callToActionUrl ?? input.callToAction?.url ?? null,
     responseBody: input.responseBody ?? null,
@@ -285,6 +369,49 @@ const buildCampaignMetadata = (brief: AdCampaignBrief) => {
   const primarySignal = brief.emotionSignals[0] ?? { label: 'balanced', confidence: 0.5 }
   const variantKey = randomUUID()
   const mediaCandidate = brief.mediaUrl ?? brief.assetUrl ?? null
+  autopostQueue.push(entry)
+  return entry
+}
+
+interface AdCampaignBrief {
+  campaignId: string
+  brandName: string
+  objective: string
+  creativeType: string
+  title: string
+  summary: string
+  body: string
+  inspirations: string[]
+  hashtags: string[]
+  assetUrl?: string | null
+  posterUrl?: string | null
+  mediaUrl?: string | null
+  durationSeconds?: number | null
+  audience?: AutopostAudience | null
+  callToAction?: AutopostCallToAction | null
+  emotionSignals: EmotionSignal[]
+  scheduledAt: string
+  delaySeconds?: number | null
+}
+
+const buildCampaignMetadata = (brief: AdCampaignBrief) => {
+  const sentiment = brief.emotionSignals[0] ?? { label: 'balanced', confidence: 0.5 }
+  const feedHints = {
+    placement: 'feed-ad',
+    isPromoted: true,
+    campaignId: brief.campaignId,
+    brand: brief.brandName,
+    objective: brief.objective,
+    sentimentLabel: sentiment.label,
+    sentimentConfidence: sentiment.confidence,
+    variantKey: randomUUID(),
+  }
+
+  const adaptiveProfile = {
+    brandVoice: brief.brandName,
+    campaignObjective: brief.objective,
+    emotionSignals: brief.emotionSignals,
+  }
 
   return {
     autopost: {
@@ -320,6 +447,17 @@ const buildCampaignMetadata = (brief: AdCampaignBrief) => {
         tone: 'aspirational',
         highlightedEmotion: primarySignal.label,
         confidence: primarySignal.confidence,
+      assetUrl: brief.assetUrl ?? brief.mediaUrl ?? null,
+      posterUrl: ensurePosterUrl(brief.posterUrl, brief.mediaUrl ?? brief.assetUrl ?? null),
+      mediaUrl: brief.mediaUrl ?? brief.assetUrl ?? null,
+      durationSeconds: ensureDuration(brief.durationSeconds),
+      scheduledAt: brief.scheduledAt,
+      adaptiveProfile,
+      feedHints,
+      connectionDream: {
+        tone: 'aspirational',
+        highlightedEmotion: sentiment.label,
+        confidence: sentiment.confidence,
       },
     },
     adCampaign: {
@@ -329,6 +467,7 @@ const buildCampaignMetadata = (brief: AdCampaignBrief) => {
       isPromoted: true,
       emotionSignals: brief.emotionSignals,
       callToAction: brief.callToAction ?? null,
+      callToAction: brief.callToAction,
     },
   }
 }
@@ -346,6 +485,10 @@ export const createCampaignAutopost = (brief: AdCampaignBrief) => {
     ownerId,
     body: brief.body,
     mood: primarySignal.label,
+  const entry = createAutopost({
+    ownerId: brief.brandName.toLowerCase().replace(/\s+/g, '-'),
+    body: brief.summary,
+    mood: brief.emotionSignals[0]?.label ?? 'confident',
     emotionState: {
       aggregate: brief.emotionSignals,
       lastUpdated: new Date().toISOString(),
@@ -356,6 +499,7 @@ export const createCampaignAutopost = (brief: AdCampaignBrief) => {
     mediaUrl: brief.mediaUrl ?? undefined,
     posterUrl: brief.posterUrl ?? undefined,
     durationSeconds: brief.durationSeconds ?? undefined,
+    durationSeconds: ensureDuration(brief.durationSeconds),
     creativeType: brief.creativeType,
     title: brief.title,
     summary: brief.summary,
@@ -366,6 +510,8 @@ export const createCampaignAutopost = (brief: AdCampaignBrief) => {
     responseBody: brief.body,
     delaySeconds: brief.delaySeconds ?? null,
   })
+
+  return entry
 }
 
 export const createGenericAutopost = (input: CreateAutopostInput) => createAutopost(input)
@@ -380,6 +526,7 @@ export const releaseDueAutoposts = (releaseUntilIso: string) => {
   const now = new Date().toISOString()
   const released: AutopostRecord[] = []
   state.entries.forEach((entry) => {
+  autopostQueue.forEach((entry) => {
     if (entry.status !== 'scheduled') return
     const scheduledTime = new Date(entry.scheduledAt).getTime()
     if (!Number.isFinite(scheduledTime)) return
@@ -387,6 +534,7 @@ export const releaseDueAutoposts = (releaseUntilIso: string) => {
     entry.status = 'publishing'
     entry.updatedAt = now
     released.push(cloneAutopost(entry))
+    released.push(entry)
   })
 
   return released
@@ -403,12 +551,24 @@ const buildFeedMetadata = (entry: AutopostRecord) => {
   const isPromoted = feedHintsRaw && hasOwn(feedHintsRaw, 'isPromoted')
     ? Boolean(feedHintsRaw.isPromoted)
     : false
+  const autopostSectionRaw = (baseMetadata as Record<string, unknown>)['autopost']
+  const autopostSection =
+    autopostSectionRaw && typeof autopostSectionRaw === 'object' && !Array.isArray(autopostSectionRaw)
+      ? (autopostSectionRaw as Record<string, unknown>)
+      : undefined
+  const feedHintsRaw = autopostSection ? autopostSection['feedHints'] : undefined
+  const feedHints =
+    feedHintsRaw && typeof feedHintsRaw === 'object' && !Array.isArray(feedHintsRaw)
+      ? (feedHintsRaw as Record<string, unknown>)
+      : {}
 
   return {
     ...(baseMetadata as Record<string, unknown>),
     feedHints: {
       ...(feedHintsRaw ?? {}),
       isPromoted,
+      ...feedHints,
+      isPromoted: true,
       autopostId: entry.id,
       status: entry.status,
     },
@@ -419,6 +579,7 @@ const buildFeedMetadata = (entry: AutopostRecord) => {
 export const publishAutopost = (id: number, publishedAtIso: string): PublishResult => {
   const state = getQueueState()
   const entry = state.entries.find((candidate) => candidate.id === id)
+  const entry = autopostQueue.find((candidate) => candidate.id === id)
   if (!entry) {
     throw new Error(`Autopost ${id} not found`)
   }
@@ -427,6 +588,10 @@ export const publishAutopost = (id: number, publishedAtIso: string): PublishResu
     return {
       entry: cloneAutopost(entry),
       feedPost: cloneFeedPost(entry.publishedPost),
+  if (entry.status === 'published') {
+    return {
+      entry,
+      feedPost: entry.publishedPost as FeedPostRecord,
     }
   }
 
@@ -446,6 +611,15 @@ export const publishAutopost = (id: number, publishedAtIso: string): PublishResu
     mediaUrl: mediaCandidate,
     posterUrl: ensurePosterUrl(entry.posterUrl ?? null, mediaCandidate),
     durationSeconds: ensureDuration(entry.durationSeconds ?? null, mediaCandidate),
+  const post: FeedPostRecord = {
+    id: feedSequence++,
+    authorId: entry.ownerId,
+    body: entry.responseBody ?? entry.body,
+    mood: entry.mood ?? null,
+    emotionState: entry.emotionState ?? null,
+    mediaUrl: entry.mediaUrl ?? entry.assetUrl ?? null,
+    posterUrl: entry.posterUrl ?? null,
+    durationSeconds: entry.durationSeconds ?? null,
     metadata: buildFeedMetadata(entry),
     publishedAt: publishedAt.toISOString(),
     createdAt: publishedAt.toISOString(),
@@ -482,3 +656,16 @@ export const resetAutopostQueue = () => {
   state.autopostSequence = 1
   state.feedSequence = 1
 }
+  entry.publishedPostId = post.id
+  entry.publishedPost = post
+  entry.updatedAt = new Date().toISOString()
+
+  feedPosts.push(post)
+
+  return {
+    entry,
+    feedPost: post,
+  }
+}
+
+export const getFeedPosts = () => [...feedPosts]
