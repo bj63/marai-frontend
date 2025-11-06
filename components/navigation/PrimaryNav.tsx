@@ -109,8 +109,10 @@ export default function PrimaryNav() {
         key={item.href}
         href={item.href}
         onClick={() => setMobileOpen(false)}
-        className={`group relative flex flex-col gap-1 rounded-lg border border-transparent px-3 py-2 text-left transition hover:border-brand-magnolia/40 hover:bg-white/5 md:text-center ${
-          isActive ? 'bg-brand-magnolia/10 text-brand-magnolia shadow-[0_0_16px_rgba(255,158,207,0.25)]' : 'text-brand-mist/80'
+        className={`group relative flex flex-col gap-1 rounded-2xl px-3 py-2 text-left transition-colors duration-300 ease-enter-expressive md:text-center ${
+          isActive
+            ? 'bg-brand-magnolia/10 text-brand-magnolia shadow-[0_0_18px_rgba(255,158,207,0.28)]'
+            : 'text-brand-mist/80 hover:text-brand-magnolia'
         }`}
         aria-current={isActive ? 'page' : undefined}
       >
@@ -118,6 +120,7 @@ export default function PrimaryNav() {
           {item.label}
         </span>
         <span className="text-[0.65rem] text-brand-mist/60 md:hidden">{item.description}</span>
+        <span className="pointer-events-none absolute inset-0 rounded-2xl border border-transparent transition-colors duration-300 ease-enter-expressive group-hover:border-brand-magnolia/45" />
       </Link>
     )
   }
@@ -128,7 +131,7 @@ export default function PrimaryNav() {
         <button
           type="button"
           onClick={() => setMobileOpen((value) => !value)}
-          className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-[#101737] px-3 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:border-brand-magnolia/60 hover:text-brand-magnolia"
+          className="button-tertiary px-3 py-2 text-[0.68rem]"
           aria-expanded={mobileOpen}
           aria-controls="primary-nav-mobile"
         >
@@ -149,7 +152,7 @@ export default function PrimaryNav() {
         {filteredItems.map((item) => (
           <div key={item.href} className="group relative">
             {renderLink(item)}
-            <span className="pointer-events-none absolute left-1/2 top-full hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-[#0d142c]/90 px-2 py-1 text-[0.6rem] text-brand-mist/70 shadow-lg group-hover:flex">
+            <span className="pointer-events-none absolute left-1/2 top-full hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#0d142c]/90 px-2 py-1 text-[0.6rem] text-brand-mist/70 shadow-lg transition-opacity duration-300 ease-enter-expressive group-hover:flex">
               {item.description}
             </span>
           </div>
