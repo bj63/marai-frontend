@@ -21,7 +21,8 @@ Users can interact with emotional avatars, view dynamic visuals, and later conne
 - **Marketplace Concepts** – Coming soon gallery showcasing AI-generated mock NFTs.
 - **Avatar Mint Preview** – Marketplace renders your personalized NFT mockup using live avatar data.
 - **Marketplace Social Reactions** – Like, comment, and share your avatar preview with AI-personalised insights.
-- **Responsive UI** – Fully mobile-optimized experience.  
+- **Factime Live Session** – Join the refreshed Factime backend for real-time avatar calls directly from the `/factime` route.
+- **Responsive UI** – Fully mobile-optimized experience.
 - **Cloud Ready** – Deployable on Vercel in one click.
 
 ---
@@ -111,6 +112,9 @@ Create a `.env.local` file in the project root (optional for offline stubs):
 NEXT_PUBLIC_SUPABASE_URL=<your_supabase_url>
 NEXT_PUBLIC_SUPABASE_KEY=<your_supabase_key>
 NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+NEXT_PUBLIC_FACTIME_WS_URL=ws://127.0.0.1:8001
+# Optional array of ICE server configs, defaults to browser defaults when omitted
+NEXT_PUBLIC_FACTIME_ICE_SERVERS=[{"urls":"stun:stun.l.google.com:19302"}]
 ```
 
 #### Running without Supabase
@@ -144,6 +148,56 @@ const response = await fetch(`${apiUrl}/chat`, {
 ```
 
 This enables real-time emotion → avatar feedback within the UI.
+
+---
+
+## 🎥 Factime Live Session UI
+
+With the websocket and WebRTC plumbing in place, you can now join a live Factime session straight from the frontend:
+
+1. Define `NEXT_PUBLIC_FACTIME_WS_URL` (and optionally `NEXT_PUBLIC_FACTIME_ICE_SERVERS`) in `.env.local`.
+2. Start the development server with `npm run dev`.
+3. Navigate to [`http://localhost:3000/factime`](http://localhost:3000/factime).
+4. Enter your backend `userId` and optional consent token, then click **Start Call**.
+
+The page will negotiate media, stream your local camera preview, attach the remote avatar feed, and keep a live transcript that mirrors the backend `user-transcript` and `ai-response` events. Manual transcript snippets can also be injected to exercise the backend pipeline.
+
+---
+
+## 📞 Factime Backend Integration Plan
+
+To bridge the refreshed Factime backend with this frontend, follow the end-to-end flow below:
+
+### 1. Session Bootstrapping
+- Reuse the Flask authentication flow to obtain a JWT and preload emotional state via the `/api/chat` consent payload.
+- Open a websocket connection to `ws://<backend>/ws/{userId}` as soon as the user enters the call lobby.
+- Listen for `user-transcript`, `ai-response`, and `ai-audio` events to drive live UI updates.
+
+### 2. Media and Signaling
+- Collect local audio/video with the browser `MediaDevices` API and instantiate an `RTCPeerConnection` that mirrors the backend.
+- Send SDP offers over the websocket using `{ type: "offer", sdp }` and apply the returned answer to complete the handshake.
+- Forward browser ICE candidates and ensure the backend can echo remote candidates if TURN is required.
+
+### 3. Transcript Pipeline
+- Stream microphone audio both through the peer connection and an on-device STT component (Web Speech API, VAD + Whisper, etc.).
+- Forward recognized phrases as `{ type: "transcript", text, audio?: base64 }` so the backend can trigger HybridIntelligence flows.
+- Surface interim STT results while awaiting `ai-response` events, and play `ai-audio` payloads when present.
+
+### 4. Avatar Rendering
+- Attach the remote video track from the peer connection to a `<video>` element and apply a loading shimmer until frames arrive.
+- Wire mute, end-call, and escalate controls to websocket messages or REST endpoints, respecting backend cooldown rules.
+
+### 5. Error Handling & Resilience
+- Detect websocket closures, display a reconnect toast, and retry the handshake with exponential backoff while preserving chat history.
+- Show non-blocking banners for `ai-error` events, allowing users to retry transcripts or fall back to `/api/chat` text interactions.
+- Log signaling metrics (latency, disconnects) for correlation with Supabase telemetry.
+
+### 6. Testing & Observability
+- Add Playwright specs that mock microphone input to validate the transcript → AI loop.
+- Capture Cypress visual snapshots to confirm avatar frames align with the design system.
+- Feed websocket events into Redux slices or React Query caches and assert store updates with backend-provided mock responses in Jest.
+
+These steps keep the frontend light while leveraging the enriched Factime services for AI avatar calls. The full plan is also available at [`backend/FACTIME_FRONTEND_PLAN.md`](./backend/FACTIME_FRONTEND_PLAN.md).
 
 ---
 
