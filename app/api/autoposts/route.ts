@@ -5,6 +5,7 @@ import {
   type AutopostAudience,
   type AutopostCallToAction,
 } from '@/lib/autopostQueue.server'
+import { createGenericAutopost, listAutoposts, type AutopostAudience } from '@/lib/autopostQueue.server'
 
 export const runtime = 'nodejs'
 
@@ -95,6 +96,8 @@ export async function POST(request: NextRequest) {
       callToActionLabel,
       callToActionUrl,
     } = payload as Record<string, unknown>
+    const { body, mood, mediaUrl, posterUrl, metadata, scheduledAt, audience, hashtags, callToActionLabel, callToActionUrl } =
+      payload as Record<string, unknown>
 
     if (typeof body !== 'string' || body.trim().length === 0) {
       return NextResponse.json({ error: 'Body is required.' }, { status: 400 })
@@ -117,6 +120,8 @@ export async function POST(request: NextRequest) {
       callToAction: parsedCallToAction,
       callToActionLabel: parsedCallToAction?.label ?? null,
       callToActionUrl: parsedCallToAction?.url ?? null,
+      callToActionLabel: typeof callToActionLabel === 'string' ? callToActionLabel : null,
+      callToActionUrl: typeof callToActionUrl === 'string' ? callToActionUrl : null,
     })
 
     return NextResponse.json({ autopost: entry }, { status: 201 })
