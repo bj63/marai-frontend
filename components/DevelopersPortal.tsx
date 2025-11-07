@@ -1,15 +1,20 @@
+'use client'
+
 import Link from 'next/link'
 import {
   Activity,
   BadgeCheck,
   CloudCog,
   Code2,
+  Loader2,
+  LockKeyhole,
   Layers,
   PlugZap,
   Rocket,
   ShieldCheck,
   Webhook,
 } from 'lucide-react'
+import { useAuth } from '@/components/auth/AuthProvider'
 
 const integrationTracks = [
   {
@@ -117,6 +122,52 @@ const pricingSignals = [
 ]
 
 export default function DevelopersPortal() {
+  const { status, hasRole } = useAuth()
+  const isDeveloper = hasRole('developer')
+
+  if (status === 'loading') {
+    return (
+      <div className="page-shell" data-width="narrow">
+        <div className="surface-panel surface-panel--hero flex flex-col items-center gap-4 text-center text-brand-mist/80">
+          <Loader2 className="h-6 w-6 animate-spin text-brand-magnolia" aria-hidden />
+          <div>
+            <h1 className="text-xl font-semibold text-white">Checking your workspace access…</h1>
+            <p className="text-sm">
+              Hold tight while we confirm whether this account can use the developer tools.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isDeveloper) {
+    return (
+      <div className="page-shell" data-width="narrow">
+        <section className="surface-panel surface-panel--hero flex flex-col items-center gap-6 text-center text-brand-mist/80">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5">
+            <LockKeyhole className="h-6 w-6 text-brand-magnolia" aria-hidden />
+          </span>
+          <div className="space-y-3">
+            <h1 className="text-2xl font-semibold text-white">Developer tools are gated</h1>
+            <p className="text-sm">
+              This workspace only unlocks integrations for approved partners. Ask an admin to add the developer role to your
+              account or request credentials from the MarAI team.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-3 text-sm uppercase tracking-[0.32em]">
+            <Link href="/auth" className="button-primary">
+              Sign in
+            </Link>
+            <Link href="mailto:build@marai.studio" className="button-tertiary">
+              Request access
+            </Link>
+          </div>
+        </section>
+      </div>
+    )
+  }
+
   return (
     <div className="relative isolate overflow-hidden">
       <div

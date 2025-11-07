@@ -26,6 +26,8 @@ interface AuthContextValue {
   settings: UserSettings | null
   designProfile: UserDesignProfile | null
   accountHydrated: boolean
+  roles: string[]
+  hasRole: (role: string) => boolean
   refreshAccountData: () => Promise<void>
   signInWithMagicLink: (email: string) => Promise<AuthResult>
   signUpWithCredentials: (email: string, password: string, username: string) => Promise<AuthResult>
@@ -36,6 +38,22 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
+const normalizeRoles = (value: unknown): string[] => {
+  if (!value) return []
+
+  const entries: string[] = []
+
+  if (Array.isArray(value)) {
+    entries.push(...value.map((item) => String(item)))
+  } else if (typeof value === 'string') {
+    entries.push(...value.split(',').map((item) => item.trim()))
+  }
+
+  return entries
+    .map((entry) => entry.trim().toLowerCase())
+    .filter((entry, index, array) => entry.length > 0 && array.indexOf(entry) === index)
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const offlineSession = isSupabaseConfigured ? null : getOfflineSession()
   const [session, setSession] = useState<Session | null>(offlineSession)
@@ -43,6 +61,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<UserSettings | null>(null)
   const [designProfile, setDesignProfile] = useState<UserDesignProfile | null>(null)
   const [accountHydrated, setAccountHydrated] = useState(false)
+
+  const derivedRoles = useMemo(() => {
+    const user = session?.user
+    if (!user) return [] as string[]
+
+    const fromAppMetadata = normalizeRoles(user.app_metadata?.roles)
+    const fromUserMetadata = normalizeRoles(user.user_metadata?.roles)
+
+    const combined = new Set<string>([...fromAppMetadata, ...fromUserMetadata])
+
+    if (user.app_metadata?.isAdmin === true || user.user_metadata?.is_admin === true) {
+      combined.add('admin')
+    }
+
+    return Array.from(combined)
+  }, [session?.user])
+
+  const hasRole = useCallback(
+    (role: string) => {
+      const normalized = role.trim().toLowerCase()
+      if (!normalized) return false
+      return derivedRoles.includes(normalized)
+    },
+    [derivedRoles],
+  )
 
   const hydrateForUser = useCallback(async (userId: string) => {
     try {
@@ -243,6 +286,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       settings,
       designProfile,
       accountHydrated,
+      roles: derivedRoles,
+      hasRole,
       refreshAccountData,
       signInWithMagicLink,
       signUpWithCredentials,
@@ -262,6 +307,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       signUpWithCredentials,
       status,
+      derivedRoles,
+      hasRole,
     ],
   )
 

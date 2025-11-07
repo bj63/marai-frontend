@@ -12,6 +12,7 @@ type NavItem = {
   description: string
   requiresAuth?: boolean
   adminOnly?: boolean
+  roles?: string[]
 }
 
 const navItems: NavItem[] = [
@@ -45,6 +46,8 @@ const navItems: NavItem[] = [
     label: 'Developers',
     href: '/developers',
     description: 'Integrations and API manifest',
+    requiresAuth: true,
+    roles: ['developer'],
   },
   {
     label: 'Avatar',
@@ -96,13 +99,17 @@ const navItems: NavItem[] = [
 
 export default function PrimaryNav() {
   const pathname = usePathname()
-  const { user } = useAuth()
+  const { user, hasRole } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  const canAccessAdmin = Boolean(user)
+  const canAccessAdmin = hasRole('admin') || Boolean(user)
   const filteredItems = navItems.filter((item) => {
     if (item.adminOnly && !canAccessAdmin) return false
     if (item.requiresAuth && !user) return false
+    if (item.roles && item.roles.length > 0) {
+      const allowed = item.roles.some((role) => hasRole(role))
+      if (!allowed) return false
+    }
     return true
   })
 
