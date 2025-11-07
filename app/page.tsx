@@ -48,6 +48,11 @@ const engagementDestinations = [
     href: '/marketplace',
   },
   {
+    heading: 'Developers',
+    copy: 'Plug third-party health quests into every surface with manifest-driven APIs.',
+    href: '/developers',
+  },
+  {
     heading: 'Avatar',
     copy: 'Project Amaris’ presence wherever fans gather with a live, reactive expression layer.',
     href: '/avatar',

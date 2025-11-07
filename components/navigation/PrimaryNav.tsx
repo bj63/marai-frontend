@@ -42,6 +42,11 @@ const navItems: NavItem[] = [
     description: 'Conversations with Amaris',
   },
   {
+    label: 'Developers',
+    href: '/developers',
+    description: 'Integrations and API manifest',
+  },
+  {
     label: 'Avatar',
     href: '/avatar',
     description: 'Real-time avatar presence',
