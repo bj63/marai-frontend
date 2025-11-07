@@ -36,7 +36,7 @@ const loginLabels: Record<TeamMember['login_method'], string> = {
 }
 
 export default function AdminPage() {
-  const { user, status, session } = useAuth()
+  const { user, status, session, hasRole } = useAuth()
   const [members, setMembers] = useState<TeamMember[]>([])
   const [loadingMembers, setLoadingMembers] = useState(true)
   const [formState, setFormState] = useState<TeamFormState>(defaultFormState)
@@ -45,12 +45,13 @@ export default function AdminPage() {
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null)
   const apiBaseUrl = useMemo(() => getApiBaseUrl(), [])
   const authToken = session?.access_token
+  const canManageOrg = hasRole('admin') || hasRole('founder')
 
   useEffect(() => {
     let active = true
 
     const loadMembers = async () => {
-      if (status !== 'authenticated') {
+      if (status !== 'authenticated' || !canManageOrg) {
         setMembers([])
         setLoadingMembers(false)
         return
@@ -68,10 +69,10 @@ export default function AdminPage() {
     return () => {
       active = false
     }
-  }, [status])
+  }, [canManageOrg, status])
 
   const founderFallback = useMemo<TeamMember | null>(() => {
-    if (!user?.email) return null
+    if (!user?.email || !canManageOrg) return null
 
     return {
       id: 'founder-local',
@@ -82,7 +83,7 @@ export default function AdminPage() {
       status: 'active',
       created_at: new Date().toISOString(),
     }
-  }, [user?.email, user?.user_metadata])
+  }, [canManageOrg, user?.email, user?.user_metadata])
 
   const visibleMembers = useMemo(() => {
     if (members.length > 0) return members
@@ -93,8 +94,8 @@ export default function AdminPage() {
     event.preventDefault()
     setFormFeedback(null)
 
-    if (status !== 'authenticated') {
-      setFormFeedback('Sign in as the founder to invite teammates.')
+    if (status !== 'authenticated' || !canManageOrg) {
+      setFormFeedback('Sign in as the founder or an admin to invite teammates.')
       return
     }
 
@@ -129,8 +130,8 @@ export default function AdminPage() {
 
   const removeMember = async (member: TeamMember) => {
     if (member.role === 'founder') return
-    if (status !== 'authenticated') {
-      setFormFeedback('Sign in again to adjust the roster.')
+    if (status !== 'authenticated' || !canManageOrg) {
+      setFormFeedback('Sign in as an admin-level account to adjust the roster.')
       return
     }
     setRemovingMemberId(member.id)
@@ -170,6 +171,27 @@ export default function AdminPage() {
           className="inline-flex items-center justify-center gap-2 rounded-md bg-brand-magnolia/80 px-4 py-2 text-sm font-semibold text-[#0b1022] transition hover:bg-brand-magnolia md:self-start"
         >
           Go to account access
+        </Link>
+      </div>
+    )
+  }
+
+  if (!canManageOrg) {
+    return (
+      <div className="relative mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-20 text-brand-mist/70">
+        <header className="flex flex-col gap-2 text-white">
+          <p className="text-[0.7rem] uppercase tracking-[0.4em] text-brand-mist/60">Admin control center</p>
+          <h1 className="text-3xl font-semibold">Professional access required</h1>
+        </header>
+        <p className="text-sm">
+          Only founders or admin-level teammates in pro mode can manage the organisation. Ask your workspace owner to upgrade
+          your permissions before revisiting this dashboard.
+        </p>
+        <Link
+          href="/"
+          className="inline-flex items-center justify-center gap-2 rounded-md bg-brand-magnolia/80 px-4 py-2 text-sm font-semibold text-[#0b1022] transition hover:bg-brand-magnolia md:self-start"
+        >
+          Return home
         </Link>
       </div>
     )
