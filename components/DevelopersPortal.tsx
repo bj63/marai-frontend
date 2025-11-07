@@ -122,6 +122,7 @@ const pricingSignals = [
 ]
 
 export default function DevelopersPortal() {
+  const { status, hasRole, isPro } = useAuth()
   const { status, hasRole } = useAuth()
   const isDeveloper = hasRole('developer')
 
@@ -141,6 +142,7 @@ export default function DevelopersPortal() {
     )
   }
 
+  if (!isPro) {
   if (!isDeveloper) {
     return (
       <div className="page-shell" data-width="narrow">
@@ -149,6 +151,10 @@ export default function DevelopersPortal() {
             <LockKeyhole className="h-6 w-6 text-brand-magnolia" aria-hidden />
           </span>
           <div className="space-y-3">
+            <h1 className="text-2xl font-semibold text-white">Switch to pro mode to unlock integrations</h1>
+            <p className="text-sm">
+              The developer hub lives inside MarAI&rsquo;s professional toolkit. Ask an admin to enable pro mode on your account so
+              you can request API credentials.
             <h1 className="text-2xl font-semibold text-white">Developer tools are gated</h1>
             <p className="text-sm">
               This workspace only unlocks integrations for approved partners. Ask an admin to add the developer role to your
@@ -159,6 +165,35 @@ export default function DevelopersPortal() {
             <Link href="/auth" className="button-primary">
               Sign in
             </Link>
+            <Link href="mailto:support@marai.ai" className="button-secondary">
+              Contact support
+            </Link>
+          </div>
+        </section>
+      </div>
+    )
+  }
+
+  if (!isDeveloper) {
+    return (
+      <div className="page-shell" data-width="narrow">
+        <section className="surface-panel surface-panel--hero flex flex-col items-center gap-6 text-center text-brand-mist/80">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5">
+            <LockKeyhole className="h-6 w-6 text-brand-magnolia" aria-hidden />
+          </span>
+          <div className="space-y-3">
+            <h1 className="text-2xl font-semibold text-white">Request developer credentials</h1>
+            <p className="text-sm">
+              You&rsquo;re in pro mode, but this account hasn&rsquo;t been issued developer access yet. Ping an admin or the MarAI team to
+              add the developer role so you can wire your app into the platform.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-3 text-sm uppercase tracking-[0.32em]">
+            <Link href="mailto:hello@marai.ai" className="button-primary">
+              Email MarAI
+            </Link>
+            <Link href="/admin" className="button-secondary">
+              Ask an admin
             <Link href="mailto:build@marai.studio" className="button-tertiary">
               Request access
             </Link>

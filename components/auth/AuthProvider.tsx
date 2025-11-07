@@ -28,6 +28,8 @@ interface AuthContextValue {
   accountHydrated: boolean
   roles: string[]
   hasRole: (role: string) => boolean
+  hasAnyRole: (roles: string[]) => boolean
+  isPro: boolean
   refreshAccountData: () => Promise<void>
   signInWithMagicLink: (email: string) => Promise<AuthResult>
   signUpWithCredentials: (email: string, password: string, username: string) => Promise<AuthResult>
@@ -75,6 +77,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       combined.add('admin')
     }
 
+    if (user.app_metadata?.isDeveloper === true || user.user_metadata?.is_developer === true) {
+      combined.add('developer')
+    }
+
+    if (
+      user.app_metadata?.isPro === true ||
+      user.user_metadata?.is_pro === true ||
+      user.user_metadata?.pro_mode === true
+    ) {
+      combined.add('pro')
+    }
+
+    if (user.app_metadata?.isFounder === true || user.user_metadata?.is_founder === true) {
+      combined.add('founder')
+    }
+
     return Array.from(combined)
   }, [session?.user])
 
@@ -86,6 +104,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [derivedRoles],
   )
+
+  const hasAnyRole = useCallback(
+    (roles: string[]) => {
+      if (!Array.isArray(roles) || roles.length === 0) return false
+      return roles.some((role) => hasRole(role))
+    },
+    [hasRole],
+  )
+
+  const isPro = useMemo(() => hasAnyRole(['pro', 'admin', 'developer', 'founder']), [hasAnyRole])
 
   const hydrateForUser = useCallback(async (userId: string) => {
     try {
@@ -288,6 +316,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accountHydrated,
       roles: derivedRoles,
       hasRole,
+      hasAnyRole,
+      isPro,
       refreshAccountData,
       signInWithMagicLink,
       signUpWithCredentials,
@@ -309,6 +339,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       status,
       derivedRoles,
       hasRole,
+      hasAnyRole,
+      isPro,
     ],
   )
 
