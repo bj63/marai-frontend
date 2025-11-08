@@ -9,12 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@sentry/nextjs": "^8.50.0",
+    "@sentry/nextjs": "^10.23.0",
     "prom-client": "^15.1.3",
     "@supabase/supabase-js": "^2.76.1",
-    "@thirdweb-dev/chains": "5.2.0",
-    "@thirdweb-dev/react": "4.16.0",
-    "@thirdweb-dev/sdk": "4.16.0",
+    "thirdweb": "^5.111.8",
     "ethers": "^6.13.4",
     "framer-motion": "^12.23.24",
     "lucide-react": "^0.548.0",
