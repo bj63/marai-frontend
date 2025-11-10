@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
-import { supabase, isSupabaseConfigured, getOfflineSession } from '@/lib/supabaseClient'
+import { supabase, getOfflineSession, supabaseRuntime } from '@/lib/supabaseClient'
 import { reportError } from '@/lib/observability'
 import {
   requestMagicLink,
@@ -57,7 +57,8 @@ const normalizeRoles = (value: unknown): string[] => {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const offlineSession = isSupabaseConfigured ? null : getOfflineSession()
+  const runtimeMode = supabaseRuntime.mode
+  const offlineSession = runtimeMode === 'offline' ? getOfflineSession() : null
   const [session, setSession] = useState<Session | null>(offlineSession)
   const [status, setStatus] = useState<AuthStatus>(offlineSession ? 'authenticated' : 'loading')
   const [settings, setSettings] = useState<UserSettings | null>(null)
@@ -132,7 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (!isSupabaseConfigured) {
+    if (runtimeMode === 'offline') {
       setSession(getOfflineSession())
       setStatus('authenticated')
       const userId = offlineSession?.user?.id
@@ -141,6 +142,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           reportError('AuthProvider.offlineHydrate', error, { userId })
         })
       }
+      return
+    }
+
+    if (runtimeMode === 'disabled') {
+      setSession(null)
+      setStatus('unauthenticated')
+      setSettings(null)
+      setDesignProfile(null)
+      setAccountHydrated(false)
       return
     }
 
@@ -188,7 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       active = false
       subscription.unsubscribe()
     }
-  }, [hydrateForUser, offlineSession])
+  }, [hydrateForUser, offlineSession, runtimeMode])
 
   const refreshAccountData = useCallback(async () => {
     const userId = session?.user?.id
@@ -292,19 +302,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     setStatus('loading')
-    if (isSupabaseConfigured) {
+    if (runtimeMode === 'online') {
       await signOutFromSupabase()
       setSession(null)
       setStatus('unauthenticated')
-    } else {
+    } else if (runtimeMode === 'offline') {
       const offline = getOfflineSession()
       setSession(offline)
       setStatus('authenticated')
+    } else {
+      setSession(null)
+      setStatus('unauthenticated')
     }
     setSettings(null)
     setDesignProfile(null)
     setAccountHydrated(false)
-  }, [])
+  }, [runtimeMode])
 
   const value = useMemo<AuthContextValue>(
     () => ({

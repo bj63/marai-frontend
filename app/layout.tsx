@@ -5,6 +5,7 @@ import { Inter, Poppins, Space_Grotesk } from 'next/font/google'
 import AuthStatus from '@/components/auth/AuthStatus'
 import PrimaryNav from '@/components/navigation/PrimaryNav'
 import { Providers } from './providers'
+import DeploymentBanner from '@/components/system/DeploymentBanner'
 
 const display = Poppins({
   subsets: ['latin'],
@@ -85,6 +86,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </div>
               </div>
             </header>
+
+            <DeploymentBanner />
 
             <div id="main-content" role="main" className="relative z-10 flex-1 pb-12">
               {children}
