@@ -131,7 +131,7 @@ App runs at 👉 **[http://localhost:3000](http://localhost:3000)**
 
 > 📌 **Dependency install tips**
 >
-> The project depends on scoped packages such as `@nomicfoundation/hardhat-toolbox`. If `npm install` returns a `403` from the npm registry, double-check that the npm account in use has verified its email address and is pointing at the public registry. Additional remediation steps are documented in [docs/npm-troubleshooting.md](./docs/npm-troubleshooting.md).
+> Frontend dependencies no longer include the Hardhat toolchain, so `npm install` in the repository root stays clear of the scoped `@nomicfoundation` packages that used to trigger `403` responses on misconfigured npm accounts. When you need to compile or test the Solidity contracts, change into [`contracts/`](./contracts) and run `npm install` there; extra registry troubleshooting steps remain documented in [docs/npm-troubleshooting.md](./docs/npm-troubleshooting.md).
 
 ---
 
