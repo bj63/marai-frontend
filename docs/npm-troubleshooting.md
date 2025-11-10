@@ -1,6 +1,7 @@
 # npm Installation Troubleshooting
 
 When dependency installs fail, start with the basics below. The main frontend install no longer touches scoped packages, but the Solidity toolchain that lives under [`contracts/`](../contracts) still pulls `@nomicfoundation/hardhat-toolbox`. These steps focus on the `403 Forbidden` response that can appear when fetching those scoped packages and the `ETARGET` error that shows up when npm tries to resolve a version that does not exist.
+When dependency installs fail, start with the basics below. The main frontend install no longer touches scoped packages, but the Solidity toolchain that lives under [`contracts/`](../contracts) still pulls `@nomicfoundation/hardhat-toolbox`. These steps focus on the `403 Forbidden` response that can appear when fetching those scoped packages.
 
 ## 1. Confirm your npm account is verified
 

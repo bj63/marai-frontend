@@ -36,6 +36,24 @@ export const isSupabaseDisabled = runtimeMode === 'disabled'
 
 export const supabase: SupabaseClient = runtimeMode === 'online' && SUPABASE_URL && SUPABASE_ANON_KEY
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+import { IS_OFFLINE_MODE } from '@/constants/config'
+import { getOfflineSession, getOfflineUser } from './offlineSession'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+if (!IS_OFFLINE_MODE && (!supabaseUrl || !supabaseAnonKey)) {
+  throw new Error(
+    'Missing Supabase credentials. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment.',
+  )
+}
+
+if (process.env.NODE_ENV === 'production' && IS_OFFLINE_MODE) {
+  throw new Error('Offline mode cannot be used in production.')
+}
+
+export const supabase: SupabaseClient = !IS_OFFLINE_MODE && supabaseUrl && supabaseAnonKey
+  ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
@@ -60,6 +78,14 @@ function createOfflineSupabaseClient(): SupabaseClient {
   }
 
   console.warn('Running in offline mode. Supabase operations are mocked and not persisted.')
+  : createOfflineSupabaseClient()
+
+function createOfflineSupabaseClient(): SupabaseClient {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Offline mode is disabled in production.')
+  }
+
+  console.warn('Running in offline mode. Supabase operations are mocked.')
 
   const offlineSession = getOfflineSession()
   const offlineUser = getOfflineUser()
