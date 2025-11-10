@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from './supabaseClient'
+import { supabase, supabaseRuntime } from './supabaseClient'
 import { recordSupabaseFailure, recordSupabaseSuccess, reportError } from './observability'
 import offlineSupabaseApi from './supabaseOfflineApi'
 import type {
@@ -43,7 +43,7 @@ export type {
   UserSettings,
 } from '@/types/supabase'
 
-const offlineMode = !isSupabaseConfigured
+const offlineMode = supabaseRuntime.mode !== 'online'
 
 type MetricsMetadata = Record<string, unknown> | undefined
 
