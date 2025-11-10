@@ -19,7 +19,7 @@
   "dependencies": {
     "@sentry/nextjs": "8.50.0",
     "@supabase/supabase-js": "2.39.3",
-    "@thirdweb-dev/chains": "5.2.0",
+    "@thirdweb-dev/chains": "5.1.0",
     "@thirdweb-dev/react": "4.16.0",
     "@thirdweb-dev/sdk": "4.16.0",
     "@upstash/ratelimit": "1.0.1",
