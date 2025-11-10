@@ -51,6 +51,11 @@
     "lockfile-lint": "4.13.1",
     "postcss": "8.4.49",
     "tailwindcss": "3.4.17",
+    "typescript": "5.3.3"
+  },
+  "overrides": {
+    "@nomicfoundation/hardhat-toolbox": "4.0.0"
+  },
     "hardhat": "2.22.17",
     "lockfile-lint": "4.13.1",
     "postcss": "8.4.49",
