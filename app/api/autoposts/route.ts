@@ -5,7 +5,6 @@ import {
   type AutopostAudience,
   type AutopostCallToAction,
 } from '@/lib/autopostQueue.server'
-import { createGenericAutopost, listAutoposts, type AutopostAudience } from '@/lib/autopostQueue.server'
 
 export const runtime = 'nodejs'
 
@@ -96,8 +95,6 @@ export async function POST(request: NextRequest) {
       callToActionLabel,
       callToActionUrl,
     } = payload as Record<string, unknown>
-    const { body, mood, mediaUrl, posterUrl, metadata, scheduledAt, audience, hashtags, callToActionLabel, callToActionUrl } =
-      payload as Record<string, unknown>
 
     if (typeof body !== 'string' || body.trim().length === 0) {
       return NextResponse.json({ error: 'Body is required.' }, { status: 400 })
@@ -108,6 +105,12 @@ export async function POST(request: NextRequest) {
     }
 
     const parsedCallToAction = parseCallToAction(callToAction, callToActionLabel, callToActionUrl)
+    const resolvedCallToActionLabel =
+      parsedCallToAction?.label ??
+      (typeof callToActionLabel === 'string' ? callToActionLabel.trim() || null : null)
+    const resolvedCallToActionUrl =
+      parsedCallToAction?.url ?? (typeof callToActionUrl === 'string' ? callToActionUrl.trim() || null : null)
+
     const entry = createGenericAutopost({
       body: body.trim(),
       mood: typeof mood === 'string' ? mood : null,
@@ -118,10 +121,8 @@ export async function POST(request: NextRequest) {
       audience: typeof audience === 'string' ? (audience as AutopostAudience) : null,
       hashtags: toStringArray(hashtags) ?? undefined,
       callToAction: parsedCallToAction,
-      callToActionLabel: parsedCallToAction?.label ?? null,
-      callToActionUrl: parsedCallToAction?.url ?? null,
-      callToActionLabel: typeof callToActionLabel === 'string' ? callToActionLabel : null,
-      callToActionUrl: typeof callToActionUrl === 'string' ? callToActionUrl : null,
+      callToActionLabel: resolvedCallToActionLabel,
+      callToActionUrl: resolvedCallToActionUrl,
     })
 
     return NextResponse.json({ autopost: entry }, { status: 201 })
