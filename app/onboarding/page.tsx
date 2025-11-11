@@ -140,6 +140,8 @@ export default function OnboardingPage() {
           name: profileRecord.name || founderNameFallback,
           avatar: profileRecord.avatar || previous.avatar,
           color: profileRecord.color || previous.color,
+          handle: profileRecord.handle ? profileRecord.handle.replace(/^@+/, '@') : previous.handle,
+          bio: profileRecord.bio ?? previous.bio,
         }))
       } else {
         setForm((previous) => ({
@@ -204,14 +206,23 @@ export default function OnboardingPage() {
     setSaving(true)
     setFeedback(null)
 
+    const normalizedHandle = form.handle.trim()
+    const handleValue = normalizedHandle
+      ? normalizedHandle.startsWith('@')
+        ? normalizedHandle
+        : `@${normalizedHandle}`
+      : null
+
     const profilePayload = {
       name: form.name.trim() || founderNameFallback,
       avatar: form.avatar,
       color: form.color,
+      handle: handleValue,
+      bio: form.bio.trim() || null,
     }
 
     const metadataPayload = {
-      username: form.handle || form.name,
+      username: handleValue ?? form.name,
       bio: form.bio,
       accent_color: form.color,
       avatar_emoji: form.avatar,
