@@ -1,0 +1,17 @@
+{
+  "name": "marai-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "hardhat compile",
+    "test": "hardhat test",
+    "lint": "hardhat check"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "4.0.0",
+    "dotenv": "16.4.7",
+    "hardhat": "2.22.17",
+    "ts-node": "10.9.2",
+    "typescript": "5.3.3"
+  }
+}
