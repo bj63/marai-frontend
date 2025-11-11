@@ -35,9 +35,6 @@ export default function FactimeCallPage() {
     []
   )
 
-  const localVideoRef = useRef<HTMLVideoElement | null>(null)
-  const remoteVideoRef = useRef<HTMLVideoElement | null>(null)
-
   useEffect(() => {
     if (localVideoRef.current && state.localStream) {
       localVideoRef.current.srcObject = state.localStream

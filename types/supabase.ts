@@ -4,6 +4,8 @@ export interface MiraiProfile {
   name: string
   avatar: string
   color: string
+  handle?: string | null
+  bio?: string | null
   created_at: string
 }
 
@@ -75,10 +77,13 @@ export interface FollowProfile extends MiraiProfile {
 }
 
 export interface OnboardingState {
+  id?: string
   user_id: string
   completed: boolean
   current_step: string | null
   completed_at: string | null
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 export interface Notification {

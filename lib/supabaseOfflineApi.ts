@@ -40,6 +40,8 @@ let profile: MiraiProfile = {
   name: 'Mirai Dev Build',
   avatar: '/avatars/mirai-dev.png',
   color: '#7F5BFF',
+  handle: '@mirai-dev',
+  bio: 'Offline mode AI companion keeping the lab pulsing while services reboot.',
   created_at: baseTimestamp,
 }
 
