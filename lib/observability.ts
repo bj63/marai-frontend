@@ -4,15 +4,35 @@ type Extras = Record<string, unknown>
 
 type MetricsModule = typeof import('./metrics.server')
 
+type DynamicImporter = (path: string) => Promise<MetricsModule>
+
 let metricsModulePromise: Promise<MetricsModule> | null = null
 let metricsBootstrapFailed = false
+let dynamicImporter: DynamicImporter | null = null
 
-function loadMetricsModule(): Promise<MetricsModule> {
-  if (metricsModulePromise) {
-    return metricsModulePromise
+function getDynamicImporter(): DynamicImporter {
+  if (!dynamicImporter) {
+    dynamicImporter = new Function('path', 'return import(path)') as DynamicImporter
   }
 
-  metricsModulePromise = import('./metrics.server')
+  return dynamicImporter
+}
+
+function loadMetricsModule(): Promise<MetricsModule> | null {
+  if (typeof window !== 'undefined' || metricsBootstrapFailed) {
+    return null
+  }
+
+  if (typeof process !== 'undefined' && process.env.NEXT_RUNTIME === 'edge') {
+    metricsBootstrapFailed = true
+    return null
+  }
+
+  if (!metricsModulePromise) {
+    const importer = getDynamicImporter()
+    metricsModulePromise = importer('./metrics.server')
+  }
+
   return metricsModulePromise
 }
 
@@ -23,7 +43,12 @@ function withMetrics(
     return
   }
 
-  loadMetricsModule()
+  const promise = loadMetricsModule()
+  if (!promise) {
+    return
+  }
+
+  promise
     .then((module) => {
       callback(module)
     })

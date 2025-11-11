@@ -43,7 +43,6 @@ type DesignInteractionInput = {
 type QueuedInteraction = DesignInteractionInput & { timestamp: number }
 
 export type NormalizedTheme = {
-type NormalizedTheme = {
   design_dna: DesignDNA
   evolution_stage: string | null
   preferred_emotion: string | null
