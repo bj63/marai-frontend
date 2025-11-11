@@ -50,7 +50,7 @@
     "lockfile-lint": "4.13.1",
     "postcss": "8.4.49",
     "tailwindcss": "4.1.17",
-    "typescript": "5.3.3"
+    "typescript": "5.9.3"
   },
   "snyk": true
 }
