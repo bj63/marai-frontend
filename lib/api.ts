@@ -1,18 +1,69 @@
 const DEFAULT_API_FALLBACKS = ['http://127.0.0.1:8000', 'http://localhost:8000', 'http://localhost:5000'] as const
 const API_ENV_KEYS = ['NEXT_PUBLIC_API_BASE', 'NEXT_PUBLIC_API_URL', 'NEXT_PUBLIC_MOA_API_URL'] as const
+const SITE_ENV_KEYS = [
+  'NEXT_PUBLIC_SITE_URL',
+  'NEXT_PUBLIC_SITE_ORIGIN',
+  'NEXT_PUBLIC_APP_URL',
+  'NEXT_PUBLIC_BASE_URL',
+  'NEXT_PUBLIC_FRONTEND_URL',
+  'NEXT_PUBLIC_VERCEL_URL',
+  'NEXT_PUBLIC_URL',
+  'VERCEL_URL',
+  'URL',
+] as const
+const HTTP_PROTOCOL_PATTERN = /^https?:\/\//i
 const DEFAULT_EMOTION = 'reflective'
 const DEFAULT_COLOR = 'hsl(180,85%,60%)'
 
-function resolveApiBase() {
-  for (const key of API_ENV_KEYS) {
-    const value = process.env[key]?.trim()
-    if (value) {
-      return value.replace(/\/$/, '')
+function normaliseBaseUrl(raw: string | undefined | null): string | null {
+  if (!raw) {
+    return null
+  }
+
+  const trimmed = raw.trim()
+  if (!trimmed || trimmed.startsWith('/')) {
+    return null
+  }
+
+  const withProtocol = HTTP_PROTOCOL_PATTERN.test(trimmed)
+    ? trimmed
+    : trimmed.startsWith('//')
+      ? `https:${trimmed}`
+      : `https://${trimmed}`
+
+  return withProtocol.replace(/\/$/, '')
+}
+
+function resolveRuntimeOrigin(): string | null {
+  if (typeof window !== 'undefined' && typeof window.location?.origin === 'string') {
+    return window.location.origin.replace(/\/$/, '')
+  }
+
+  for (const key of SITE_ENV_KEYS) {
+    const candidate = normaliseBaseUrl(process.env[key])
+    if (candidate) {
+      return candidate
     }
   }
 
-  const fallback = DEFAULT_API_FALLBACKS.find((base) => base && base.length > 0)
-  return (fallback ?? 'http://localhost:5000').replace(/\/$/, '')
+  return null
+}
+
+function resolveApiBase() {
+  for (const key of API_ENV_KEYS) {
+    const value = normaliseBaseUrl(process.env[key])
+    if (value) {
+      return value
+    }
+  }
+
+  const runtimeOrigin = resolveRuntimeOrigin()
+  if (runtimeOrigin) {
+    return runtimeOrigin
+  }
+
+  const fallback = DEFAULT_API_FALLBACKS.find((base) => base && base.length > 0) ?? 'http://localhost:5000'
+  return normaliseBaseUrl(fallback) ?? fallback.replace(/\/$/, '')
 }
 
 export function getApiBaseUrl() {

@@ -1,27 +1,10 @@
 import './globals.css'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Inter, Poppins, Space_Grotesk } from 'next/font/google'
 import AuthStatus from '@/components/auth/AuthStatus'
 import PrimaryNav from '@/components/navigation/PrimaryNav'
 import { Providers } from './providers'
 import DeploymentBanner from '@/components/system/DeploymentBanner'
-
-const display = Poppins({
-  subsets: ['latin'],
-  weight: ['600', '700'],
-  variable: '--font-display',
-})
-
-const body = Inter({
-  subsets: ['latin'],
-  variable: '--font-body',
-})
-
-const accent = Space_Grotesk({
-  subsets: ['latin'],
-  variable: '--font-accent',
-})
 
 export const metadata = {
   title: 'Mirai Marketplace',
@@ -30,7 +13,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable} ${accent.variable}`}>
+    <html lang="en">
       <body className="app-body text-[var(--text-subtle)] antialiased transition-colors duration-300">
         <Providers>
           <div className="app-backdrop" aria-hidden />

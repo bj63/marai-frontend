@@ -10,6 +10,9 @@
   --design-neutral: #c8d2e1;
   --design-surface: rgba(200, 210, 225, 0.08);
   --design-stroke: rgba(200, 210, 225, 0.22);
+  --font-display: 'Poppins', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-accent: 'Space Grotesk', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --design-font-family: var(--font-body, 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
   --color-magnolia: var(--design-accent);
   --color-bayou: var(--design-primary);
