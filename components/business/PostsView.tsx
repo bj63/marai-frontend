@@ -1,6 +1,6 @@
 'use client'
 
-import PromotedPostCard from '@/components/business/PromotedPostCard'
+import AutopostCard from '@/components/business/autopost/AutopostCard'
 import { useBusinessData } from '@/components/business/BusinessDataContext'
 
 export default function PostsView() {
@@ -21,7 +21,7 @@ export default function PostsView() {
   return (
     <div className="flex flex-col gap-6">
       {autoposts.map((entry) => (
-        <PromotedPostCard key={entry.id} entry={entry} />
+        <AutopostCard key={entry.id} entry={entry} />
       ))}
     </div>
   )

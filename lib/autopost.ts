@@ -1,3 +1,5 @@
+import type { AutopostFeedHints, AutopostStatus } from '@/types/business'
+
 export interface AutopostCallToAction {
   label?: string | null
   url?: string | null
@@ -59,6 +61,11 @@ const toStringArray = (value: unknown): string[] => {
     .filter((entry) => entry.length > 0)
 }
 
+const toOptionalStringArray = (value: unknown): string[] | null => {
+  const items = toStringArray(value)
+  return items.length > 0 ? items : null
+}
+
 const findValue = (source: Record<string, unknown>, keys: string[]): unknown => {
   for (const key of keys) {
     if (hasOwn(source, key)) {
@@ -86,6 +93,61 @@ const findString = (source: Record<string, unknown>, keys: string[]): string | n
 const findNumber = (source: Record<string, unknown>, keys: string[]): number | null => {
   const value = findValue(source, keys)
   return toNumberOrNull(value)
+}
+
+const parseBoolean = (value: unknown): boolean | null => {
+  if (typeof value === 'boolean') {
+    return value
+  }
+  if (typeof value === 'string') {
+    if (value.toLowerCase() === 'true') return true
+    if (value.toLowerCase() === 'false') return false
+  }
+  return null
+}
+
+export const parseFeedHints = (value: unknown): AutopostFeedHints | null => {
+  if (!isRecord(value)) {
+    return null
+  }
+
+  const record = value as Record<string, unknown>
+
+  const categories = toOptionalStringArray(record.categories ?? record.categoryTags)
+  const relationalHooks = toOptionalStringArray(record.relationalHooks ?? record.relational_hooks)
+  const targetPersonas = toOptionalStringArray(record.targetPersonas ?? record.target_personas)
+
+  const placement = toStringOrNull(record.placement)
+  const campaignId =
+    toStringOrNull(record.campaignId) ?? toStringOrNull(record.campaign_id)
+  const brand = toStringOrNull(record.brand)
+  const objective = toStringOrNull(record.objective)
+  const variantKey = toStringOrNull(record.variantKey)
+  const creativeMedium =
+    toStringOrNull(record.creativeMedium) ?? toStringOrNull(record.creative_medium)
+  const sentimentLabel = toStringOrNull(record.sentimentLabel)
+  const sentimentConfidence = toNumberOrNull(record.sentimentConfidence)
+  const autopostId = toNumberOrNull(record.autopostId ?? record.autopost_id)
+  const statusRaw = toStringOrNull(record.status)
+  const status = statusRaw ? (statusRaw as AutopostStatus) : undefined
+  const isPromoted = parseBoolean(record.isPromoted ?? record.is_promoted)
+
+  return {
+    placement,
+    campaignId,
+    brand,
+    objective,
+    variantKey,
+    creativeMedium,
+    sentimentLabel,
+    sentimentConfidence: sentimentConfidence ?? undefined,
+    autopostId: autopostId ?? undefined,
+    status,
+    isPromoted: isPromoted ?? undefined,
+    categories,
+    relationalHooks,
+    targetPersonas,
+  }
 }
 
 export const sanitizeHashtagInput = (value: string): string[] => {
@@ -118,6 +180,7 @@ export const extractAutopostDetails = (metadata: unknown): AutopostDetails | nul
   const candidate =
     findRecord(container, ['autopost', 'creative', 'payload', 'entry']) ?? container
 
+  const type = findString(candidate, ['type', 'contentType', 'metadataType']) ?? findString(container, ['type'])
   const creativeType = findString(candidate, ['creativeType', 'creative_type', 'type'])
   const title = findString(candidate, ['title', 'headline'])
   const summary = findString(candidate, ['summary', 'body', 'description'])
@@ -133,7 +196,9 @@ export const extractAutopostDetails = (metadata: unknown): AutopostDetails | nul
   const hashtags = toStringArray(findValue(candidate, ['hashtags', 'tags']))
 
   const adaptiveProfile = findRecord(candidate, ['adaptiveProfile', 'adaptive_profile'])
-  const feedHints = findValue(candidate, ['feedHints', 'feed_hints'])
+  const feedHintsValue =
+    findValue(candidate, ['feedHints', 'feed_hints']) ?? findValue(container, ['feedHints', 'feed_hints'])
+  const feedHints = parseFeedHints(feedHintsValue)
   const callToActionRecord = findRecord(candidate, ['callToAction', 'call_to_action'])
   const callToActionLabel =
     findString(candidate, ['callToActionLabel', 'ctaLabel']) ??
@@ -157,6 +222,7 @@ export const extractAutopostDetails = (metadata: unknown): AutopostDetails | nul
   const connectionDream = findRecord(candidate, ['connectionDream', 'connection_dream'])
 
   return {
+    type,
     creativeType,
     title,
     summary,
