@@ -1,14 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { extractAutopostDetails } from '@/lib/autopost'
-import type {
-  AutopostDetails,
-  AutopostFeedHints,
-  AutopostQueueEntry,
-  AutopostStatus,
-  SentimentSignal,
-} from '@/types/business'
+import { extractAutopostDetails, parseFeedHints } from '@/lib/autopost'
+import type { AutopostQueueEntry, AutopostStatus, SentimentSignal } from '@/types/business'
 
 interface ApiAutopostResponse {
   autoposts: RawAutopostEntry[]
@@ -108,35 +102,15 @@ const normaliseSentiment = (emotionState?: Record<string, unknown> | null): Sent
   ]
 }
 
-const normaliseFeedHints = (details: AutopostDetails | null, metadata?: Record<string, unknown> | null) => {
-  const detailHints = details?.feedHints
-  if (detailHints) {
-    return detailHints
-  }
-
-  if (metadata && isRecord((metadata as Record<string, unknown>).feedHints)) {
-    const hints = (metadata as Record<string, unknown>).feedHints as Record<string, unknown>
-    return {
-      placement: typeof hints.placement === 'string' ? hints.placement : null,
-      isPromoted: Boolean(hints.isPromoted),
-      campaignId: typeof hints.campaignId === 'string' ? hints.campaignId : null,
-      brand: typeof hints.brand === 'string' ? hints.brand : null,
-      objective: typeof hints.objective === 'string' ? hints.objective : null,
-      variantKey: typeof hints.variantKey === 'string' ? hints.variantKey : null,
-      sentimentLabel: typeof hints.sentimentLabel === 'string' ? hints.sentimentLabel : null,
-      sentimentConfidence:
-        typeof hints.sentimentConfidence === 'number' ? hints.sentimentConfidence : null,
-      autopostId: typeof hints.autopostId === 'number' ? hints.autopostId : null,
-      status: typeof hints.status === 'string' ? (hints.status as AutopostStatus) : undefined,
-    } satisfies AutopostFeedHints
-  }
-
-  return null
-}
-
 export const mapAutopostEntry = (entry: RawAutopostEntry): AutopostQueueEntry => {
   const details = extractAutopostDetails(entry.metadata ?? null)
-  const feedHints = normaliseFeedHints(details, entry.metadata)
+  const feedHints =
+    details?.feedHints ??
+    parseFeedHints(
+      entry.metadata && isRecord(entry.metadata)
+        ? (entry.metadata.feedHints ?? (entry.metadata as Record<string, unknown>).feed_hints ?? null)
+        : null,
+    )
 
   return {
     ...entry,

@@ -58,9 +58,14 @@ export interface AutopostFeedHints {
   sentimentConfidence?: number | null
   autopostId?: number | null
   status?: AutopostStatus
+  categories?: string[] | null
+  relationalHooks?: string[] | null
+  creativeMedium?: string | null
+  targetPersonas?: string[] | null
 }
 
 export interface AutopostDetails {
+  type?: string | null
   creativeType?: string | null
   title?: string | null
   summary?: string | null

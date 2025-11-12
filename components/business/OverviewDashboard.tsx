@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { ArrowUpRight, Users } from 'lucide-react'
-import PromotedPostCard from '@/components/business/PromotedPostCard'
+import AutopostCard from '@/components/business/autopost/AutopostCard'
 import QueueTimeline from '@/components/business/QueueTimeline'
 import SentimentBadge from '@/components/business/SentimentBadge'
 import { useBusinessData } from '@/components/business/BusinessDataContext'
@@ -78,7 +78,7 @@ export default function OverviewDashboard() {
             Preview the most recent promoted drop with CTA metadata and sentiment markers.
           </p>
           <div className="mt-4">
-            <PromotedPostCard entry={featured} />
+            <AutopostCard entry={featured} />
           </div>
         </section>
       )}
