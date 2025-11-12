@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Heart, MessageCircle, Share2, Sparkles } from 'lucide-react'
+import { ArrowRight, CircuitBoard, Heart, MessageCircle, Share2, Sparkles } from 'lucide-react'
 
 import MarketplaceAvatarPreview from './MarketplaceAvatarPreview'
 
@@ -62,6 +62,272 @@ const mockDrops: Array<{
     accent: '#EFD6FF',
   },
 ]
+
+type PlanSectionContent = {
+  name: string
+  detail: string
+  meta?: string
+}
+
+type PlanSectionDescriptor = {
+  id: string
+  title: string
+  subtitle: string
+  accent?: string
+  variant?: 'grid' | 'timeline'
+  items: PlanSectionContent[]
+  footerNote?: string
+}
+
+const planSections: PlanSectionDescriptor[] = [
+  {
+    id: 'surfaces',
+    title: 'Product surfaces',
+    subtitle:
+      'Four complementary touchpoints help collectors, bidders, and genesis creators navigate evolving NFTs without leaving the MarAI universe.',
+    accent: 'linear-gradient(135deg, rgba(164,124,255,0.25), rgba(60,224,181,0.25))',
+    items: [
+      {
+        name: 'Marketplace landing grid',
+        detail:
+          'Responsive masonry and carousel layouts spotlight live reserve auctions, new emotion evolutions, and secondary listings with filters for emotion tier, cohort, and auction state.',
+        meta: 'Discovery',
+      },
+      {
+        name: 'Token detail view',
+        detail:
+          'Dedicated token pages merge on-chain metadata — lineage, emotion proofs, tokenURI — with social energy like bids, comments, and provenance updates to drive confident bidding.',
+        meta: 'Acquisition',
+      },
+      {
+        name: 'Creator cockpit',
+        detail:
+          'Genesis holders mint, refresh emotion states, and configure auction parameters behind gated controls that sync with the hybrid intelligence pipeline.',
+        meta: 'Supply',
+      },
+      {
+        name: 'Collector portfolio',
+        detail:
+          'A profile tab summarises owned NFTs, bidding history, and routed royalties so collectors can measure impact without leaving their account hub.',
+        meta: 'Retention',
+      },
+    ],
+  },
+  {
+    id: 'integration',
+    title: 'Data & contract integration',
+    subtitle:
+      'Smart contracts, backend workers, and Supabase primitives stitch together the on-chain narrative so the UI can stay reactive.',
+    accent: 'linear-gradient(135deg, rgba(60,224,181,0.25), rgba(255,158,207,0.25))',
+    items: [
+      {
+        name: 'On-chain contracts',
+        detail:
+          'Interact with MarAIEvolvingNFT for minting, emotion reads, and lineage, while MarAIAuctionFactory + MarAIAuction orchestrate reserve auctions and royalty routing.',
+        meta: 'Solidity',
+      },
+      {
+        name: 'Backend bridge',
+        detail:
+          'Extend relational_visual_engine.mint_entity_nft so the pipeline triggers contract calls and emits events whenever NFTs mint or evolve, powering live refreshes.',
+        meta: 'Hybrid intelligence',
+      },
+      {
+        name: 'Supabase schema',
+        detail:
+          'New tables for listings, auction snapshots, and bid history mirror the feed schema, enabling simple queries and websocket updates that hydrate React Query caches.',
+        meta: 'Realtime data',
+      },
+    ],
+    footerNote:
+      'Surface split breakdowns from RoyaltyRouter.primarySplits() and royaltyInfo so every bid highlights how value flows back to collaborators.',
+  },
+  {
+    id: 'frontend',
+    title: 'Frontend architecture',
+    subtitle:
+      'Next.js routes, shared primitives, and wallet connectivity ensure the marketplace feels cohesive with the rest of MarAI.',
+    accent: 'linear-gradient(135deg, rgba(255,158,207,0.25), rgba(164,124,255,0.25))',
+    items: [
+      {
+        name: 'Route structure',
+        detail:
+          'Under app/marketplace ship routes for the landing grid, token detail pages, and creator tools, while reusing primitives like AuctionCard and EmotionBadge.',
+        meta: 'Next.js',
+      },
+      {
+        name: 'State management',
+        detail:
+          'React Query (or SWR) hydrates listings from Supabase views and gracefully falls back to on-chain reads whenever wallets connect or cache stales.',
+        meta: 'Data',
+      },
+      {
+        name: 'Wallet connectivity',
+        detail:
+          'RainbowKit or wagmi connectors handle auth, network switching, and session tokens that link wallet addresses to mirai_profile records for gated actions.',
+        meta: 'Access',
+      },
+    ],
+  },
+  {
+    id: 'flows',
+    title: 'Core auction flows',
+    subtitle:
+      'From discovery to primary settlement, each step keeps collectors informed and keeps state in sync with the chain.',
+    variant: 'timeline',
+    items: [
+      {
+        name: 'Discover & filter',
+        detail:
+          'Query marketplace_listings_view for live auctions sorted by end time, applying emotion-tier filters and optimistic websocket updates as bids land.',
+      },
+      {
+        name: 'Auction participation',
+        detail:
+          'Submit bids via MarAIAuction.bid() through wagmi and optimistically append entries to Supabase, handling BidTooLow and AuctionEnded reverts gracefully.',
+      },
+      {
+        name: 'Primary settlement',
+        detail:
+          'Listen for AuctionFinalized to mark listings as sold, refresh provenance, and display royalty breakdowns from RoyaltyRouter with reserve-miss fallbacks.',
+      },
+      {
+        name: 'Emotion evolution',
+        detail:
+          'Owners trigger updateEmotionState through the backend pipeline, refreshing the emotion timeline and highlighting newly unlocked tiers.',
+      },
+      {
+        name: 'Secondary sales',
+        detail:
+          'Expose ERC-2981 compatible listings with royaltyInfo previews and outbound calls-to-action for partner marketplaces.',
+      },
+    ],
+  },
+  {
+    id: 'creator-tooling',
+    title: 'Creator tooling rollout',
+    subtitle:
+      'Give genesis collaborators the guardrails they need to launch evolving drops confidently.',
+    items: [
+      {
+        name: 'Gated access policies',
+        detail:
+          'Supabase RLS ties wallet addresses and genesis IDs to cockpit permissions so only approved creators can mint or schedule auctions.',
+        meta: 'Trust',
+      },
+      {
+        name: 'Guided launch wizard',
+        detail:
+          'Step-by-step wizards capture metadata, story, visuals, and lineage settings before hitting the mint endpoint.',
+        meta: 'Experience',
+      },
+      {
+        name: 'Emotion-aware previews',
+        detail:
+          'Preview cards fetch token URI payloads and baseline emotion states, letting creators validate the drop before it goes live.',
+        meta: 'Quality',
+      },
+    ],
+  },
+  {
+    id: 'observability',
+    title: 'Observability & QA',
+    subtitle:
+      'Tight feedback loops keep launches on track and ensure the UI matches on-chain truth.',
+    items: [
+      {
+        name: 'Event tracing',
+        detail:
+          'Mirror auction lifecycle events into Supabase so dashboards highlight live stats and alert the team when anomalies hit.',
+        meta: 'Telemetry',
+      },
+      {
+        name: 'End-to-end testing',
+        detail:
+          'Playwright simulations validate wallet connections, bid placement, countdown behaviour, and emotion refreshes.',
+        meta: 'QA',
+      },
+      {
+        name: 'Contract integration tests',
+        detail:
+          'Hardhat or Foundry scripts confirm reserve checks, royalty routing, and error messaging before any UI ships.',
+        meta: 'Verification',
+      },
+    ],
+  },
+]
+
+function PlanSection({
+  id,
+  title,
+  subtitle,
+  accent,
+  items,
+  variant = 'grid',
+  footerNote,
+}: PlanSectionDescriptor) {
+  return (
+    <section
+      id={id}
+      className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0c132d]/75 px-6 py-8 shadow-[0_24px_60px_rgba(6,10,32,0.55)]"
+    >
+      <div
+        className="pointer-events-none absolute inset-0 -z-10 opacity-70"
+        style={{
+          background: accent,
+        }}
+      />
+      <header className="relative mb-6 space-y-2">
+        <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[0.6rem] uppercase tracking-[0.4em] text-brand-mist/70">
+          <CircuitBoard className="h-3 w-3" />
+          {title}
+        </span>
+        <p className="text-sm text-brand-mist/80">{subtitle}</p>
+      </header>
+      {variant === 'timeline' ? (
+        <ol className="relative space-y-4">
+          {items.map((item, index) => (
+            <li
+              key={item.name}
+              className="group flex gap-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/85 transition hover:border-brand-magnolia/40 hover:bg-white/5"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-magnolia/20 text-xs font-semibold text-brand-magnolia">
+                {index + 1}
+              </span>
+              <div className="space-y-1">
+                <h3 className="font-semibold text-white">{item.name}</h3>
+                <p className="text-sm text-brand-mist/80">{item.detail}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {items.map((item) => (
+            <div
+              key={item.name}
+              className="group flex h-full flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:border-brand-magnolia/40 hover:bg-white/5"
+            >
+              <div className="flex items-center justify-between text-xs uppercase tracking-[0.32em] text-brand-mist/60">
+                <span>{item.meta ?? 'Strategy'}</span>
+                <ArrowRight className="h-3.5 w-3.5 opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-base font-semibold text-white">{item.name}</h3>
+                <p className="text-sm text-brand-mist/80">{item.detail}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {footerNote ? (
+        <p className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs uppercase tracking-[0.32em] text-brand-mist/70">
+          {footerNote}
+        </p>
+      ) : null}
+    </section>
+  )
+}
 
 function MockDropCard({ id, title, vibe, prompt, palette, accent }: (typeof mockDrops)[number]) {
   const [liked, setLiked] = useState(false)
@@ -225,6 +491,20 @@ export default function Marketplace() {
           {mockDrops.map((drop) => (
             <MockDropCard key={drop.id} {...drop} />
           ))}
+        </section>
+
+        <section className="space-y-6">
+          <div className="mx-auto max-w-3xl text-center text-white">
+            <h2 className="text-3xl font-semibold">The marketplace roadmap is wired in</h2>
+            <p className="mt-3 text-sm text-brand-mist/75">
+              We translated the internal blueprint into an actionable launch plan so design, engineering, and growth teams can sprint in sync.
+            </p>
+          </div>
+          <div className="grid gap-6">
+            {planSections.map((section) => (
+              <PlanSection key={section.id} {...section} />
+            ))}
+          </div>
         </section>
 
         <footer className="rounded-3xl border border-white/10 bg-[#0c132d]/80 px-6 py-8 shadow-[0_28px_65px_rgba(5,8,24,0.55)]">
