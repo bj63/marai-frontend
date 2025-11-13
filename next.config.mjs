@@ -5,6 +5,14 @@ const nextConfig = {
   experimental: {
     instrumentationHook: true,
   },
+  webpack: (config) => {
+    config.resolve = config.resolve || {}
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      'pino-pretty': false,
+    }
+    return config
+  },
 }
 
 const sentryWebpackPluginOptions = {

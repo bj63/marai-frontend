@@ -64,22 +64,30 @@ const engagementDestinations = [
   },
 ]
 
+const heroSignals = [
+  { label: 'Cohorts live', value: '08', detail: 'founder pods' },
+  { label: 'Latency', value: '42 ms', detail: 'predictive relay' },
+  { label: 'Trust tier', value: 'Founders', detail: 'white-glove ops' },
+]
+
 export default function Home() {
   return (
     <main className="page-shell" data-width="wide">
-      <section className="surface-panel surface-panel--hero">
-        <div className="absolute -right-24 top-10 h-56 w-56 rounded-full bg-brand-gradient opacity-30 blur-3xl" />
-        <div className="absolute -left-28 -top-20 h-44 w-44 rounded-full bg-brand-magnolia/40 opacity-40 blur-3xl" />
-        <div className="relative flex flex-col gap-6 text-white">
-          <p className="section-label text-brand-mist/70">Founders’ control room</p>
-          <h1 className="section-title heading-balance text-4xl md:text-5xl">
+      <section className="surface-panel surface-panel--hero hero-panel">
+        <div className="hero-panel__orbs" aria-hidden>
+          <span className="hero-panel__orb hero-panel__orb--one" />
+          <span className="hero-panel__orb hero-panel__orb--two" />
+        </div>
+        <div className="hero-panel__body">
+          <p className="section-label">Founders’ control room</p>
+          <h1 className="hero-panel__title heading-balance">
             Launch MarAI with a flow that respects the humans behind the AI
           </h1>
-          <p className="section-description max-w-2xl text-brand-mist/70">
-            This dashboard keeps your social AI platform accountable: route teammates through the right login, lock in the
-            persona, then light up the community surfaces that make Amaris feel alive.
+          <p className="hero-panel__lead">
+            Route teammates through the right login lanes, lock the persona, and light up the community surfaces that make
+            Amaris feel alive—without losing the human rituals that keep trust high.
           </p>
-          <div className="flex flex-wrap gap-3">
+          <div className="hero-panel__actions">
             <Link href="/auth" className="button-primary">
               <ShieldCheck className="h-4 w-4" />
               Start onboarding
@@ -89,29 +97,36 @@ export default function Home() {
               Talk with Amaris
             </Link>
           </div>
+          <dl className="hero-panel__signals">
+            {heroSignals.map((signal) => (
+              <div key={signal.label}>
+                <dt>{signal.label}</dt>
+                <dd>
+                  <span>{signal.value}</span>
+                  <small>{signal.detail}</small>
+                </dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
 
       <section className="grid gap-6 lg:grid-cols-3">
         {onboardingStages.map(({ title, description, action, icon: Icon }) => (
-          <article
-            key={title}
-            className="surface-card surface-card--interactive h-full text-sm"
-          >
-            <div className="flex items-center gap-3 text-brand-magnolia">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-magnolia/10">
-                <Icon className="h-5 w-5" />
-              </span>
-              <h2 className="text-lg font-semibold text-white">{title}</h2>
+          <article key={title} className="surface-card surface-card--interactive surface-card--stacked text-sm">
+            <div className="surface-card__icon-ring">
+              <Icon className="h-5 w-5" />
             </div>
-            <p className="flex-1 text-brand-mist/70">{description}</p>
-            <Link
-              href={action.href}
-              className="inline-flex items-center gap-2 text-[0.75rem] font-semibold uppercase tracking-[0.3em] text-brand-magnolia transition hover:text-white"
-            >
-              {action.label}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+            <div className="surface-card__content">
+              <h2 className="surface-card__title">{title}</h2>
+              <p className="surface-card__body">{description}</p>
+            </div>
+            <div className="surface-card__footer">
+              <Link href={action.href} className="button-ghost">
+                {action.label}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
           </article>
         ))}
       </section>
@@ -130,13 +145,18 @@ export default function Home() {
             <Link
               key={destination.heading}
               href={destination.href}
-              className="surface-card surface-card--interactive group text-sm"
+              className="surface-card surface-card--interactive surface-card--link group text-sm"
             >
-              <div className="flex items-center justify-between text-white">
-                <span className="text-lg font-semibold">{destination.heading}</span>
-                <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+              <div className="surface-card__link-heading">
+                <div>
+                  <p className="surface-card__eyebrow">Surface</p>
+                  <h3>{destination.heading}</h3>
+                </div>
+                <span className="surface-card__chevron" aria-hidden>
+                  <ArrowRight className="h-4 w-4" />
+                </span>
               </div>
-              <p className="text-brand-mist/70">{destination.copy}</p>
+              <p className="surface-card__body">{destination.copy}</p>
             </Link>
           ))}
         </div>
