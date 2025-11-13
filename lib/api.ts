@@ -205,8 +205,6 @@ export interface AnalyzeMessageOptions {
   walletAddress?: string | null
   personality?: Record<string, number> | null
   relationshipContext?: Record<string, unknown>
-  includeTimeline?: boolean
-  toneOverride?: string | null
   metadata?: Record<string, unknown>
 }
 
@@ -471,34 +469,32 @@ export async function analyzeMessage(message: string, options: AnalyzeMessageOpt
     throw new Error('Message cannot be empty.')
   }
 
-  const basePayload: Record<string, unknown> = {
+  const payload: Record<string, unknown> = {
     message: trimmedMessage,
   }
 
-  const payloadEntries: Array<[string, unknown]> = [
-    ['user_id', options.userId?.trim() ?? undefined],
-    ['federation_id', options.federationId?.trim() ?? undefined],
+  const optionalEntries: Array<[string, unknown]> = [
+    ['userId', options.userId?.trim() ?? undefined],
+    ['federationId', options.federationId?.trim() ?? undefined],
     ['wallet', options.walletAddress?.trim() ?? undefined],
-    ['relationship_context', options.relationshipContext],
-    ['include_timeline', options.includeTimeline],
-    ['tone_override', options.toneOverride],
+    ['relationshipContext', options.relationshipContext],
     ['metadata', options.metadata],
   ]
 
   if (options.personality && Object.keys(options.personality).length > 0) {
-    payloadEntries.push(['personality', options.personality])
+    optionalEntries.push(['personality', options.personality])
   }
 
-  payloadEntries.forEach(([key, value]) => {
+  optionalEntries.forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') {
-      basePayload[key] = value
+      payload[key] = value
     }
   })
 
   const res = await fetch(`${resolveApiBase()}/api/analyze`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(basePayload),
+    body: JSON.stringify(payload),
   })
 
   const raw = await handleApiResponse<RawAnalyzeResponse>(res, 'Analysis')

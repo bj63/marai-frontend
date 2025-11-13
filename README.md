@@ -140,14 +140,15 @@ App runs at 👉 **[http://localhost:3000](http://localhost:3000)**
 The frontend connects directly to the **MOA_AI_V3** backend using the API URL environment variable:
 
 ```ts
-const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-const response = await fetch(`${apiUrl}/chat`, {
-  method: "POST",
-  body: JSON.stringify({ message }),
+const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_MOA_API_URL;
+const response = await fetch(`${apiBase}/api/analyze`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ message, userId, metadata: { source: 'frontend-demo' } }),
 });
 ```
 
-This enables real-time emotion → avatar feedback within the UI.
+Set `NEXT_PUBLIC_API_BASE`, `NEXT_PUBLIC_API_URL`, or `NEXT_PUBLIC_MOA_API_URL` in `.env.local` so [`resolveApiBase()`](./lib/api.ts) can discover the correct backend origin. This enables real-time emotion → avatar feedback within the UI.
 
 ---
 
