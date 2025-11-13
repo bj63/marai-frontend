@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -47,22 +47,6 @@ const badgeToneMap: Record<NonNullable<NavItem['badgeTone']>, string> = {
   new: 'bg-emerald-500/15 text-emerald-200 border-emerald-400/30',
   beta: 'bg-amber-500/15 text-amber-200 border-amber-400/30',
   pro: 'bg-brand-magnolia/10 text-brand-magnolia border-brand-magnolia/30',
-}
-
-const normalizePath = (value: string | null | undefined) => {
-  if (!value) return null
-  if (value === '/') return '/'
-  return value.replace(/\/+$/, '')
-}
-
-const isHrefActive = (pathname: string | null | undefined, href: string) => {
-  const normalizedPath = normalizePath(pathname)
-  const normalizedHref = normalizePath(href) ?? href
-  if (!normalizedPath) return false
-  if (normalizedHref === '/') {
-    return normalizedPath === '/'
-  }
-  return normalizedPath === normalizedHref || normalizedPath.startsWith(`${normalizedHref}/`)
 }
 
 const navItems: NavItem[] = [
@@ -183,6 +167,9 @@ const navItems: NavItem[] = [
 export default function PrimaryNav({ activePath }: PrimaryNavProps) {
   const currentPathname = usePathname()
   const pathname = activePath ?? currentPathname
+  const resolvedPathname = activePath ?? currentPathname
+  const pathname = activePath ?? currentPathname
+  const pathname = activePath ?? usePathname()
   const { user, hasRole, hasAnyRole, isPro } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -209,7 +196,9 @@ export default function PrimaryNav({ activePath }: PrimaryNavProps) {
   const coreItems = filteredItems.filter((item) => item.section !== 'pro')
   const proItems = filteredItems.filter((item) => item.section === 'pro')
 
-  const isPathActive = useCallback((href: string) => isHrefActive(pathname, href), [pathname])
+  const isPathActive = (href: string) => pathname === href || pathname?.startsWith(`${href}/`)
+  const isPathActive = (href: string) =>
+    resolvedPathname === href || resolvedPathname?.startsWith(`${href}/`)
 
   const renderBadge = (item: NavItem) => {
     if (!item.badge) return null
@@ -224,6 +213,9 @@ export default function PrimaryNav({ activePath }: PrimaryNavProps) {
 
   const renderDesktopLink = (item: NavItem) => {
     const isActive = isPathActive(item.href)
+    const isActive =
+      resolvedPathname === item.href || resolvedPathname?.startsWith(`${item.href}/`)
+    const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`)
     const Icon = item.icon
 
     return (
@@ -258,6 +250,9 @@ export default function PrimaryNav({ activePath }: PrimaryNavProps) {
 
   const renderMobileLink = (item: NavItem) => {
     const isActive = isPathActive(item.href)
+    const isActive =
+      resolvedPathname === item.href || resolvedPathname?.startsWith(`${item.href}/`)
+    const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`)
     const Icon = item.icon
 
     return (
