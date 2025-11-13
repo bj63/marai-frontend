@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -172,8 +173,11 @@ const navItems: NavItem[] = [
 
 export default function PrimaryNav({ activePath }: PrimaryNavProps) {
   const currentPathname = usePathname()
+  const resolvedPathname = useMemo(() => normalizePath(activePath ?? currentPathname), [activePath, currentPathname])
   const pathname = activePath ?? currentPathname
-  const normalizedPathname = useMemo(() => normalizePath(pathname), [pathname])
+  const resolvedPathname = activePath ?? currentPathname
+  const pathname = activePath ?? currentPathname
+  const pathname = activePath ?? usePathname()
   const { user, hasRole, hasAnyRole, isPro } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -184,30 +188,37 @@ export default function PrimaryNav({ activePath }: PrimaryNavProps) {
     }
   }, [mobileOpen])
 
-  const { coreItems, proItems } = useMemo(() => {
-    const visibleItems = navItems.filter((item) => {
+  const filteredItems = useMemo(() => {
+    return navItems.filter((item) => {
       if (item.adminOnly && !hasRole('admin') && !hasRole('founder')) return false
       if (item.requiresAuth && !user) return false
-      if (item.roles?.length && !hasAnyRole(item.roles)) return false
+      if (item.roles && item.roles.length > 0) {
+        const allowed = hasAnyRole(item.roles)
+        if (!allowed) return false
+      }
       if (item.section === 'pro' && !isPro) return false
       return true
     })
-
-    return {
-      coreItems: visibleItems.filter((item) => item.section !== 'pro'),
-      proItems: visibleItems.filter((item) => item.section === 'pro'),
-    }
   }, [hasAnyRole, hasRole, isPro, user])
+
+  const renderDesktopLink = (item: NavItem) => {
+    const active = isPathActive(item.href)
+    const Icon = item.icon
 
   const isPathActive = useCallback(
     (href: string) => {
-      const normalizedHref = normalizePath(href)
-      if (!normalizedPathname || !normalizedHref) return false
-      if (normalizedHref === '/') return normalizedPathname === '/'
-      return normalizedPathname === normalizedHref || normalizedPathname.startsWith(`${normalizedHref}/`)
+      if (!resolvedPathname) return false
+      const normalizedHref = normalizePath(href) ?? href
+      if (normalizedHref === '/') {
+        return resolvedPathname === '/'
+      }
+      return resolvedPathname === normalizedHref || resolvedPathname.startsWith(`${normalizedHref}/`)
     },
-    [normalizedPathname],
+    [resolvedPathname],
   )
+  const isPathActive = (href: string) => pathname === href || pathname?.startsWith(`${href}/`)
+  const isPathActive = (href: string) =>
+    resolvedPathname === href || resolvedPathname?.startsWith(`${href}/`)
 
   const renderBadge = (item: NavItem) => {
     if (!item.badge) return null
@@ -221,7 +232,10 @@ export default function PrimaryNav({ activePath }: PrimaryNavProps) {
   }
 
   const renderDesktopLink = (item: NavItem) => {
-    const active = isPathActive(item.href)
+    const isActive = isPathActive(item.href)
+    const isActive =
+      resolvedPathname === item.href || resolvedPathname?.startsWith(`${item.href}/`)
+    const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`)
     const Icon = item.icon
 
     return (
@@ -229,15 +243,15 @@ export default function PrimaryNav({ activePath }: PrimaryNavProps) {
         <Link
           href={item.href}
           className={`group flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition-colors duration-300 ${
-            active
+            isActive
               ? 'bg-white/10 text-white shadow-[0_8px_24px_rgba(8,10,32,0.55)]'
               : 'text-brand-mist/80 hover:text-white'
           }`}
-          aria-current={active ? 'page' : undefined}
+          aria-current={isActive ? 'page' : undefined}
         >
           <span
             className={`flex h-6 w-6 items-center justify-center rounded-full border text-[0.65rem] transition-colors ${
-              active
+              isActive
                 ? 'border-white/60 bg-white/15 text-white'
                 : 'border-white/10 bg-white/5 text-brand-mist/70'
             }`}
@@ -255,7 +269,10 @@ export default function PrimaryNav({ activePath }: PrimaryNavProps) {
   }
 
   const renderMobileLink = (item: NavItem) => {
-    const active = isPathActive(item.href)
+    const isActive = isPathActive(item.href)
+    const isActive =
+      resolvedPathname === item.href || resolvedPathname?.startsWith(`${item.href}/`)
+    const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`)
     const Icon = item.icon
 
     return (
@@ -264,7 +281,7 @@ export default function PrimaryNav({ activePath }: PrimaryNavProps) {
         href={item.href}
         onClick={() => setMobileOpen(false)}
         className={`flex items-center justify-between rounded-2xl border px-3.5 py-3 transition-colors ${
-          active
+          isActive
             ? 'border-white/30 bg-white/10 text-white'
             : 'border-white/10 bg-white/5 text-brand-mist/80 hover:text-white'
         }`}
