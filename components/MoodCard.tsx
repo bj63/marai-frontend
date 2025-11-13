@@ -215,9 +215,9 @@ export default function MoodCard({ post }: MoodCardProps) {
             </a>
           ) : null}
 
-          {callToActionLabel && isSafeExternalUrl(callToActionUrl) ? (
+          {callToActionLabel && isSafeExternalUrl(callToActionUrl ?? undefined) ? (
             <a
-              href={callToActionUrl}
+              href={callToActionUrl ?? undefined}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex w-full items-center justify-center rounded-full bg-[color-mix(in srgb,var(--design-accent) 80%,#86f2d1)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-[#0b1024] transition hover:bg-[color-mix(in srgb,var(--design-accent) 90%,white)]"
@@ -228,9 +228,9 @@ export default function MoodCard({ post }: MoodCardProps) {
         </div>
       ) : null}
 
-      {isSafeExternalUrl(post.music_url) ? (
+      {isSafeExternalUrl(post.music_url ?? undefined) ? (
         <a
-          href={post.music_url}
+          href={post.music_url ?? undefined}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-4 inline-flex items-center gap-2 rounded-full border border-[color-mix(in srgb,var(--design-stroke) 70%,transparent)] bg-[color-mix(in srgb,var(--design-background) 70%,#1e2748)] px-3 py-1.5 text-xs font-medium uppercase tracking-[0.32em] text-[color-mix(in srgb,var(--design-neutral) 85%,#f8fafc)] transition hover:border-[color-mix(in srgb,var(--design-accent) 70%,white)]"

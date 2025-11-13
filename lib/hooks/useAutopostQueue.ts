@@ -183,7 +183,7 @@ export function useAutopostQueue(options?: UseAutopostQueueOptions): UseAutopost
       active = false
       clearInterval(handle)
     }
-  }, [fetchEntries, refreshIntervalMs, refreshTokenRef.current])
+  }, [fetchEntries, refreshIntervalMs])
 
   const refresh = useCallback(() => {
     refreshTokenRef.current += 1

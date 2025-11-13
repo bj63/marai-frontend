@@ -118,7 +118,7 @@ const coerceAutopostEntry = (value: unknown): AutopostEntry | null => {
   const record = asRecord(value)
   if (!record) return null
   if (typeof record.id !== 'number') return null
-  return record as AutopostEntry
+  return record as unknown as AutopostEntry
 }
 
 const unwrapAutopostPayload = (payload: unknown): AutopostEntry | null => {
@@ -198,16 +198,19 @@ function AssetPreview({ url, posterUrl, typeHint }: AssetPreviewProps) {
   return (
     <div className="flex flex-col gap-2">
       {assetType === 'image' ? (
-        <img
-          src={url}
-          alt="Creative asset"
-          className={`max-h-48 w-full rounded-lg object-cover ${isLoading ? 'animate-pulse bg-[#101737]' : ''}`}
-          onLoad={() => setIsLoading(false)}
-          onError={() => {
-            setIsLoading(false)
-            setHasError(true)
-          }}
-        />
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={url}
+            alt="Creative asset"
+            className={`max-h-48 w-full rounded-lg object-cover ${isLoading ? 'animate-pulse bg-[#101737]' : ''}`}
+            onLoad={() => setIsLoading(false)}
+            onError={() => {
+              setIsLoading(false)
+              setHasError(true)
+            }}
+          />
+        </>
       ) : null}
       {assetType === 'video' || assetType === 'unknown' ? (
         <video

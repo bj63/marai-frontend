@@ -2,18 +2,14 @@
 
 import { useMemo } from 'react'
 import { useContract, useContractRead, Web3Button } from '@thirdweb-dev/react'
-import { encodeBytes32String, formatUnits } from 'ethers'
+import { utils } from 'ethers'
 import { MIRAI_CARD, MIRAI_MARKETPLACE } from '@/lib/contracts'
 import { MIRAI_MARKETPLACE_ABI } from '@/lib/abi/miraiMarketplace'
 import ThreeCard from './ThreeCard'
 import { playEmotion, type EmotionKey } from './AudioEngine'
 
 const emotionKeys: EmotionKey[] = ['joy', 'calm', 'anger', 'sadness', 'curiosity']
-const DEFAULT_TOKEN_ID = 1n
-
-import { MIRAI_CARD, MIRAI_MARKETPLACE } from '@/lib/contracts'
-import ThreeCard from './ThreeCard'
-import { playEmotion, type EmotionKey } from './AudioEngine'
+const DEFAULT_TOKEN_ID = BigInt(1)
 
 type MarketplaceGridProps = {
   emotion?: string
@@ -37,7 +33,7 @@ function normalizeToBigInt(value: unknown): bigint {
       return BigInt(asString)
     }
   }
-  return 0n
+  return BigInt(0)
 }
 
 function parseEntityStruct(data: unknown): EntityListing | null {
@@ -70,14 +66,17 @@ function parseEntityStruct(data: unknown): EntityListing | null {
 
   return null
 }
-const emotionKeys: EmotionKey[] = ['joy', 'calm', 'anger', 'sadness', 'curiosity']
 
-export default function MarketplaceGrid({ emotion = 'joy', color = 'hsl(60,90%,60%)', intensity = 0.6 }: MarketplaceGridProps) {
+export default function MarketplaceGrid({
+  emotion = 'joy',
+  color = 'hsl(60,90%,60%)',
+  intensity = 0.6,
+}: MarketplaceGridProps) {
   const { contract: nft } = useContract(MIRAI_CARD, 'nft-collection')
   const { data: supply } = useContractRead(nft, 'totalSupply')
 
   const { contract: marketplace } = useContract(MIRAI_MARKETPLACE, MIRAI_MARKETPLACE_ABI)
-  const entityId = useMemo(() => encodeBytes32String('CORE_RESONANCE'), [])
+  const entityId = useMemo(() => utils.formatBytes32String('CORE_RESONANCE'), [])
 
   const { data: entityRaw } = useContractRead(marketplace, 'entities', [entityId])
   const { data: nftListingRaw } = useContractRead(marketplace, 'nftListings', [DEFAULT_TOKEN_ID])
@@ -96,11 +95,9 @@ export default function MarketplaceGrid({ emotion = 'joy', color = 'hsl(60,90%,6
 
   const emotionKey = (emotionKeys.includes(emotion as EmotionKey) ? emotion : 'curiosity') as EmotionKey
 
-  const entityPrice = entityListing?.isListed ? formatUnits(entityListing.price, 18) : null
-  const cardPrice = nftListing?.isListed ? formatUnits(nftListing.price, 18) : null
+  const entityPrice = entityListing?.isListed ? utils.formatUnits(entityListing.price, 18) : null
+  const cardPrice = nftListing?.isListed ? utils.formatUnits(nftListing.price, 18) : null
 
-  return (
-    <div className="grid grid-cols-1 gap-6">
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       <div onMouseEnter={() => playEmotion(emotionKey, Math.min(1, intensity + 0.1))}>
@@ -143,12 +140,6 @@ export default function MarketplaceGrid({ emotion = 'joy', color = 'hsl(60,90%,6
           {entityListing?.currentOwner
             ? `Current owner: ${entityListing.currentOwner}`
             : 'Entity not registered on-chain yet. Use registerEntity from the contract owner account to bootstrap the listing.'}
-        </div>
-            action={(contract) => contract.call('buyCard', [1])}
-            className="px-3 py-1 rounded-md glass hover:opacity-90"
-          >
-            Buy
-          </Web3Button>
         </div>
       </div>
     </div>

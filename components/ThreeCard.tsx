@@ -101,7 +101,7 @@ export default function ThreeCard({ color, emotion, intensity, stats }: { color:
       window.removeEventListener('resize', handleResize)
       cancelAnimationFrame(animationFrameId)
       controls.dispose()
-      cardGroup.traverse((object) => {
+      cardGroup.traverse((object: any) => {
         if (object instanceof THREE.Mesh) {
           object.geometry.dispose()
           const material = object.material

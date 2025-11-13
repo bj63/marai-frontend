@@ -91,6 +91,7 @@ export const EvolutionCard = ({
 
       <div className="relative flex flex-col gap-4">
         <header className="flex items-center gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={imageUrl}
             alt={`${name} avatar`}

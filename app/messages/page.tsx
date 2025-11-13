@@ -103,7 +103,7 @@ export default function MessagesPage() {
     return () => {
       active = false
     }
-  }, [selectedId])
+  }, [selectedId, registerInteraction])
 
   useEffect(() => {
     return () => {

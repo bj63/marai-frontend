@@ -79,7 +79,9 @@ export default function MarketplaceAvatarPreview() {
 
   const preferredEmotion = designProfile?.preferred_emotion || mood || 'neutral'
   const stageLabel = formatStageLabel(designProfile?.evolution_stage || null)
-  const designTagline = designProfile?.design_dna?.tagline || 'Adaptive co-pilot tuned to your emotional telemetry'
+  const designTagline =
+    (designProfile?.design_dna as { tagline?: string } | undefined)?.tagline ??
+    'Adaptive co-pilot tuned to your emotional telemetry'
 
   const energy = Math.min(0.95, Math.max(0.25, personality.energy ?? 0.6))
   const connectionScore = computeAverage([

@@ -327,7 +327,7 @@ export default function Chat() {
         userId: user?.id,
         federationId,
         walletAddress: walletAddress ?? undefined,
-        personality: storePersonality,
+        personality: storePersonality as unknown as Record<string, number> | undefined,
         relationshipContext: entityState?.entityId
           ? {
               target_user_id: entityState.entityId,
@@ -717,6 +717,7 @@ export default function Chat() {
                                   >
                                     {isImage && attachment.url ? (
                                       <div className="relative aspect-[4/3] overflow-hidden">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img
                                           src={attachment.url ?? undefined}
                                           alt={attachment.title ?? 'Attachment preview'}
@@ -790,6 +791,7 @@ export default function Chat() {
                                   <div key={dream.id} className="overflow-hidden rounded-3xl border border-white/10 bg-black/30 shadow-inner">
                                     {hasPoster ? (
                                       <div className="relative h-48 w-full overflow-hidden">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img
                                           src={dream.posterUrl ?? undefined}
                                           alt={dream.title ?? 'Media dream poster'}
@@ -850,6 +852,7 @@ export default function Chat() {
                       key={upload.id}
                       className="group relative overflow-hidden rounded-xl border border-white/20 bg-black/40 shadow-[0_12px_32px_rgba(5,9,20,0.45)]"
                     >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={upload.previewUrl} alt={upload.name} className="h-24 w-24 object-cover" />
                       <button
                         type="button"
