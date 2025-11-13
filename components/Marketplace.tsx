@@ -432,17 +432,17 @@ function MockDropCard({ id, title, vibe, prompt, palette, accent }: (typeof mock
             </div>
           </div>
         </div>
-        {shareToast !== 'idle' && (
-          <div
-            className={`mt-3 rounded-2xl border border-white/20 px-3 py-2 text-[0.6rem] uppercase tracking-[0.32em] ${shareToast === 'copied' ? 'bg-brand-mint/20 text-brand-mist' : 'bg-[#2b1b2b]/70 text-[#ffc6ff]'}`}
-          >
-            {shareToast === 'copied' ? 'Concept copied to clipboard' : 'Clipboard share unavailable'}
-          </div>
+          {shareToast !== 'idle' && (
+            <div
+              className={`mt-3 rounded-2xl border border-white/20 px-3 py-2 text-[0.6rem] uppercase tracking-[0.32em] ${shareToast === 'copied' ? 'bg-brand-mint/20 text-brand-mist' : 'bg-[#2b1b2b]/70 text-[#ffc6ff]'}`}
+            >
+              {shareToast === 'copied' ? 'Concept copied to clipboard' : 'Clipboard share unavailable'}
+            </div>
+          )}
         </div>
-      </div>
-    </article>
-  )
-}
+      </article>
+    )
+  }
 
 export default function Marketplace() {
   return (

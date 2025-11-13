@@ -361,7 +361,6 @@ export function useFactimeSession(): [FactimeSessionState, FactimeSessionControl
       }
     },
     [applyAudioState, applyVideoState, setupWebSocket]
-    [setupWebSocket]
   )
 
   useEffect(() => {
@@ -413,8 +412,5 @@ export function useFactimeSession(): [FactimeSessionState, FactimeSessionControl
   return [
     { connectionState, localStream, remoteStream, transcripts, isAudioMuted, isVideoMuted, lastError },
     { connect, disconnect, sendTranscript, toggleAudio, toggleVideo },
-  return [
-    { connectionState, localStream, remoteStream, transcripts, lastError },
-    { connect, disconnect, sendTranscript },
   ]
 }
