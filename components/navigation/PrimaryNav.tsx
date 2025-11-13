@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -47,6 +48,12 @@ const badgeToneMap: Record<NonNullable<NavItem['badgeTone']>, string> = {
   new: 'bg-emerald-500/15 text-emerald-200 border-emerald-400/30',
   beta: 'bg-amber-500/15 text-amber-200 border-amber-400/30',
   pro: 'bg-brand-magnolia/10 text-brand-magnolia border-brand-magnolia/30',
+}
+
+const normalizePath = (value: string | null | undefined) => {
+  if (!value) return null
+  if (value === '/') return '/'
+  return value.replace(/\/+$/, '')
 }
 
 const navItems: NavItem[] = [
@@ -166,6 +173,7 @@ const navItems: NavItem[] = [
 
 export default function PrimaryNav({ activePath }: PrimaryNavProps) {
   const currentPathname = usePathname()
+  const resolvedPathname = useMemo(() => normalizePath(activePath ?? currentPathname), [activePath, currentPathname])
   const pathname = activePath ?? currentPathname
   const resolvedPathname = activePath ?? currentPathname
   const pathname = activePath ?? currentPathname
@@ -196,6 +204,17 @@ export default function PrimaryNav({ activePath }: PrimaryNavProps) {
   const coreItems = filteredItems.filter((item) => item.section !== 'pro')
   const proItems = filteredItems.filter((item) => item.section === 'pro')
 
+  const isPathActive = useCallback(
+    (href: string) => {
+      if (!resolvedPathname) return false
+      const normalizedHref = normalizePath(href) ?? href
+      if (normalizedHref === '/') {
+        return resolvedPathname === '/'
+      }
+      return resolvedPathname === normalizedHref || resolvedPathname.startsWith(`${normalizedHref}/`)
+    },
+    [resolvedPathname],
+  )
   const isPathActive = (href: string) => pathname === href || pathname?.startsWith(`${href}/`)
   const isPathActive = (href: string) =>
     resolvedPathname === href || resolvedPathname?.startsWith(`${href}/`)
