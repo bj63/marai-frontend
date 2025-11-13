@@ -165,6 +165,8 @@ const navItems: NavItem[] = [
 ]
 
 export default function PrimaryNav({ activePath }: PrimaryNavProps) {
+  const currentPathname = usePathname()
+  const pathname = activePath ?? currentPathname
   const pathname = activePath ?? usePathname()
   const { user, hasRole, hasAnyRole, isPro } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
