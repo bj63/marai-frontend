@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -173,13 +172,16 @@ const navItems: NavItem[] = [
 
 export default function PrimaryNav({ activePath }: PrimaryNavProps) {
   const currentPathname = usePathname()
-  const resolvedPathname = useMemo(() => normalizePath(activePath ?? currentPathname), [activePath, currentPathname])
-  const pathname = activePath ?? currentPathname
-  const resolvedPathname = activePath ?? currentPathname
-  const pathname = activePath ?? currentPathname
-  const pathname = activePath ?? usePathname()
+  const resolvedPathname = useMemo(
+    () => normalizePath(activePath ?? currentPathname),
+    [activePath, currentPathname]
+  )
   const { user, hasRole, hasAnyRole, isPro } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  const closeMobileMenu = useCallback(() => {
+    setMobileOpen(false)
+  }, [])
 
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? 'hidden' : ''
@@ -190,7 +192,8 @@ export default function PrimaryNav({ activePath }: PrimaryNavProps) {
 
   const filteredItems = useMemo(() => {
     return navItems.filter((item) => {
-      if (item.adminOnly && !hasRole('admin') && !hasRole('founder')) return false
+      if (item.adminOnly && !hasRole('admin') && !hasRole('founder'))
+        return false
       if (item.requiresAuth && !user) return false
       if (item.roles && item.roles.length > 0) {
         const allowed = hasAnyRole(item.roles)
@@ -201,9 +204,14 @@ export default function PrimaryNav({ activePath }: PrimaryNavProps) {
     })
   }, [hasAnyRole, hasRole, isPro, user])
 
-  const renderDesktopLink = (item: NavItem) => {
-    const active = isPathActive(item.href)
-    const Icon = item.icon
+  const coreItems = useMemo(
+    () => filteredItems.filter((item) => item.section === 'core'),
+    [filteredItems]
+  )
+  const proItems = useMemo(
+    () => filteredItems.filter((item) => item.section === 'pro'),
+    [filteredItems]
+  )
 
   const isPathActive = useCallback(
     (href: string) => {
@@ -212,91 +220,26 @@ export default function PrimaryNav({ activePath }: PrimaryNavProps) {
       if (normalizedHref === '/') {
         return resolvedPathname === '/'
       }
-      return resolvedPathname === normalizedHref || resolvedPathname.startsWith(`${normalizedHref}/`)
+      return (
+        resolvedPathname === normalizedHref ||
+        resolvedPathname.startsWith(`${normalizedHref}/`)
+      )
     },
-    [resolvedPathname],
+    [resolvedPathname]
   )
-  const isPathActive = (href: string) => pathname === href || pathname?.startsWith(`${href}/`)
-  const isPathActive = (href: string) =>
-    resolvedPathname === href || resolvedPathname?.startsWith(`${href}/`)
 
-  const renderBadge = (item: NavItem) => {
+  const renderBadge = useCallback((item: NavItem) => {
     if (!item.badge) return null
-    const toneClass = item.badgeTone ? badgeToneMap[item.badgeTone] : 'bg-white/5 text-white border-white/20'
+    const toneClass = item.badgeTone
+      ? badgeToneMap[item.badgeTone]
+      : 'bg-white/5 text-white border-white/20'
 
     return (
-      <span className={`rounded-full border px-2 py-0.5 text-[0.6rem] font-semibold tracking-tight ${toneClass}`}>
+      <span
+        className={`rounded-full border px-2 py-0.5 text-[0.6rem] font-semibold tracking-tight ${toneClass}`}
+      >
         {item.badge}
       </span>
-    )
-  }
-
-  const renderDesktopLink = (item: NavItem) => {
-    const isActive = isPathActive(item.href)
-    const isActive =
-      resolvedPathname === item.href || resolvedPathname?.startsWith(`${item.href}/`)
-    const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`)
-    const Icon = item.icon
-
-    return (
-      <div key={item.href} className="group relative">
-        <Link
-          href={item.href}
-          className={`group flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition-colors duration-300 ${
-            isActive
-              ? 'bg-white/10 text-white shadow-[0_8px_24px_rgba(8,10,32,0.55)]'
-              : 'text-brand-mist/80 hover:text-white'
-          }`}
-          aria-current={isActive ? 'page' : undefined}
-        >
-          <span
-            className={`flex h-6 w-6 items-center justify-center rounded-full border text-[0.65rem] transition-colors ${
-              isActive
-                ? 'border-white/60 bg-white/15 text-white'
-                : 'border-white/10 bg-white/5 text-brand-mist/70'
-            }`}
-          >
-            <Icon className="h-3.5 w-3.5" />
-          </span>
-          <span>{item.label}</span>
-          {renderBadge(item)}
-        </Link>
-        <span className="pointer-events-none absolute left-1/2 top-full z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-2xl border border-white/10 bg-[#0d142c]/95 px-3 py-1 text-[0.7rem] text-brand-mist/70 shadow-xl transition-opacity duration-300 group-hover:flex">
-          {item.description}
-        </span>
-      </div>
-    )
-  }
-
-  const renderMobileLink = (item: NavItem) => {
-    const isActive = isPathActive(item.href)
-    const isActive =
-      resolvedPathname === item.href || resolvedPathname?.startsWith(`${item.href}/`)
-    const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`)
-    const Icon = item.icon
-
-    return (
-      <Link
-        key={item.href}
-        href={item.href}
-        onClick={() => setMobileOpen(false)}
-        className={`flex items-center justify-between rounded-2xl border px-3.5 py-3 transition-colors ${
-          isActive
-            ? 'border-white/30 bg-white/10 text-white'
-            : 'border-white/10 bg-white/5 text-brand-mist/80 hover:text-white'
-        }`}
-      >
-        <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
-            <Icon className="h-[18px] w-[18px]" />
-          </span>
-          <div className="flex flex-col text-left">
-            <span className="text-sm font-semibold">{item.label}</span>
-            <span className="text-[0.72rem] text-brand-mist/70">{item.description}</span>
-          </div>
-        </div>
-        {renderBadge(item)}
-      </Link>
     )
   }, [])
 
@@ -335,7 +278,7 @@ ${
         </div>
       )
     },
-    [isPathActive, renderBadge],
+    [isPathActive, renderBadge]
   )
 
   const renderMobileLink = useCallback(
@@ -360,14 +303,16 @@ ${
             </span>
             <div className="flex flex-col text-left">
               <span className="text-sm font-semibold">{item.label}</span>
-              <span className="text-[0.72rem] text-brand-mist/70">{item.description}</span>
+              <span className="text-[0.72rem] text-brand-mist/70">
+                {item.description}
+              </span>
             </div>
           </div>
           {renderBadge(item)}
         </Link>
       )
     },
-    [closeMobileMenu, isPathActive, renderBadge],
+    [closeMobileMenu, isPathActive, renderBadge]
   )
 
   return (
@@ -380,7 +325,11 @@ ${
           aria-expanded={mobileOpen}
           aria-controls="primary-nav-mobile"
         >
-          {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          {mobileOpen ? (
+            <X className="h-4 w-4" />
+          ) : (
+            <Menu className="h-4 w-4" />
+          )}
           Navigate
         </button>
         <AnimatePresence>
@@ -404,7 +353,9 @@ ${
                 transition={{ type: 'spring', damping: 26, stiffness: 280 }}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold uppercase tracking-[0.3em] text-brand-mist/70">Navigate</span>
+                  <span className="text-sm font-semibold uppercase tracking-[0.3em] text-brand-mist/70">
+                    Navigate
+                  </span>
                   <button
                     type="button"
                     onClick={() => setMobileOpen(false)}
@@ -415,15 +366,21 @@ ${
                   </button>
                 </div>
                 <div className="flex flex-col gap-3">
-                  <span className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-mist/60">Core</span>
-                  <div className="flex flex-col gap-2">{coreItems.map((item) => renderMobileLink(item))}</div>
+                  <span className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-mist/60">
+                    Core
+                  </span>
+                  <div className="flex flex-col gap-2">
+                    {coreItems.map((item) => renderMobileLink(item))}
+                  </div>
                 </div>
                 {proItems.length > 0 ? (
                   <div className="flex flex-col gap-3">
                     <span className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-magnolia/80">
                       Pro experiences
                     </span>
-                    <div className="flex flex-col gap-2">{proItems.map((item) => renderMobileLink(item))}</div>
+                    <div className="flex flex-col gap-2">
+                      {proItems.map((item) => renderMobileLink(item))}
+                    </div>
                   </div>
                 ) : null}
               </motion.div>
@@ -438,7 +395,9 @@ ${
         </div>
         {proItems.length > 0 ? (
           <div className="flex items-center gap-2 border-l border-white/10 pl-3">
-            <span className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-brand-mist/65">Pro</span>
+            <span className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-brand-mist/65">
+              Pro
+            </span>
             {proItems.map((item) => renderDesktopLink(item))}
           </div>
         ) : null}
