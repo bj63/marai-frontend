@@ -204,8 +204,8 @@ function createDisabledSupabaseClient(reason: string): SupabaseClient {
         verify: promiseReject('supabase.auth.mfa.verify'),
       },
     },
-    from: ((..._args: Parameters<SupabaseClient['from']>) => builder()) as SupabaseClient['from'],
-    rpc: promiseReject('supabase.rpc') as SupabaseClient['rpc'],
+    from: ((..._args: Parameters<SupabaseClient['from']>) => builder()) as unknown as SupabaseClient['from'],
+    rpc: promiseReject('supabase.rpc') as unknown as SupabaseClient['rpc'],
     removeAllSubscriptions: promiseReject('supabase.removeAllSubscriptions'),
     channel: () => ({
       subscribe: promiseReject('supabase.channel().subscribe'),

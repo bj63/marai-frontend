@@ -142,7 +142,7 @@ function loadCachedTheme(designProfile: UserDesignProfile | null): NormalizedThe
       if (raw) {
         const parsed = JSON.parse(raw) as NormalizedTheme
         if (parsed && isRecord(parsed.design_dna)) {
-          return normaliseTheme(parsed, DEFAULT_THEME)
+          return normaliseTheme(parsed as Partial<DesignContextResponse>, DEFAULT_THEME)
         }
       }
     } catch (error) {
@@ -153,7 +153,7 @@ function loadCachedTheme(designProfile: UserDesignProfile | null): NormalizedThe
   if (designProfile?.design_dna) {
     return normaliseTheme(
       {
-        design_dna: designProfile.design_dna,
+        design_dna: designProfile.design_dna as RemoteDesignDNA,
         evolution_stage: designProfile.evolution_stage,
         preferred_emotion: designProfile.preferred_emotion,
       },
@@ -171,7 +171,7 @@ function loadPendingTheme(): NormalizedTheme | null {
     if (!raw) return null
     const parsed = JSON.parse(raw) as NormalizedTheme
     if (parsed && isRecord(parsed.design_dna)) {
-      return normaliseTheme(parsed, DEFAULT_THEME)
+      return normaliseTheme(parsed as Partial<DesignContextResponse>, DEFAULT_THEME)
     }
   } catch (error) {
     reportError('DesignThemeProvider.loadPendingTheme', error)
@@ -242,7 +242,7 @@ export function DesignThemeProvider({ children }: { children: ReactNode }) {
     if (!bootstrappedFromProfile && accountHydrated && designProfile?.design_dna) {
       const nextTheme = normaliseTheme(
         {
-          design_dna: designProfile.design_dna,
+          design_dna: designProfile.design_dna as RemoteDesignDNA,
           evolution_stage: designProfile.evolution_stage,
           preferred_emotion: designProfile.preferred_emotion,
         },
@@ -404,7 +404,11 @@ export function DesignThemeProvider({ children }: { children: ReactNode }) {
         await persistTheme((previous) => normaliseTheme(response, previous))
       }
     } catch (error) {
-      reportError('DesignThemeProvider.flushFeedback', error, payload)
+      reportError(
+        'DesignThemeProvider.flushFeedback',
+        error,
+        payload as unknown as Record<string, unknown>,
+      )
     }
   }, [persistTheme, session?.access_token, session?.user?.id])
 
@@ -437,7 +441,11 @@ export function DesignThemeProvider({ children }: { children: ReactNode }) {
         const nextTheme = await persistTheme((previous) => normaliseTheme(response, previous))
         return nextTheme
       } catch (error) {
-        reportError('DesignThemeProvider.submitEmotionContext', error, payload)
+        reportError(
+          'DesignThemeProvider.submitEmotionContext',
+          error,
+          payload as unknown as Record<string, unknown>,
+        )
         return null
       }
     },
