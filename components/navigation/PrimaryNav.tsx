@@ -166,6 +166,7 @@ const navItems: NavItem[] = [
 
 export default function PrimaryNav({ activePath }: PrimaryNavProps) {
   const currentPathname = usePathname()
+  const pathname = activePath ?? currentPathname
   const resolvedPathname = activePath ?? currentPathname
   const pathname = activePath ?? currentPathname
   const pathname = activePath ?? usePathname()
@@ -195,6 +196,7 @@ export default function PrimaryNav({ activePath }: PrimaryNavProps) {
   const coreItems = filteredItems.filter((item) => item.section !== 'pro')
   const proItems = filteredItems.filter((item) => item.section === 'pro')
 
+  const isPathActive = (href: string) => pathname === href || pathname?.startsWith(`${href}/`)
   const isPathActive = (href: string) =>
     resolvedPathname === href || resolvedPathname?.startsWith(`${href}/`)
 
