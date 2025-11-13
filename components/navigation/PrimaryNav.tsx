@@ -167,6 +167,8 @@ const navItems: NavItem[] = [
 export default function PrimaryNav({ activePath }: PrimaryNavProps) {
   const currentPathname = usePathname()
   const resolvedPathname = activePath ?? currentPathname
+  const pathname = activePath ?? currentPathname
+  const pathname = activePath ?? usePathname()
   const { user, hasRole, hasAnyRole, isPro } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -209,6 +211,9 @@ export default function PrimaryNav({ activePath }: PrimaryNavProps) {
 
   const renderDesktopLink = (item: NavItem) => {
     const isActive = isPathActive(item.href)
+    const isActive =
+      resolvedPathname === item.href || resolvedPathname?.startsWith(`${item.href}/`)
+    const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`)
     const Icon = item.icon
 
     return (
@@ -243,6 +248,9 @@ export default function PrimaryNav({ activePath }: PrimaryNavProps) {
 
   const renderMobileLink = (item: NavItem) => {
     const isActive = isPathActive(item.href)
+    const isActive =
+      resolvedPathname === item.href || resolvedPathname?.startsWith(`${item.href}/`)
+    const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`)
     const Icon = item.icon
 
     return (
