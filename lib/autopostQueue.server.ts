@@ -408,14 +408,13 @@ export const releaseDueAutoposts = (releaseUntilIso: string) => {
 }
 
 const buildFeedMetadata = (entry: AutopostRecord) => {
-  const baseMetadata = cloneMetadata(entry.metadata) ?? {}
-  const autopostSection =
-    isRecord((baseMetadata as Record<string, unknown>).autopost)
-      ? ({ ...(baseMetadata as Record<string, unknown>).autopost } as Record<string, unknown>)
-      : {}
+  const baseMetadata = (cloneMetadata(entry.metadata) ?? {}) as Record<string, unknown>
+  const autopostSection = isRecord(baseMetadata.autopost)
+    ? ({ ...baseMetadata.autopost } as Record<string, unknown>)
+    : {}
 
-  const feedHintsSource = isRecord((autopostSection as Record<string, unknown>).feedHints)
-    ? ({ ...(autopostSection as Record<string, unknown>).feedHints } as Record<string, unknown>)
+  const feedHintsSource = isRecord(autopostSection.feedHints)
+    ? ({ ...(autopostSection.feedHints as Record<string, unknown>) } as Record<string, unknown>)
     : {}
 
   const rawIsPromoted = (feedHintsSource as { isPromoted?: unknown }).isPromoted
@@ -427,7 +426,7 @@ const buildFeedMetadata = (entry: AutopostRecord) => {
   }
 
   return {
-    ...(baseMetadata as Record<string, unknown>),
+    ...baseMetadata,
     autopost: {
       ...autopostSection,
       feedHints: mergedFeedHints,

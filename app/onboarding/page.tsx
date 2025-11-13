@@ -271,7 +271,7 @@ export default function OnboardingPage() {
       <div className="mx-auto flex min-h-[70vh] w-full max-w-2xl flex-col items-center justify-center gap-4 text-center text-brand-mist/80">
         <h1 className="text-2xl font-semibold text-white">Create an account to continue</h1>
         <p className="text-sm text-brand-mist/70">
-          Head to the authentication hub to log in or sign up. Once you're authenticated we'll walk you through setting up your Mirai identity.
+          Head to the authentication hub to log in or sign up. Once you&rsquo;re authenticated we&rsquo;ll walk you through setting up your Mirai identity.
         </p>
       </div>
     )
@@ -431,7 +431,7 @@ export default function OnboardingPage() {
               </span>
             </label>
             <p className="rounded-2xl border border-brand-magnolia/30 bg-brand-magnolia/10 p-4 text-sm text-brand-magnolia">
-              Once you finish onboarding we'll connect the notifications centre and direct messages so everyone enters with the same context.
+              Once you finish onboarding we&rsquo;ll connect the notifications centre and direct messages so everyone enters with the same context.
             </p>
           </div>
         ) : null}

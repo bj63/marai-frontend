@@ -20,8 +20,8 @@ export default function TimelineCard({ data }: TimelineCardProps) {
   const timestampLabel = data.timestamp ? new Date(data.timestamp).toLocaleString() : null
   const summary = data.summary && data.summary.trim().length > 0 ? data.summary : null
 
-  const style: CSSProperties = {
-    ['--emotion-color' as const]: data.color,
+  const style: CSSProperties & { ['--emotion-color']?: string } = {
+    '--emotion-color': data.color,
   }
 
   return (

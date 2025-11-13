@@ -213,59 +213,59 @@ type RawAnalyzeResponse = Record<string, unknown>
 function normaliseTimeline(value: unknown): AnalyzeTimelineEntry[] {
   if (!Array.isArray(value)) return []
 
-  return value
-    .map((entry) => {
-      if (!isRecord(entry)) return null
+  const entries = value.map<AnalyzeTimelineEntry | null>((entry) => {
+    if (!isRecord(entry)) return null
 
-      const emotion =
-        pickString([entry.emotion, entry.core_emotion, entry.label, entry.state, entry.feeling]) ?? DEFAULT_EMOTION
-      const color = pickString([entry.color, entry.aura, entry.hex, entry.hue]) ?? DEFAULT_COLOR
-      const summary = pickString([entry.summary, entry.note, entry.narrative, entry.story])
-      const timestamp = pickString([entry.timestamp, entry.ts, entry.occurred_at, entry.updated_at])
-      const intensity = pickNumber([entry.intensity, entry.score, entry.weight])
-      const personality = normaliseNumericRecord(entry.personality ?? entry.traits)
+    const emotion =
+      pickString([entry.emotion, entry.core_emotion, entry.label, entry.state, entry.feeling]) ?? DEFAULT_EMOTION
+    const color = pickString([entry.color, entry.aura, entry.hex, entry.hue]) ?? DEFAULT_COLOR
+    const summary = pickString([entry.summary, entry.note, entry.narrative, entry.story])
+    const timestamp = pickString([entry.timestamp, entry.ts, entry.occurred_at, entry.updated_at])
+    const intensity = pickNumber([entry.intensity, entry.score, entry.weight])
+    const personality = normaliseNumericRecord(entry.personality ?? entry.traits)
 
-      return {
-        emotion,
-        color,
-        personality: Object.keys(personality).length > 0 ? personality : undefined,
-        summary: summary ?? null,
-        timestamp: timestamp ?? null,
-        intensity: intensity ?? null,
-      }
-    })
-    .filter((entry): entry is AnalyzeTimelineEntry => entry !== null)
+    return {
+      emotion,
+      color,
+      personality: Object.keys(personality).length > 0 ? personality : undefined,
+      summary: summary ?? null,
+      timestamp: timestamp ?? null,
+      intensity: intensity ?? null,
+    }
+  })
+
+  return entries.filter((entry): entry is AnalyzeTimelineEntry => entry !== null)
 }
 
 function normaliseInsights(value: unknown): AnalyzeInsight[] {
   if (!Array.isArray(value)) return []
 
-  return value
-    .map((entry, index) => {
-      if (typeof entry === 'string') {
-        const trimmed = entry.trim()
-        if (trimmed.length === 0) return null
-        return { id: `insight-${index}`, label: trimmed }
-      }
+  const entries = value.map<AnalyzeInsight | null>((entry, index) => {
+    if (typeof entry === 'string') {
+      const trimmed = entry.trim()
+      if (trimmed.length === 0) return null
+      return { id: `insight-${index}`, label: trimmed }
+    }
 
-      if (!isRecord(entry)) return null
+    if (!isRecord(entry)) return null
 
-      const label = pickString([entry.label, entry.title, entry.summary, entry.insight])
-      if (!label) return null
+    const label = pickString([entry.label, entry.title, entry.summary, entry.insight])
+    if (!label) return null
 
-      const detail = pickString([entry.detail, entry.description, entry.reasoning, entry.context])
-      const weight = pickNumber([entry.weight, entry.score, entry.intensity, entry.confidence])
-      const emotion = pickString([entry.emotion, entry.tone])
+    const detail = pickString([entry.detail, entry.description, entry.reasoning, entry.context])
+    const weight = pickNumber([entry.weight, entry.score, entry.intensity, entry.confidence])
+    const emotion = pickString([entry.emotion, entry.tone])
 
-      return {
-        id: pickString([entry.id, entry.key, entry.slug]) ?? `insight-${index}`,
-        label,
-        detail: detail ?? null,
-        weight: weight ?? null,
-        emotion: emotion ?? null,
-      }
-    })
-    .filter((entry): entry is AnalyzeInsight => entry !== null)
+    return {
+      id: pickString([entry.id, entry.key, entry.slug]) ?? `insight-${index}`,
+      label,
+      detail: detail ?? null,
+      weight: weight ?? null,
+      emotion: emotion ?? null,
+    }
+  })
+
+  return entries.filter((entry): entry is AnalyzeInsight => entry !== null)
 }
 
 function normaliseAttachments(...values: unknown[]): AnalyzeAttachment[] {
@@ -643,21 +643,22 @@ export interface DesignFeedbackResponse {
   relational_signature?: Record<string, unknown> | null
 }
 
-function buildAuthHeaders(accessToken?: string | null) {
-  return accessToken
-    ? {
-        Authorization: `Bearer ${accessToken}`,
-      }
-    : {}
+function buildJsonHeaders(accessToken?: string | null): HeadersInit {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`
+  }
+
+  return headers
 }
 
 export async function getDesignTheme(userId: string, accessToken?: string | null) {
   const response = await fetch(`${resolveApiBase()}/design/theme/${encodeURIComponent(userId)}`, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...buildAuthHeaders(accessToken),
-    },
+    headers: buildJsonHeaders(accessToken),
     cache: 'no-store',
   })
 
@@ -667,10 +668,7 @@ export async function getDesignTheme(userId: string, accessToken?: string | null
 export async function postDesignContext(payload: DesignContextRequest, accessToken?: string | null) {
   const response = await fetch(`${resolveApiBase()}/design/context`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...buildAuthHeaders(accessToken),
-    },
+    headers: buildJsonHeaders(accessToken),
     body: JSON.stringify(payload),
   })
 
@@ -680,10 +678,7 @@ export async function postDesignContext(payload: DesignContextRequest, accessTok
 export async function postDesignFeedback(payload: DesignFeedbackPayload, accessToken?: string | null) {
   const response = await fetch(`${resolveApiBase()}/design/feedback`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...buildAuthHeaders(accessToken),
-    },
+    headers: buildJsonHeaders(accessToken),
     body: JSON.stringify(payload),
   })
 
@@ -724,10 +719,7 @@ export async function sendFriendRequest(targetUserId: string, accessToken?: stri
 
   const response = await fetch(`${resolveApiBase()}/api/friend-requests`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...buildAuthHeaders(accessToken),
-    },
+    headers: buildJsonHeaders(accessToken),
     body: JSON.stringify({ targetUserId: normalized }),
   })
 

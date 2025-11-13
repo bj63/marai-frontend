@@ -47,14 +47,19 @@ const offlineMode = supabaseRuntime.mode !== 'online'
 
 type MetricsMetadata = Record<string, unknown> | undefined
 
+type TrackedSupabasePromise<T> = Promise<{ data?: T | null; error?: unknown | null }>
+
+const asTrackedPromise = <T>(builder: unknown): TrackedSupabasePromise<T> =>
+  builder as TrackedSupabasePromise<T>
+
 async function trackSupabase<T>(
   operation: string,
-  request: () => Promise<{ data: T; error: unknown }>,
+  request: () => TrackedSupabasePromise<T>,
   metadata?: MetricsMetadata,
 ): Promise<{ data: T | null; error: unknown | null }> {
   const startedAt = Date.now()
   try {
-    const { data, error } = await request()
+    const { data = null, error = null } = await request()
     if (error) {
       recordSupabaseFailure(operation, Date.now() - startedAt)
       reportError(operation, error, metadata)
@@ -62,7 +67,7 @@ async function trackSupabase<T>(
     }
 
     recordSupabaseSuccess(operation, Date.now() - startedAt)
-    return { data, error: null }
+    return { data: (data ?? null) as T | null, error: null }
   } catch (error) {
     recordSupabaseFailure(operation, Date.now() - startedAt)
     reportError(operation, error, metadata)
@@ -75,8 +80,12 @@ export async function getProfile(userId: string): Promise<MiraiProfile | null> {
     return offlineSupabaseApi.getProfile(userId)
   }
 
-  const { data } = await trackSupabase('getProfile', () =>
-    supabase.from('mirai_profile').select('*').eq('user_id', userId).maybeSingle(),
+  const { data } = await trackSupabase(
+    'getProfile',
+    () =>
+      asTrackedPromise(
+        supabase.from('mirai_profile').select('*').eq('user_id', userId).maybeSingle(),
+      ),
     { userId },
   )
 
@@ -92,8 +101,12 @@ export async function saveProfile(
   }
 
   const payload = { user_id: userId, ...profile }
-  const result = await trackSupabase('saveProfile', () =>
-    supabase.from('mirai_profile').upsert(payload, { onConflict: 'user_id' }).select().single(),
+  const result = await trackSupabase(
+    'saveProfile',
+    () =>
+      asTrackedPromise(
+        supabase.from('mirai_profile').upsert(payload, { onConflict: 'user_id' }).select().single(),
+      ),
     { userId },
   )
 
@@ -105,8 +118,10 @@ export async function getPersonality(userId: string): Promise<Personality | null
     return offlineSupabaseApi.getPersonality(userId)
   }
 
-  const { data } = await trackSupabase('getPersonality', () =>
-    supabase.from('personality').select('*').eq('user_id', userId).maybeSingle(),
+  const { data } = await trackSupabase(
+    'getPersonality',
+    () =>
+      asTrackedPromise(supabase.from('personality').select('*').eq('user_id', userId).maybeSingle()),
     { userId },
   )
 
@@ -127,8 +142,12 @@ export async function savePersonality(
     updated_at: new Date().toISOString(),
   }
 
-  const result = await trackSupabase('savePersonality', () =>
-    supabase.from('personality').upsert(payload, { onConflict: 'user_id' }).select().single(),
+  const result = await trackSupabase(
+    'savePersonality',
+    () =>
+      asTrackedPromise(
+        supabase.from('personality').upsert(payload, { onConflict: 'user_id' }).select().single(),
+      ),
     { userId },
   )
 
@@ -140,9 +159,13 @@ export async function updateUserMetadata(metadata: Record<string, unknown>): Pro
     return offlineSupabaseApi.updateUserMetadata(metadata)
   }
 
-  const result = await trackSupabase('updateUserMetadata', () => supabase.auth.updateUser({ data: metadata }), {
-    keys: Object.keys(metadata),
-  })
+  const result = await trackSupabase(
+    'updateUserMetadata',
+    () => asTrackedPromise(supabase.auth.updateUser({ data: metadata })),
+    {
+      keys: Object.keys(metadata),
+    },
+  )
 
   return result.error ? { error: result.error } : {}
 }
@@ -154,7 +177,11 @@ export async function getFollowingFeed(viewerId: string): Promise<FeedPostWithEn
 
   const { data } = await trackSupabase(
     'getFollowingFeed',
-    () => supabase.rpc('fetch_following_feed', { viewer_id: viewerId }),
+    () =>
+      supabase.rpc('fetch_following_feed', { viewer_id: viewerId }) as unknown as Promise<{
+        data?: FeedPostWithEngagement[] | null
+        error?: unknown | null
+      }>,
     { viewerId },
   )
 
@@ -173,7 +200,11 @@ export async function getFeedWithEngagement(viewerId?: string): Promise<FeedPost
 
   const { data } = await trackSupabase(
     'getFeedWithEngagement',
-    () => supabase.rpc('fetch_feed_with_engagement', { viewer_id: viewerId ?? null }),
+    () =>
+      supabase.rpc('fetch_feed_with_engagement', { viewer_id: viewerId ?? null }) as unknown as Promise<{
+        data?: FeedPostWithEngagement[] | null
+        error?: unknown | null
+      }>,
     { viewerId },
   )
 
@@ -195,7 +226,11 @@ export async function getFeedForUser(
 
   const { data } = await trackSupabase(
     'getFeedForUser',
-    () => supabase.rpc('fetch_profile_feed', { target_user_id: userId, viewer_id: viewerId ?? null }),
+    () =>
+      supabase.rpc('fetch_profile_feed', { target_user_id: userId, viewer_id: viewerId ?? null }) as unknown as Promise<{
+        data?: FeedPostWithEngagement[] | null
+        error?: unknown | null
+      }>,
     { userId, viewerId },
   )
 
@@ -214,7 +249,7 @@ export async function likePost(postId: string, userId: string): Promise<AuthResu
 
   const result = await trackSupabase(
     'likePost',
-    () => supabase.from('feed_likes').upsert({ post_id: postId, user_id: userId }),
+    () => asTrackedPromise(supabase.from('feed_likes').upsert({ post_id: postId, user_id: userId })),
     { postId, userId },
   )
 
@@ -228,7 +263,8 @@ export async function unlikePost(postId: string, userId: string): Promise<AuthRe
 
   const result = await trackSupabase(
     'unlikePost',
-    () => supabase.from('feed_likes').delete().eq('post_id', postId).eq('user_id', userId),
+    () =>
+      asTrackedPromise(supabase.from('feed_likes').delete().eq('post_id', postId).eq('user_id', userId)),
     { postId, userId },
   )
 
@@ -247,11 +283,13 @@ export async function addComment(
   const result = await trackSupabase(
     'addComment',
     () =>
-      supabase
-        .from('feed_comments')
-        .insert([{ post_id: postId, user_id: userId, body }])
-        .select('*')
-        .single(),
+      asTrackedPromise(
+        supabase
+          .from('feed_comments')
+          .insert([{ post_id: postId, user_id: userId, body }])
+          .select('*')
+          .single(),
+      ),
     { postId, userId },
   )
 
@@ -267,7 +305,7 @@ export async function createPost(
 
   const result = await trackSupabase(
     'createPost',
-    () => supabase.from('feed_posts').insert([post]).select().single(),
+    () => asTrackedPromise(supabase.from('feed_posts').insert([post]).select().single()),
     { userId: post.user_id },
   )
 
@@ -310,7 +348,10 @@ export async function getFollowers(userId: string): Promise<FollowProfile[]> {
 
   const { data } = await trackSupabase(
     'getFollowers',
-    () => supabase.from('followers_view').select('*').eq('target_id', userId).order('created_at', { ascending: false }),
+    () =>
+      asTrackedPromise(
+        supabase.from('followers_view').select('*').eq('target_id', userId).order('created_at', { ascending: false }),
+      ),
     { userId },
   )
 
@@ -324,7 +365,10 @@ export async function getFollowing(userId: string): Promise<FollowProfile[]> {
 
   const { data } = await trackSupabase(
     'getFollowing',
-    () => supabase.from('following_view').select('*').eq('follower_id', userId).order('created_at', { ascending: false }),
+    () =>
+      asTrackedPromise(
+        supabase.from('following_view').select('*').eq('follower_id', userId).order('created_at', { ascending: false }),
+      ),
     { userId },
   )
 
@@ -338,7 +382,7 @@ export async function followProfile(followerId: string, targetId: string): Promi
 
   const result = await trackSupabase(
     'followProfile',
-    () => supabase.from('follows').upsert({ follower_id: followerId, following_id: targetId }),
+    () => asTrackedPromise(supabase.from('follows').upsert({ follower_id: followerId, following_id: targetId })),
     { followerId, targetId },
   )
 
@@ -352,7 +396,8 @@ export async function unfollowProfile(followerId: string, targetId: string): Pro
 
   const result = await trackSupabase(
     'unfollowProfile',
-    () => supabase.from('follows').delete().eq('follower_id', followerId).eq('following_id', targetId),
+    () =>
+      asTrackedPromise(supabase.from('follows').delete().eq('follower_id', followerId).eq('following_id', targetId)),
     { followerId, targetId },
   )
 
@@ -366,7 +411,7 @@ export async function getOnboardingState(userId: string): Promise<OnboardingStat
 
   const { data } = await trackSupabase(
     'getOnboardingState',
-    () => supabase.from('onboarding_state').select('*').eq('user_id', userId).maybeSingle(),
+    () => asTrackedPromise(supabase.from('onboarding_state').select('*').eq('user_id', userId).maybeSingle()),
     { userId },
   )
 
@@ -384,7 +429,8 @@ export async function upsertOnboardingState(
   const payload = { user_id: userId, ...state }
   const result = await trackSupabase(
     'upsertOnboardingState',
-    () => supabase.from('onboarding_state').upsert(payload, { onConflict: 'user_id' }).select().single(),
+    () =>
+      asTrackedPromise(supabase.from('onboarding_state').upsert(payload, { onConflict: 'user_id' }).select().single()),
     { userId },
   )
 
@@ -398,7 +444,7 @@ export async function getUserSettings(userId: string): Promise<UserSettings | nu
 
   const { data } = await trackSupabase(
     'getUserSettings',
-    () => supabase.from('user_settings').select('*').eq('user_id', userId).maybeSingle(),
+    () => asTrackedPromise(supabase.from('user_settings').select('*').eq('user_id', userId).maybeSingle()),
     { userId },
   )
 
@@ -416,7 +462,7 @@ export async function saveUserSettings(
   const payload = { user_id: userId, ...settings }
   const result = await trackSupabase(
     'saveUserSettings',
-    () => supabase.from('user_settings').upsert(payload, { onConflict: 'user_id' }),
+    () => asTrackedPromise(supabase.from('user_settings').upsert(payload, { onConflict: 'user_id' })),
     { userId },
   )
 
@@ -430,7 +476,8 @@ export async function getUserDesignProfile(userId: string): Promise<UserDesignPr
 
   const { data } = await trackSupabase(
     'getUserDesignProfile',
-    () => supabase.from('user_design_profile').select('*').eq('user_id', userId).maybeSingle(),
+    () =>
+      asTrackedPromise(supabase.from('user_design_profile').select('*').eq('user_id', userId).maybeSingle()),
     { userId },
   )
 
@@ -448,7 +495,8 @@ export async function saveUserDesignProfile(
   const payload = { user_id: userId, ...profile }
   const result = await trackSupabase(
     'saveUserDesignProfile',
-    () => supabase.from('user_design_profile').upsert(payload, { onConflict: 'user_id' }).select().single(),
+    () =>
+      asTrackedPromise(supabase.from('user_design_profile').upsert(payload, { onConflict: 'user_id' }).select().single()),
     { userId },
   )
 
@@ -462,7 +510,10 @@ export async function getNotifications(userId: string): Promise<Notification[]> 
 
   const { data } = await trackSupabase(
     'getNotifications',
-    () => supabase.from('notifications').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+    () =>
+      asTrackedPromise(
+        supabase.from('notifications').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+      ),
     { userId },
   )
 
@@ -476,7 +527,7 @@ export async function markNotificationRead(id: string): Promise<AuthResult> {
 
   const result = await trackSupabase(
     'markNotificationRead',
-    () => supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', id),
+    () => asTrackedPromise(supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', id)),
     { id },
   )
 
@@ -491,11 +542,13 @@ export async function markAllNotificationsRead(userId: string): Promise<AuthResu
   const result = await trackSupabase(
     'markAllNotificationsRead',
     () =>
-      supabase
-        .from('notifications')
-        .update({ read_at: new Date().toISOString() })
-        .eq('user_id', userId)
-        .is('read_at', null),
+      asTrackedPromise(
+        supabase
+          .from('notifications')
+          .update({ read_at: new Date().toISOString() })
+          .eq('user_id', userId)
+          .is('read_at', null),
+      ),
     { userId },
   )
 
@@ -509,7 +562,10 @@ export async function getConversations(userId: string): Promise<ConversationSumm
 
   const { data } = await trackSupabase(
     'getConversations',
-    () => supabase.from('conversations_view').select('*').eq('member_id', userId).order('updated_at', { ascending: false }),
+    () =>
+      asTrackedPromise(
+        supabase.from('conversations_view').select('*').eq('member_id', userId).order('updated_at', { ascending: false }),
+      ),
     { userId },
   )
 
@@ -523,7 +579,10 @@ export async function getConversationMessages(conversationId: string): Promise<D
 
   const { data } = await trackSupabase(
     'getConversationMessages',
-    () => supabase.from('messages_view').select('*').eq('conversation_id', conversationId).order('created_at', { ascending: true }),
+    () =>
+      asTrackedPromise(
+        supabase.from('messages_view').select('*').eq('conversation_id', conversationId).order('created_at', { ascending: true }),
+      ),
     { conversationId },
   )
 
@@ -542,11 +601,13 @@ export async function sendMessage(
   const result = await trackSupabase(
     'sendMessage',
     () =>
-      supabase
-        .from('messages')
-        .insert([{ conversation_id: conversationId, sender_id: senderId, body }])
-        .select('*')
-        .single(),
+      asTrackedPromise(
+        supabase
+          .from('messages')
+          .insert([{ conversation_id: conversationId, sender_id: senderId, body }])
+          .select('*')
+          .single(),
+      ),
     { conversationId, senderId },
   )
 
@@ -558,9 +619,10 @@ export async function getTeamMembers(): Promise<TeamMember[]> {
     return offlineSupabaseApi.getTeamMembers()
   }
 
-  const { data } = await trackSupabase('getTeamMembers', () => supabase.from('team_members').select('*').order('created_at', {
-    ascending: true,
-  }))
+  const { data } = await trackSupabase(
+    'getTeamMembers',
+    () => asTrackedPromise(supabase.from('team_members').select('*').order('created_at', { ascending: true })),
+  )
 
   return (data as TeamMember[]) ?? []
 }
@@ -577,7 +639,7 @@ export async function addTeamMember(payload: {
 
   const result = await trackSupabase(
     'addTeamMember',
-    () => supabase.from('team_members').insert([payload]).select('*').single(),
+    () => asTrackedPromise(supabase.from('team_members').insert([payload]).select('*').single()),
     { email: payload.email, role: payload.role },
   )
 
@@ -589,7 +651,11 @@ export async function removeTeamMember(id: string): Promise<AuthResult> {
     return offlineSupabaseApi.removeTeamMember(id)
   }
 
-  const result = await trackSupabase('removeTeamMember', () => supabase.from('team_members').delete().eq('id', id), { id })
+  const result = await trackSupabase(
+    'removeTeamMember',
+    () => asTrackedPromise(supabase.from('team_members').delete().eq('id', id)),
+    { id },
+  )
   return result.error ? { error: result.error } : {}
 }
 
@@ -600,7 +666,11 @@ export async function searchDirectory(query: string): Promise<SearchResult[]> {
 
   const { data } = await trackSupabase(
     'searchDirectory',
-    () => supabase.rpc('search_directory', { search_query: query }),
+    () =>
+      supabase.rpc('search_directory', { search_query: query }) as unknown as Promise<{
+        data?: SearchResult[] | null
+        error?: unknown | null
+      }>,
     { query },
   )
 
@@ -612,7 +682,11 @@ export async function requestMagicLink(email: string): Promise<AuthResult> {
     return offlineSupabaseApi.requestMagicLink(email)
   }
 
-  const result = await trackSupabase('requestMagicLink', () => supabase.auth.signInWithOtp({ email }), { email })
+  const result = await trackSupabase(
+    'requestMagicLink',
+    () => asTrackedPromise(supabase.auth.signInWithOtp({ email })),
+    { email },
+  )
   return result.error ? { error: result.error } : {}
 }
 
@@ -628,13 +702,15 @@ export async function signUpWithPassword(
   const result = await trackSupabase(
     'signUpWithPassword',
     () =>
-      supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { username },
-        },
-      }),
+      asTrackedPromise(
+        supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { username },
+          },
+        }),
+      ),
     { email },
   )
 
@@ -648,7 +724,7 @@ export async function signInWithPassword(email: string, password: string): Promi
 
   const result = await trackSupabase(
     'signInWithPassword',
-    () => supabase.auth.signInWithPassword({ email, password }),
+    () => asTrackedPromise(supabase.auth.signInWithPassword({ email, password })),
     { email },
   )
 
@@ -664,13 +740,15 @@ export async function signInWithGoogle(): Promise<AuthResult> {
   const result = await trackSupabase(
     'signInWithGoogle',
     () =>
-      supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo,
-          queryParams: { prompt: 'select_account' },
-        },
-      }),
+      asTrackedPromise(
+        supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo,
+            queryParams: { prompt: 'select_account' },
+          },
+        }),
+      ),
   )
 
   return result.error ? { error: result.error } : {}
@@ -682,5 +760,5 @@ export async function signOut(): Promise<void> {
     return
   }
 
-  await trackSupabase('signOut', () => supabase.auth.signOut())
+  await trackSupabase('signOut', () => asTrackedPromise(supabase.auth.signOut()))
 }

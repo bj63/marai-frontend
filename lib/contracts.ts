@@ -1,29 +1,22 @@
-const MIRAI_CARD_ENV = process.env.NEXT_PUBLIC_MIRAI_CARD
-if (typeof MIRAI_CARD_ENV !== 'string' || MIRAI_CARD_ENV.trim().length === 0) {
-  throw new Error('Missing required environment variable: NEXT_PUBLIC_MIRAI_CARD')
-const MIRAI_CARD = process.env.NEXT_PUBLIC_MIRAI_CARD
-const MIRAI_COIN = process.env.NEXT_PUBLIC_MIRAI_COIN
-const MIRAI_MARKETPLACE = process.env.NEXT_PUBLIC_MIRAI_MARKETPLACE
+const MIRAI_CARD_ENV = process.env.NEXT_PUBLIC_MIRAI_CARD ?? ''
+const MIRAI_COIN_ENV = process.env.NEXT_PUBLIC_MIRAI_COIN ?? ''
+const MIRAI_MARKETPLACE_ENV = process.env.NEXT_PUBLIC_MIRAI_MARKETPLACE ?? ''
 
-if (!MIRAI_CARD || MIRAI_CARD.trim().length === 0) {
+if (MIRAI_CARD_ENV.trim().length === 0) {
   throw new Error('Missing required environment variable: NEXT_PUBLIC_MIRAI_CARD')
 }
 
-if (!MIRAI_COIN || MIRAI_COIN.trim().length === 0) {
+if (MIRAI_COIN_ENV.trim().length === 0) {
   throw new Error('Missing required environment variable: NEXT_PUBLIC_MIRAI_COIN')
 }
 
-if (!MIRAI_MARKETPLACE || MIRAI_MARKETPLACE.trim().length === 0) {
+if (MIRAI_MARKETPLACE_ENV.trim().length === 0) {
   throw new Error('Missing required environment variable: NEXT_PUBLIC_MIRAI_MARKETPLACE')
 }
-export const MIRAI_CARD_ADDRESS = MIRAI_CARD_ENV
 
-const MIRAI_COIN_ENV = process.env.NEXT_PUBLIC_MIRAI_COIN
-if (typeof MIRAI_COIN_ENV !== 'string' || MIRAI_COIN_ENV.trim().length === 0) {
-  throw new Error('Missing required environment variable: NEXT_PUBLIC_MIRAI_COIN')
-export const MIRAI_MARKETPLACE_ADDRESS = process.env.NEXT_PUBLIC_MIRAI_MARKETPLACE || ''
-export const MIRAI_CARD_ADDRESS = process.env.NEXT_PUBLIC_MIRAI_CARD || ''
-export const MIRAI_COIN_ADDRESS = process.env.NEXT_PUBLIC_MIRAI_COIN || ''
+export const MIRAI_CARD_ADDRESS = MIRAI_CARD_ENV
+export const MIRAI_COIN_ADDRESS = MIRAI_COIN_ENV
+export const MIRAI_MARKETPLACE_ADDRESS = MIRAI_MARKETPLACE_ENV
 
 // Backwards-compatible aliases used by earlier components.
 export const MIRAI_MARKETPLACE = MIRAI_MARKETPLACE_ADDRESS
@@ -372,27 +365,3 @@ export const miraiCoinAbi = [
 export type MiraiMarketplaceAbi = typeof miraiMarketplaceAbi
 export type MiraiCardAbi = typeof miraiCardAbi
 export type MiraiCoinAbi = typeof miraiCoinAbi
-function getRequiredEnv(key: string) {
-  const value = process.env[key]
-  if (typeof value === 'string' && value.trim().length > 0) {
-    return value
-  }
-  throw new Error(`Missing required environment variable: ${key}`)
-}
-export const MIRAI_COIN_ADDRESS = MIRAI_COIN_ENV
-
-const MIRAI_MARKETPLACE_ENV = process.env.NEXT_PUBLIC_MIRAI_MARKETPLACE
-if (
-  typeof MIRAI_MARKETPLACE_ENV !== 'string' ||
-  MIRAI_MARKETPLACE_ENV.trim().length === 0
-) {
-  throw new Error('Missing required environment variable: NEXT_PUBLIC_MIRAI_MARKETPLACE')
-}
-export const MIRAI_MARKETPLACE_ADDRESS = MIRAI_MARKETPLACE_ENV
-export const MIRAI_CARD_ADDRESS = MIRAI_CARD
-export const MIRAI_COIN_ADDRESS = MIRAI_COIN
-export const MIRAI_MARKETPLACE_ADDRESS = MIRAI_MARKETPLACE
-
-export const MIRAI_CARD = MIRAI_CARD_ADDRESS
-export const MIRAI_COIN = MIRAI_COIN_ADDRESS
-export const MIRAI_MARKETPLACE = MIRAI_MARKETPLACE_ADDRESS
