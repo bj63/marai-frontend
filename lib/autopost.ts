@@ -14,7 +14,7 @@ export interface AutopostDetails {
   hashtags: string[]
   audience?: string | null
   adaptiveProfile?: Record<string, unknown> | null
-  feedHints?: unknown
+  feedHints?: AutopostFeedHints | null
   callToAction?: AutopostCallToAction | null
   assetUrl?: string | null
   posterUrl?: string | null
@@ -180,7 +180,6 @@ export const extractAutopostDetails = (metadata: unknown): AutopostDetails | nul
   const candidate =
     findRecord(container, ['autopost', 'creative', 'payload', 'entry']) ?? container
 
-  const type = findString(candidate, ['type', 'contentType', 'metadataType']) ?? findString(container, ['type'])
   const creativeType = findString(candidate, ['creativeType', 'creative_type', 'type'])
   const title = findString(candidate, ['title', 'headline'])
   const summary = findString(candidate, ['summary', 'body', 'description'])
@@ -222,7 +221,6 @@ export const extractAutopostDetails = (metadata: unknown): AutopostDetails | nul
   const connectionDream = findRecord(candidate, ['connectionDream', 'connection_dream'])
 
   return {
-    type,
     creativeType,
     title,
     summary,

@@ -321,10 +321,6 @@ interface AutopostMetadataViewProps {
 
 function AutopostMetadataView({ entry, details: providedDetails }: AutopostMetadataViewProps) {
   const details = providedDetails ?? mergeAutopostDetails(entry)
-}
-
-function AutopostMetadataView({ entry }: AutopostMetadataViewProps) {
-  const details = mergeAutopostDetails(entry)
   const rawMetadata = formatJson(entry.metadata)
 
   if (!details && !rawMetadata) {
@@ -522,12 +518,6 @@ function AutopostMetadataView({ entry }: AutopostMetadataViewProps) {
               <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap">{connectionDream}</pre>
             </details>
           ) : null}
-      {connectionDream ? (
-        <div className="space-y-1">
-          <p className="text-[0.7rem] uppercase tracking-[0.32em] text-brand-mist/60">Connection dream</p>
-          <pre className="max-h-40 overflow-auto rounded-xl border border-white/10 bg-[#0b1126]/80 p-3 text-xs text-brand-mist/80">
-            {connectionDream}
-          </pre>
         </div>
       ) : null}
       {rawMetadata ? (
@@ -653,22 +643,6 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
   useEffect(() => {
     setSelectedEntries((previous) => previous.filter((id) => queue.some((entry) => entry.id === id)))
   }, [queue])
-
-  const loadQueue = useCallback(
-    async (options?: { cursor?: string }) => {
-      const cursor = options?.cursor
-      const isLoadMore = Boolean(cursor)
-      if (isLoadMore) {
-        setLoadingMore(true)
-      } else {
-        setLoading(true)
-      }
-
-  useEffect(() => {
-    if (statusFilter && statusFilter !== statusOption) {
-      setStatusOption(statusFilter)
-    }
-  }, [statusFilter, statusOption])
 
   const loadQueue = useCallback(
     async (options?: { cursor?: string }) => {
@@ -887,25 +861,11 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
   const handleCreativeSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!validateCreativeForm()) {
-  const handleCreativeSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (!creativeTitle.trim() || !creativeSummary.trim()) {
-      setError('Provide both a title and summary for creative drops.')
       return
     }
 
     const delaySeconds = creativeDelaySeconds.trim() ? Number(creativeDelaySeconds) : undefined
     const durationSeconds = creativeDurationSeconds.trim() ? Number(creativeDurationSeconds) : undefined
-    if (delaySeconds !== undefined && (!Number.isFinite(delaySeconds) || delaySeconds < 0)) {
-      setError('Delay seconds must be zero or a positive number.')
-      return
-    }
-
-    const durationSeconds = creativeDurationSeconds.trim() ? Number(creativeDurationSeconds) : undefined
-    if (durationSeconds !== undefined && (!Number.isFinite(durationSeconds) || durationSeconds <= 0)) {
-      setError('Duration seconds must be a positive number when provided.')
-      return
-    }
 
     setCreativeSubmitting(true)
     setError(null)
@@ -1239,28 +1199,6 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
               </button>
             </div>
           </div>
-        <div className="flex flex-col gap-3 sm:items-end">
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-[0.3em] text-brand-mist/70">
-            Filter queue
-            <select
-              value={statusOption}
-              onChange={(event) => handleStatusChange(event.target.value as AutopostStatus | 'all')}
-              className="rounded-full border border-white/10 bg-[#0b1126] px-3 py-2 text-sm font-semibold text-white focus:border-brand-magnolia/50 focus:outline-none"
-            >
-              {STATUS_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            type="button"
-            onClick={() => void loadQueue()}
-            className="inline-flex items-center justify-center rounded-md border border-white/10 bg-[#161f3e] px-4 py-2 text-sm font-semibold text-white transition hover:border-brand-magnolia/50 hover:text-brand-magnolia"
-          >
-            Refresh queue
-          </button>
         </div>
       </header>
 
@@ -1423,10 +1361,6 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
               {creativeFormErrors.title ? (
                 <span className="text-xs text-red-300">{creativeFormErrors.title}</span>
               ) : null}
-                onChange={(event) => setCreativeTitle(event.target.value)}
-                placeholder="Connection dream: Midnight analog"
-                className="rounded-full border border-white/10 bg-[#0b1126] px-3 py-2 text-sm text-white placeholder:text-brand-mist/50 focus:border-brand-magnolia/50 focus:outline-none"
-              />
             </label>
             <label className="flex flex-col gap-2 text-sm text-brand-mist">
               Summary
@@ -1446,10 +1380,6 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
               {creativeFormErrors.summary ? (
                 <span className="text-xs text-red-300">{creativeFormErrors.summary}</span>
               ) : null}
-                onChange={(event) => setCreativeSummary(event.target.value)}
-                placeholder="Describe the drop so the adaptive profile knows how to position it."
-                className="min-h-[120px] rounded-xl border border-white/10 bg-[#0b1126] p-3 text-sm text-white placeholder:text-brand-mist/50 focus:border-brand-magnolia/50 focus:outline-none"
-              />
             </label>
             <label className="flex flex-col gap-2 text-sm text-brand-mist">
               Inspirations (comma or newline separated)
@@ -1480,9 +1410,6 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
                 {creativeFormErrors.delaySeconds ? (
                   <span className="text-xs text-red-300">{creativeFormErrors.delaySeconds}</span>
                 ) : null}
-                  onChange={(event) => setCreativeDelaySeconds(event.target.value)}
-                  className="rounded-full border border-white/10 bg-[#0b1126] px-3 py-2 text-sm text-white focus:border-brand-magnolia/50 focus:outline-none"
-                />
               </label>
               <label className="flex flex-col gap-2 text-sm text-brand-mist">
                 Audience
@@ -1517,9 +1444,6 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
                 {creativeFormErrors.durationSeconds ? (
                   <span className="text-xs text-red-300">{creativeFormErrors.durationSeconds}</span>
                 ) : null}
-                  onChange={(event) => setCreativeDurationSeconds(event.target.value)}
-                  className="rounded-full border border-white/10 bg-[#0b1126] px-3 py-2 text-sm text-white focus:border-brand-magnolia/50 focus:outline-none"
-                />
               </label>
               <label className="flex flex-col gap-2 text-sm text-brand-mist">
                 Hashtags
@@ -1575,10 +1499,6 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
                 {creativeFormErrors.callToActionLabel ? (
                   <span className="text-xs text-red-300">{creativeFormErrors.callToActionLabel}</span>
                 ) : null}
-                  onChange={(event) => setCreativeCallToActionLabel(event.target.value)}
-                  placeholder="Experience"
-                  className="rounded-full border border-white/10 bg-[#0b1126] px-3 py-2 text-sm text-white placeholder:text-brand-mist/50 focus:border-brand-magnolia/50 focus:outline-none"
-                />
               </label>
               <label className="flex flex-col gap-2 text-sm text-brand-mist">
                 CTA URL
@@ -1600,10 +1520,6 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
                 {creativeFormErrors.callToActionUrl ? (
                   <span className="text-xs text-red-300">{creativeFormErrors.callToActionUrl}</span>
                 ) : null}
-                  onChange={(event) => setCreativeCallToActionUrl(event.target.value)}
-                  placeholder="https://mirai.ai/dream"
-                  className="rounded-full border border-white/10 bg-[#0b1126] px-3 py-2 text-sm text-white placeholder:text-brand-mist/50 focus:border-brand-magnolia/50 focus:outline-none"
-                />
               </label>
             </div>
             <button
@@ -1625,7 +1541,6 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
                 </p>
               </div>
               <AutopostMetadataView entry={creativeResponse} details={creativeResponseDetails} />
-              <AutopostMetadataView entry={creativeResponse} />
             </article>
           ) : null}
         </div>
@@ -1712,6 +1627,7 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
         {!loading && queue.length > 0 && filteredQueue.length === 0 ? (
           <p className="text-sm text-brand-mist/70">No autoposts match the current filters.</p>
         ) : null}
+
         {filteredQueue.map(({ entry, details }) => {
           const isSelected = selectedEntries.includes(entry.id)
           const headline =
@@ -1758,30 +1674,6 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
                 <div className="flex flex-col">
                   <dt className="font-semibold text-brand-mist">Scheduled</dt>
                   <dd>{scheduledDisplay}</dd>
-        {queue.map((entry) => (
-          <article key={entry.id} className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#0d142c]/70 p-5">
-            <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex flex-col gap-1">
-                <span className="text-[0.65rem] uppercase tracking-[0.32em] text-brand-mist/60">Autopost #{entry.id}</span>
-                <h4 className="text-lg font-semibold text-white">{entry.title || entry.summary || entry.body}</h4>
-              </div>
-              <span className="inline-flex items-center justify-center rounded-full border border-white/10 bg-[#16204b] px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.32em] text-brand-mist">
-                {entry.status}
-              </span>
-            </header>
-            <dl className="grid gap-2 text-xs text-brand-mist/80 sm:grid-cols-2">
-              <div className="flex flex-col">
-                <dt className="font-semibold text-brand-mist">Scheduled</dt>
-                <dd>{formatDateTime(entry.scheduledAt)}</dd>
-              </div>
-              <div className="flex flex-col">
-                <dt className="font-semibold text-brand-mist">Last updated</dt>
-                <dd>{formatDateTime(entry.updatedAt)}</dd>
-              </div>
-              {entry.mediaUrl || entry.assetUrl ? (
-                <div className="flex flex-col">
-                  <dt className="font-semibold text-brand-mist">Media</dt>
-                  <dd className="break-all text-brand-magnolia">{entry.mediaUrl ?? entry.assetUrl}</dd>
                 </div>
                 <div className="flex flex-col">
                   <dt className="font-semibold text-brand-mist">Last updated</dt>
@@ -1827,30 +1719,7 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
             </article>
           )
         })}
-              ) : null}
-            </dl>
-            <AutopostMetadataView entry={entry} />
-            {entry.publishedPost ? (
-              <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-[#101737]/80 p-3">
-                <p className="text-[0.65rem] uppercase tracking-[0.32em] text-brand-mist/60">Published post</p>
-                <p className="text-sm text-brand-mist">{entry.publishedPost.body}</p>
-              </div>
-            ) : null}
-            {entry.status === 'scheduled' ? (
-              <div className="flex items-center justify-end">
-                <button
-                  type="button"
-                  onClick={() => void publishNow(entry)}
-                  className="inline-flex items-center justify-center rounded-md bg-emerald-400/90 px-4 py-2 text-sm font-semibold text-[#03161f] transition hover:bg-emerald-300"
-                >
-                  Publish now
-                </button>
-              </div>
-            ) : null}
-          </article>
-        ))}
-      </div>
-
+        </div>
       {nextCursor ? (
         <button
           type="button"

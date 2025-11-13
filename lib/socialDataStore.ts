@@ -1,4 +1,4 @@
-const LATENCY_MS = 120
+const LATENCY_MS: number = 120
 
 const DEFAULT_USER_ID = 'demo-user'
 

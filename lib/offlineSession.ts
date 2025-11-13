@@ -4,7 +4,7 @@ const OFFLINE_USER_ID = 'offline-user'
 
 const now = new Date().toISOString()
 
-const offlineUser: User = {
+const offlineUser = {
   id: OFFLINE_USER_ID,
   aud: 'authenticated',
   role: 'authenticated',
@@ -38,9 +38,9 @@ const offlineUser: User = {
   identities: [],
   factors: null,
   is_anonymous: false,
-} as User
+} as unknown as User
 
-const offlineSession: Session = {
+const offlineSession = {
   provider_token: null,
   provider_refresh_token: null,
   access_token: 'offline-access-token',
@@ -49,7 +49,7 @@ const offlineSession: Session = {
   expires_at: Math.round(Date.now() / 1000) + 3600,
   refresh_token: 'offline-refresh-token',
   user: offlineUser,
-} as Session
+} as unknown as Session
 
 export function getOfflineSession(): Session {
   return offlineSession
