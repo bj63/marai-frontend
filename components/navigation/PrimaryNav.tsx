@@ -201,8 +201,9 @@ export default function PrimaryNav({ activePath }: PrimaryNavProps) {
     })
   }, [hasAnyRole, hasRole, isPro, user])
 
-  const coreItems = filteredItems.filter((item) => item.section !== 'pro')
-  const proItems = filteredItems.filter((item) => item.section === 'pro')
+  const renderDesktopLink = (item: NavItem) => {
+    const active = isPathActive(item.href)
+    const Icon = item.icon
 
   const isPathActive = useCallback(
     (href: string) => {
