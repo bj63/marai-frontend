@@ -57,13 +57,6 @@ const navItems: NavItem[] = [
     section: 'pro',
   },
   {
-    label: 'Developers',
-    href: '/developers',
-    description: 'Integrations and API manifest',
-    requiresAuth: true,
-    roles: ['developer'],
-  },
-  {
     label: 'Avatar',
     href: '/avatar',
     description: 'Real-time avatar presence',
@@ -125,10 +118,6 @@ export default function PrimaryNav() {
   const { user, hasRole, hasAnyRole, isPro } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  const { user, hasRole } = useAuth()
-  const [mobileOpen, setMobileOpen] = useState(false)
-
-  const canAccessAdmin = hasRole('admin') || Boolean(user)
   const filteredItems = navItems.filter((item) => {
     if (item.adminOnly && !hasRole('admin') && !hasRole('founder')) return false
     if (item.requiresAuth && !user) return false
@@ -137,9 +126,6 @@ export default function PrimaryNav() {
       if (!allowed) return false
     }
     if (item.section === 'pro' && !isPro) return false
-      const allowed = item.roles.some((role) => hasRole(role))
-      if (!allowed) return false
-    }
     return true
   })
 

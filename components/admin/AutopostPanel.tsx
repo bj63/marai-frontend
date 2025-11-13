@@ -518,12 +518,6 @@ function AutopostMetadataView({ entry, details: providedDetails }: AutopostMetad
               <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap">{connectionDream}</pre>
             </details>
           ) : null}
-      {connectionDream ? (
-        <div className="space-y-1">
-          <p className="text-[0.7rem] uppercase tracking-[0.32em] text-brand-mist/60">Connection dream</p>
-          <pre className="max-h-40 overflow-auto rounded-xl border border-white/10 bg-[#0b1126]/80 p-3 text-xs text-brand-mist/80">
-            {connectionDream}
-          </pre>
         </div>
       ) : null}
       {rawMetadata ? (
@@ -649,22 +643,6 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
   useEffect(() => {
     setSelectedEntries((previous) => previous.filter((id) => queue.some((entry) => entry.id === id)))
   }, [queue])
-
-  const loadQueue = useCallback(
-    async (options?: { cursor?: string }) => {
-      const cursor = options?.cursor
-      const isLoadMore = Boolean(cursor)
-      if (isLoadMore) {
-        setLoadingMore(true)
-      } else {
-        setLoading(true)
-      }
-
-  useEffect(() => {
-    if (statusFilter && statusFilter !== statusOption) {
-      setStatusOption(statusFilter)
-    }
-  }, [statusFilter, statusOption])
 
   const loadQueue = useCallback(
     async (options?: { cursor?: string }) => {
@@ -1221,28 +1199,6 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
               </button>
             </div>
           </div>
-        <div className="flex flex-col gap-3 sm:items-end">
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-[0.3em] text-brand-mist/70">
-            Filter queue
-            <select
-              value={statusOption}
-              onChange={(event) => handleStatusChange(event.target.value as AutopostStatus | 'all')}
-              className="rounded-full border border-white/10 bg-[#0b1126] px-3 py-2 text-sm font-semibold text-white focus:border-brand-magnolia/50 focus:outline-none"
-            >
-              {STATUS_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            type="button"
-            onClick={() => void loadQueue()}
-            className="inline-flex items-center justify-center rounded-md border border-white/10 bg-[#161f3e] px-4 py-2 text-sm font-semibold text-white transition hover:border-brand-magnolia/50 hover:text-brand-magnolia"
-          >
-            Refresh queue
-          </button>
         </div>
       </header>
 
@@ -1763,6 +1719,7 @@ export function AutopostPanel({ apiBaseUrl, authToken, statusFilter }: AutopostP
             </article>
           )
         })}
+        </div>
 
 
       {nextCursor ? (
