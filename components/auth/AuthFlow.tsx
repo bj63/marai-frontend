@@ -3,7 +3,26 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { ArrowRight, Loader2, LogIn, LogOut, Mail, ShieldAlert, ShieldCheck, UserPlus } from 'lucide-react'
+import {
+  ArrowRight,
+  Loader2,
+  LogIn,
+  LogOut,
+  Mail,
+  ShieldAlert,
+  ShieldCheck,
+  UserPlus,
+  Wallet,
+  WalletMinimal,
+} from 'lucide-react'
+import {
+  useAddress,
+  useCoinbaseWallet,
+  useDisconnect,
+  useMetamask,
+  useWalletConnect,
+} from '@thirdweb-dev/react'
+import { reportError } from '@/lib/observability'
 import { useAuth } from './AuthProvider'
 
 interface AuthFeedback {
