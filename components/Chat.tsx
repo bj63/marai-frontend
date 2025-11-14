@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
 import {
   ChevronDown,
   ImagePlus,
