@@ -513,13 +513,13 @@ export default function Chat() {
             </div>
             <nav className="ml-auto flex flex-wrap items-center gap-2 text-[0.7rem] uppercase tracking-[0.35em] text-brand-mist/60">
               {NAV_LINKS.map((link) => (
-                <a
+                <Link
                   key={link.href}
                   href={link.href}
                   className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-brand-mist/70 transition hover:border-brand-magnolia/60 hover:text-white"
                 >
                   {link.label}
-                </a>
+                </Link>
               ))}
             </nav>
             <Link
