@@ -1,7 +1,8 @@
 'use client'
 
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import {
   ArrowRight,
   Loader2,
@@ -48,7 +49,11 @@ export default function AuthFlow() {
   const [magicEmail, setMagicEmail] = useState('')
   const [magicFeedback, setMagicFeedback] = useState<AuthFeedback | null>(null)
 
-  const [credentialMode, setCredentialMode] = useState<'signin' | 'signup'>('signin')
+  const searchParams = useSearchParams()
+  const intentParam = searchParams?.get('intent')
+  const [credentialMode, setCredentialMode] = useState<'signin' | 'signup'>(
+    intentParam === 'signup' ? 'signup' : 'signin',
+  )
   const [credentialsEmail, setCredentialsEmail] = useState('')
   const [credentialsPassword, setCredentialsPassword] = useState('')
   const [credentialsUsername, setCredentialsUsername] = useState('')
@@ -147,6 +152,14 @@ export default function AuthFlow() {
 
     setPendingAction(null)
   }
+
+  useEffect(() => {
+    if (intentParam === 'signup') {
+      setCredentialMode('signup')
+    } else if (intentParam === 'signin') {
+      setCredentialMode('signin')
+    }
+  }, [intentParam])
 
   const startGoogle = async () => {
     setGoogleFeedback(null)
