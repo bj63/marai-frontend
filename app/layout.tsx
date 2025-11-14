@@ -17,7 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <a href="#main-content" className="skip-link">
             Skip to main content
           </a>
-          <div className="relative flex min-h-screen flex-col">
+          <div className="relative z-0 flex min-h-screen flex-col">
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
               <div className="absolute -left-20 top-[-160px] h-[360px] w-[360px] rounded-full bg-brand-gradient opacity-30 blur-3xl" />
               <div className="absolute -right-24 top-[220px] h-[320px] w-[320px] rounded-full bg-brand-gradient opacity-25 blur-3xl" />
