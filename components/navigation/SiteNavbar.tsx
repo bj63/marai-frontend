@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ArrowUpRight, Sparkles } from 'lucide-react'
 
-import AuthStatus from '@/components/auth/AuthStatus'
+import AuthControls from '@/components/navigation/AuthControls'
 import PrimaryNav from '@/components/navigation/PrimaryNav'
 
 type SiteNavbarProps = {
@@ -54,7 +54,7 @@ export default function SiteNavbar({ tone = 'frosted', activePath }: SiteNavbarP
               Admin hub
               <ArrowUpRight className="h-4 w-4" />
             </Link>
-            <AuthStatus />
+            <AuthControls />
           </div>
         </div>
 
