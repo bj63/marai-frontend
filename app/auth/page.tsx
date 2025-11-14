@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import AuthFlow from '@/components/auth/AuthFlow'
 
 export const metadata: Metadata = {
@@ -19,7 +20,9 @@ export default function AuthPage() {
         </p>
       </header>
 
-      <AuthFlow />
+      <Suspense fallback={null}>
+        <AuthFlow />
+      </Suspense>
     </div>
   )
 }
