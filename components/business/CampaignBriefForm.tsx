@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { Loader2, Sparkles } from 'lucide-react'
 import SentimentBadge from '@/components/business/SentimentBadge'
 import { mapAutopostEntry, type RawAutopostEntry } from '@/lib/hooks/useAutopostQueue'
@@ -8,6 +8,8 @@ import type { AutopostQueueEntry, SentimentSignal } from '@/types/business'
 
 interface CampaignBriefFormProps {
   onCreativeGenerated: (entry: AutopostQueueEntry) => void
+  duplicateEntry?: AutopostQueueEntry | null
+  onClearDuplicate?: () => void
 }
 
 interface SentimentOption extends SentimentSignal {
@@ -21,7 +23,7 @@ const SENTIMENT_OPTIONS: SentimentOption[] = [
   { label: 'playful', confidence: 0.71, description: 'Vibrant, experimental, and social.' },
 ]
 
-export default function CampaignBriefForm({ onCreativeGenerated }: CampaignBriefFormProps) {
+export default function CampaignBriefForm({ onCreativeGenerated, duplicateEntry, onClearDuplicate }: CampaignBriefFormProps) {
   const [objective, setObjective] = useState('awareness')
   const [audience, setAudience] = useState('public')
   const [mood, setMood] = useState('confident')
@@ -39,6 +41,22 @@ export default function CampaignBriefForm({ onCreativeGenerated }: CampaignBrief
     () => SENTIMENT_OPTIONS.find((option) => option.label === mood) ?? SENTIMENT_OPTIONS[0],
     [mood],
   )
+
+  useEffect(() => {
+    if (!duplicateEntry) return
+    const sentimentLabel = duplicateEntry.sentimentSignals[0]?.label ?? duplicateEntry.mood ?? 'confident'
+    setObjective(duplicateEntry.feedHints?.objective ?? duplicateEntry.details?.feedHints?.objective ?? 'awareness')
+    setAudience(duplicateEntry.details?.audience ?? duplicateEntry.audience ?? 'public')
+    setMood(sentimentLabel)
+    setReflection(duplicateEntry.details?.body ?? duplicateEntry.body ?? 'Our team is energized to share our latest release.')
+    setTitle(duplicateEntry.details?.title ?? duplicateEntry.title ?? 'Duplicated drop')
+    setSummary(duplicateEntry.details?.summary ?? duplicateEntry.summary ?? 'Preview this variant before publishing.')
+    setCtaLabel(duplicateEntry.details?.callToAction?.label ?? duplicateEntry.callToAction?.label ?? 'Open drop')
+    setCtaUrl(duplicateEntry.details?.callToAction?.url ?? duplicateEntry.callToAction?.url ?? 'https://marai.studio')
+    const tags = duplicateEntry.details?.hashtags ?? duplicateEntry.hashtags ?? []
+    setHashtags(tags.length ? tags.join(' ') : '#marai #campaign')
+    setDelaySeconds(String(duplicateEntry.delaySeconds ?? duplicateEntry.details?.durationSeconds ?? 3600))
+  }, [duplicateEntry])
 
   const buildPayload = () => {
     const inspirationList = hashtags
@@ -112,6 +130,22 @@ export default function CampaignBriefForm({ onCreativeGenerated }: CampaignBrief
         </div>
         <SentimentBadge label={selectedSentiment.label} confidence={selectedSentiment.confidence} />
       </div>
+      {duplicateEntry ? (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-100">
+          <p>
+            Duplicating drop #{duplicateEntry.id}. Update any details before scheduling a new variant.
+          </p>
+          {onClearDuplicate ? (
+            <button
+              type="button"
+              onClick={onClearDuplicate}
+              className="rounded-full border border-emerald-300/40 px-3 py-1 font-semibold uppercase tracking-[0.3em] text-emerald-100"
+            >
+              Reset handoff
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         <label className="flex flex-col gap-2 text-sm">
           <span className="text-xs uppercase tracking-[0.3em] text-slate-500">Objective</span>

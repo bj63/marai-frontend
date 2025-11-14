@@ -1,18 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAddress, useContract, useTokenBalance } from '@thirdweb-dev/react'
 import WalletBar from './WalletBar'
 import { analyzeMessage } from '@/lib/api'
-import { MIRAI_COIN } from '@/lib/contracts'
 import { handleError } from '@/lib/errorHandler'
 import PersonaCard from './PersonaCard'
 import BrandPhotoSpotlight from './BrandPhotoSpotlight'
 
 export default function ProfileSidebar() {
-  const address = useAddress()
-  const { contract } = useContract(MIRAI_COIN, 'token')
-  const { data: balance } = useTokenBalance(contract, address)
   const [aura, setAura] = useState('hsl(180,85%,60%)')
   const [personality, setPersonality] = useState<Record<string, number>>({})
   const [loadingPersona, setLoadingPersona] = useState(true)
@@ -49,11 +44,19 @@ export default function ProfileSidebar() {
   return (
     <aside className="w-full md:w-[360px] p-4 space-y-4">
       <WalletBar />
-      <div className="glass rounded-xl p-4">
-        <div className="text-xs opacity-60 mb-1">MiraiCoin (MRC)</div>
-        <div className="text-2xl font-semibold">{balance?.displayValue ?? '0'} MRC</div>
+      <div className="glass rounded-xl p-4 text-sm text-brand-mist/80">
+        <div className="text-xs uppercase tracking-[0.35em] text-brand-mist/60">MiraiCoin (MRC)</div>
+        <p className="mt-1 text-[0.85rem] text-white">Wallet sync disabled</p>
+        <p className="mt-1 text-xs">
+          On-chain balances will repopulate here once the Web3 provider returns. For now, founders can request manual
+          adjustments via{' '}
+          <a href="mailto:founders@mirai.ai" className="text-brand-magnolia underline">
+            founders@mirai.ai
+          </a>
+          .
+        </p>
       </div>
-      <PersonaCard aura={aura} personality={personality} address={address} loading={loadingPersona} error={personaError} />
+      <PersonaCard aura={aura} personality={personality} loading={loadingPersona} error={personaError} />
       <BrandPhotoSpotlight />
     </aside>
   )

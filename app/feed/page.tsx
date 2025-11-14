@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Heart, Loader2, MessageCircle, Music, Sparkles, ToggleLeft, ToggleRight } from 'lucide-react'
@@ -68,6 +69,9 @@ export default function FeedPage() {
   const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([])
   const [loadingSocial, setLoadingSocial] = useState(true)
   const [socialNotice, setSocialNotice] = useState<string | null>(null)
+  const [handoffNotice, setHandoffNotice] = useState<string | null>(null)
+  const [handoffSource, setHandoffSource] = useState<'chat' | 'planner' | null>(null)
+  const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null)
 
   useEffect(() => {
     viewStartedAt.current = Date.now()
@@ -166,6 +170,43 @@ export default function FeedPage() {
   useEffect(() => {
     setSocialNotice(null)
   }, [user?.id])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const moodParam = params.get('prefillMood')
+    const noteParam = params.get('prefillNote')
+    const highlightParam = params.get('highlight')
+
+    if (moodParam) {
+      setMood(moodParam)
+      setHandoffSource('chat')
+      setHandoffNotice('Pulled your latest chat mood into the feed composer.')
+    }
+    if (noteParam) {
+      setNote(noteParam)
+      if (!moodParam) {
+        setHandoffSource('chat')
+        setHandoffNotice('Loaded your chat note so it is ready to broadcast.')
+      }
+    }
+    if (highlightParam) {
+      setHighlightedPostId(highlightParam)
+      setHandoffSource('planner')
+      setHandoffNotice('Reviewing the drop you just scheduled from Planner.')
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!highlightedPostId) return
+    const hasMatch = feed.some((entry) => String(entry.id) === highlightedPostId)
+    if (hasMatch) {
+      setExpandedPosts((previous) => ({
+        ...previous,
+        [highlightedPostId]: true,
+      }))
+    }
+  }, [feed, highlightedPostId])
 
   const authorName = useMemo(() => {
     if (!user) return null
@@ -499,6 +540,29 @@ export default function FeedPage() {
         </p>
       </header>
 
+      {handoffNotice ? (
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-[color-mix(in srgb,var(--design-stroke) 70%,transparent)] bg-[color-mix(in srgb,var(--design-background) 75%,#121a3a)] px-5 py-4 text-sm text-[color-mix(in srgb,var(--design-neutral) 70%,#a3b4e4)]">
+          <p>{handoffNotice}</p>
+          <div className="flex flex-wrap gap-2 text-[0.65rem] uppercase tracking-[0.35em]">
+            {handoffSource === 'planner' ? (
+              <Link
+                href="/business/planner"
+                className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in srgb,var(--design-stroke) 65%,transparent)] px-3 py-1 text-white hover:border-[color-mix(in srgb,var(--design-accent) 80%,#86f2d1)]"
+              >
+                Return to planner
+              </Link>
+            ) : (
+              <Link
+                href="/chat"
+                className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in srgb,var(--design-stroke) 65%,transparent)] px-3 py-1 text-white hover:border-[color-mix(in srgb,var(--design-accent) 80%,#86f2d1)]"
+              >
+                Back to chat
+              </Link>
+            )}
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1.75fr),minmax(260px,1fr)]">
         <section className="space-y-6">
           <motion.section
@@ -614,10 +678,14 @@ export default function FeedPage() {
               feed.map((post) => {
                 const expanded = expandedPosts[post.id]
                 const commentValue = commentDrafts[post.id] ?? ''
+                const isHighlighted = highlightedPostId ? String(post.id) === highlightedPostId : false
+                const chatThreadHref = `/chat?thread=${post.id}&prefillMood=${encodeURIComponent(post.mood ?? mood)}`
                 return (
                   <div
                     key={post.id}
-                    className="rounded-3xl border border-[color-mix(in srgb,var(--design-stroke) 70%,transparent)] bg-[color-mix(in srgb,var(--design-background) 75%,#121a3a)] p-5 shadow-[0_18px_38px_rgba(5,9,25,0.45)]"
+                    className={`rounded-3xl border border-[color-mix(in srgb,var(--design-stroke) 70%,transparent)] bg-[color-mix(in srgb,var(--design-background) 75%,#121a3a)] p-5 shadow-[0_18px_38px_rgba(5,9,25,0.45)] ${
+                      isHighlighted ? 'ring-2 ring-[color-mix(in srgb,var(--design-accent) 80%,#86f2d1)]' : ''
+                    }`}
                   >
                     <MoodCard post={post} />
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-[color-mix(in srgb,var(--design-neutral) 70%,#a3b4e4)]">
@@ -685,6 +753,14 @@ export default function FeedPage() {
                           >
                             Send
                           </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2 text-[0.65rem] uppercase tracking-[0.3em] text-[color-mix(in srgb,var(--design-neutral) 55%,#7f8fb8)]">
+                          <Link
+                            href={chatThreadHref}
+                            className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in srgb,var(--design-stroke) 60%,transparent)] px-3 py-1 text-white hover:border-[color-mix(in srgb,var(--design-accent) 80%,#86f2d1)]"
+                          >
+                            Continue in chat
+                          </Link>
                         </div>
                       </div>
                     ) : null}
