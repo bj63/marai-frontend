@@ -27,6 +27,13 @@ import {
   type UserDesignProfile,
 } from '@/lib/supabaseApi'
 import { useAuth } from '@/components/auth/AuthProvider'
+import type { NormalizedTheme } from '@/lib/theme/types'
+import { resolveAdaptiveTheme, type ResolvedAdaptiveTheme } from '@/lib/theme/resolver'
+import {
+  deriveEmotionQuadrant,
+  type EmotionSignalInput,
+} from '@/lib/theme/emotion'
+import type { EmotionQuadrant } from '@/lib/theme/tokens'
 
 type RelationshipContext = Record<string, unknown>
 
@@ -42,18 +49,15 @@ type DesignInteractionInput = {
 
 type QueuedInteraction = DesignInteractionInput & { timestamp: number }
 
-export type NormalizedTheme = {
-  design_dna: DesignDNA
-  evolution_stage: string | null
-  preferred_emotion: string | null
-  relational_signature?: Record<string, unknown> | null
-}
-
 type DesignThemeContextValue = {
   theme: NormalizedTheme
   loading: boolean
   adaptiveEnabled: boolean
   setAdaptiveEnabled: (enabled: boolean) => void
+  emotionQuadrant: EmotionQuadrant
+  resolvedTheme: ResolvedAdaptiveTheme
+  prefersReducedMotion: boolean
+  registerEmotionSignal: (signal: EmotionSignalInput | null) => void
   submitEmotionContext: (input: Omit<DesignContextRequest, 'user_id'> & { user_id?: string }) => Promise<NormalizedTheme | null>
   registerInteraction: (interaction: DesignInteractionInput) => void
   flushFeedback: () => Promise<void>
@@ -179,27 +183,12 @@ function loadPendingTheme(): NormalizedTheme | null {
   return null
 }
 
-function applyCssVariables(theme: NormalizedTheme) {
+function applyCssVariables(theme: NormalizedTheme, resolvedTheme: ResolvedAdaptiveTheme) {
   if (typeof document === 'undefined') return
   const root = document.documentElement
-  const palette = theme.design_dna.palette
-  const tokens = theme.design_dna.theme_tokens
-
-  const updates: Record<string, string> = {
-    '--design-primary': palette.primary ?? DEFAULT_DNA.palette.primary,
-    '--design-accent': palette.accent ?? DEFAULT_DNA.palette.accent,
-    '--design-background': palette.background ?? DEFAULT_DNA.palette.background,
-    '--design-neutral': palette.neutral ?? DEFAULT_DNA.palette.neutral,
-    '--design-surface': tokens.surface ?? DEFAULT_DNA.theme_tokens.surface,
-    '--design-stroke': tokens.stroke ?? DEFAULT_DNA.theme_tokens.stroke,
-  }
-
-  if (theme.design_dna.font) {
-    updates['--design-font-family'] = theme.design_dna.font
-  }
 
   window.requestAnimationFrame(() => {
-    Object.entries(updates).forEach(([key, value]) => {
+    Object.entries(resolvedTheme.cssVariables).forEach(([key, value]) => {
       if (typeof value === 'string') {
         root.style.setProperty(key, value)
       }
@@ -216,6 +205,8 @@ function applyCssVariables(theme: NormalizedTheme) {
     } else {
       delete root.dataset.preferredEmotion
     }
+
+    root.dataset.emotionQuadrant = resolvedTheme.emotion
   })
 }
 
@@ -226,17 +217,47 @@ export function DesignThemeProvider({ children }: { children: ReactNode }) {
   const [pendingInteractions, setPendingInteractions] = useState<QueuedInteraction[]>([])
   const [bootstrappedFromProfile, setBootstrappedFromProfile] = useState(Boolean(designProfile?.design_dna))
   const [pendingTheme, setPendingTheme] = useState<NormalizedTheme | null>(() => loadPendingTheme())
+  const [emotionSignal, setEmotionSignal] = useState<EmotionSignalInput | null>(() =>
+    theme.preferred_emotion ? { label: theme.preferred_emotion } : null,
+  )
   const [adaptiveEnabledState, setAdaptiveEnabledState] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true
     const stored = window.localStorage.getItem(ADAPTIVE_KEY)
     return stored !== 'false'
   })
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
 
   const adaptiveEnabled = adaptiveEnabledState
+  const emotionQuadrant = useMemo(
+    () => deriveEmotionQuadrant(emotionSignal, theme.preferred_emotion, 'calm'),
+    [emotionSignal, theme.preferred_emotion],
+  )
+  const resolvedTheme = useMemo(
+    () => resolveAdaptiveTheme({ theme, emotion: emotionQuadrant, reducedMotion: prefersReducedMotion }),
+    [emotionQuadrant, prefersReducedMotion, theme],
+  )
 
   useLayoutEffect(() => {
-    applyCssVariables(theme)
-  }, [theme])
+    applyCssVariables(theme, resolvedTheme)
+  }, [resolvedTheme, theme])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const handleChange = (event: MediaQueryListEvent) => {
+      setPrefersReducedMotion(event.matches)
+    }
+
+    setPrefersReducedMotion(mediaQuery.matches)
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleChange)
+      return () => mediaQuery.removeEventListener('change', handleChange)
+    }
+
+    mediaQuery.addListener(handleChange)
+    return () => mediaQuery.removeListener(handleChange)
+  }, [])
 
   useEffect(() => {
     if (!bootstrappedFromProfile && accountHydrated && designProfile?.design_dna) {
@@ -339,6 +360,10 @@ export function DesignThemeProvider({ children }: { children: ReactNode }) {
     [],
   )
 
+  const registerEmotionSignal = useCallback((signal: EmotionSignalInput | null) => {
+    setEmotionSignal(signal)
+  }, [])
+
   useEffect(() => {
     if (status !== 'authenticated' || !user?.id || !session?.access_token) {
       setLoading(false)
@@ -438,6 +463,7 @@ export function DesignThemeProvider({ children }: { children: ReactNode }) {
 
       try {
         const response = await postDesignContext(payload, session.access_token)
+        registerEmotionSignal({ label: payload.emotion, intensity: payload.intensity, source: 'design_context' })
         const nextTheme = await persistTheme((previous) => normaliseTheme(response, previous))
         return nextTheme
       } catch (error) {
@@ -449,7 +475,7 @@ export function DesignThemeProvider({ children }: { children: ReactNode }) {
         return null
       }
     },
-    [persistTheme, session?.access_token, session?.user?.id],
+    [persistTheme, registerEmotionSignal, session?.access_token, session?.user?.id],
   )
 
   const registerInteraction = useCallback(
@@ -465,16 +491,37 @@ export function DesignThemeProvider({ children }: { children: ReactNode }) {
       theme,
       loading,
       adaptiveEnabled,
+      emotionQuadrant,
+      resolvedTheme,
+      prefersReducedMotion,
       setAdaptiveEnabled,
+      registerEmotionSignal,
       submitEmotionContext,
       registerInteraction,
       flushFeedback,
     }),
-    [adaptiveEnabled, flushFeedback, loading, registerInteraction, setAdaptiveEnabled, submitEmotionContext, theme],
+    [
+      adaptiveEnabled,
+      emotionQuadrant,
+      flushFeedback,
+      loading,
+      prefersReducedMotion,
+      registerEmotionSignal,
+      registerInteraction,
+      resolvedTheme,
+      setAdaptiveEnabled,
+      submitEmotionContext,
+      theme,
+    ],
   )
 
   return <DesignThemeContext.Provider value={value}>{children}</DesignThemeContext.Provider>
 }
+
+export type { NormalizedTheme } from '@/lib/theme/types'
+export type { EmotionQuadrant } from '@/lib/theme/tokens'
+export type { EmotionSignalInput } from '@/lib/theme/emotion'
+export type { ResolvedAdaptiveTheme } from '@/lib/theme/resolver'
 
 export function useDesignTheme() {
   const context = useContext(DesignThemeContext)
