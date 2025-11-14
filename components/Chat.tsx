@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
+// Ensure the floating nav and handoff chips rely on Next.js routing.
+import Link from 'next/link'
 import Image from 'next/image'
 import {
   ChevronDown,
