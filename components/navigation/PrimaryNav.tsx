@@ -401,7 +401,7 @@ ${
               />
               <motion.div
                 id="primary-nav-mobile"
-                className="fixed inset-y-0 right-0 z-50 flex w-[min(320px,85vw)] flex-col gap-6 overflow-y-auto border-l border-white/10 bg-[#090f1e]/95 p-5 backdrop-blur-2xl"
+                className="fixed top-0 right-0 z-50 flex h-screen w-[min(320px,85vw)] flex-col gap-6 overflow-y-auto border-l border-white/10 bg-[#090f1e]/95 p-5 backdrop-blur-2xl"
                 initial={{ x: '100%' }}
                 animate={{ x: 0 }}
                 exit={{ x: '100%' }}
