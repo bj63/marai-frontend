@@ -8,6 +8,7 @@ import {
   Brain,
   Code2,
   Compass,
+  FolderKanban,
   Home,
   Mail,
   Menu,
@@ -23,6 +24,7 @@ import {
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { useMoaStore } from '@/lib/store'
 
 import type { LucideIcon } from 'lucide-react'
 
@@ -125,6 +127,14 @@ const navItems: NavItem[] = [
     section: 'core',
   },
   {
+    label: 'Planner',
+    href: '/business/planner',
+    description: 'Autopost campaigns',
+    icon: FolderKanban,
+    requiresAuth: true,
+    section: 'pro',
+  },
+  {
     label: 'Profile',
     href: '/profile',
     description: 'Manage your account',
@@ -170,6 +180,27 @@ const navItems: NavItem[] = [
   },
 ]
 
+const navPulseTargets = new Set(['/chat', '/feed', '/business/planner'])
+
+const moodPulseMap: Record<string, { label: string; className: string }> = {
+  joy: { label: 'Joy sync', className: 'border-amber-400/60 text-amber-100' },
+  happy: { label: 'Joy sync', className: 'border-amber-400/60 text-amber-100' },
+  calm: { label: 'Calm sync', className: 'border-sky-400/60 text-sky-100' },
+  curious: { label: 'Curious sync', className: 'border-violet-400/60 text-violet-100' },
+  focused: { label: 'Focus sync', className: 'border-emerald-400/60 text-emerald-100' },
+  angry: { label: 'Heat sync', className: 'border-rose-500/60 text-rose-100' },
+  sad: { label: 'Mellow sync', className: 'border-blue-400/60 text-blue-100' },
+  reflective: { label: 'Reflective sync', className: 'border-brand-mist/50 text-brand-mist/90' },
+}
+
+const resolveMoodPulse = (mood: string | null | undefined) => {
+  if (!mood) {
+    return { label: 'Calm sync', className: 'border-brand-mist/50 text-brand-mist/80' }
+  }
+  const normalized = mood.toLowerCase()
+  return moodPulseMap[normalized] ?? { label: 'Calm sync', className: 'border-brand-mist/50 text-brand-mist/80' }
+}
+
 export default function PrimaryNav({ activePath }: PrimaryNavProps) {
   const currentPathname = usePathname()
   const resolvedPathname = useMemo(
@@ -178,6 +209,8 @@ export default function PrimaryNav({ activePath }: PrimaryNavProps) {
   )
   const { user, hasRole, hasAnyRole, isPro } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const globalMood = useMoaStore((state) => state.mood)
+  const currentPulse = useMemo(() => resolveMoodPulse(globalMood), [globalMood])
 
   const closeMobileMenu = useCallback(() => {
     setMobileOpen(false)
@@ -243,6 +276,22 @@ export default function PrimaryNav({ activePath }: PrimaryNavProps) {
     )
   }, [])
 
+  const renderPulse = useCallback(
+    (item: NavItem) => {
+      if (!navPulseTargets.has(item.href)) return null
+      if (!currentPulse) return null
+      return (
+        <span
+          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.6rem] font-semibold tracking-tight ${currentPulse.className}`}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80 animate-pulse" aria-hidden />
+          {currentPulse.label}
+        </span>
+      )
+    },
+    [currentPulse]
+  )
+
   const renderDesktopLink = useCallback(
     (item: NavItem) => {
       const active = isPathActive(item.href)
@@ -270,7 +319,10 @@ ${
               <Icon className="h-3.5 w-3.5" />
             </span>
             <span>{item.label}</span>
-            {renderBadge(item)}
+            <div className="flex items-center gap-1">
+              {renderBadge(item)}
+              {renderPulse(item)}
+            </div>
           </Link>
           <span className="pointer-events-none absolute left-1/2 top-full z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-2xl border border-white/10 bg-[#0d142c]/95 px-3 py-1 text-[0.7rem] text-brand-mist/70 shadow-xl transition-opacity duration-300 group-hover:flex">
             {item.description}
@@ -278,7 +330,7 @@ ${
         </div>
       )
     },
-    [isPathActive, renderBadge]
+    [isPathActive, renderBadge, renderPulse]
   )
 
   const renderMobileLink = useCallback(
@@ -308,11 +360,14 @@ ${
               </span>
             </div>
           </div>
-          {renderBadge(item)}
+          <div className="flex flex-col items-end gap-1">
+            {renderBadge(item)}
+            {renderPulse(item)}
+          </div>
         </Link>
       )
     },
-    [closeMobileMenu, isPathActive, renderBadge]
+    [closeMobileMenu, isPathActive, renderBadge, renderPulse]
   )
 
   return (

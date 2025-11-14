@@ -90,6 +90,7 @@ export default function Chat() {
   const [isPaletteOpen, setIsPaletteOpen] = useState(false)
   const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([])
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'error'>('idle')
+  const [handoffContext, setHandoffContext] = useState<{ threadId?: string | null; mood?: string | null; note?: string | null } | null>(null)
   const { user } = useAuth()
   const { submitEmotionContext, registerInteraction } = useDesignTheme()
   const federationId = useMoaStore((state) => state.federationId)
@@ -123,6 +124,24 @@ export default function Chat() {
     return messages[messages.length - 1].insights?.slice(0, 3) ?? []
   }, [messages])
 
+  const latestUserReflection = useMemo(() => {
+    if (messages.length === 0) return ''
+    const last = messages[messages.length - 1]
+    return last.you?.trim() ?? ''
+  }, [messages])
+
+  const feedShareHref = useMemo(() => {
+    const params = new URLSearchParams()
+    if (activeEmotion) {
+      params.set('prefillMood', activeEmotion)
+    }
+    if (latestUserReflection) {
+      params.set('prefillNote', latestUserReflection.slice(0, 240))
+    }
+    const query = params.toString()
+    return query.length > 0 ? `/feed?${query}` : '/feed'
+  }, [activeEmotion, latestUserReflection])
+
   const ambientStyle = useMemo(
     () => ({
       backgroundImage: `radial-gradient(circle at 18% 12%, color-mix(in srgb, ${accentColor} 30%, transparent) 0%, transparent 55%), radial-gradient(circle at 85% 8%, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, transparent 60%)`,
@@ -144,6 +163,20 @@ export default function Chat() {
     const timeout = window.setTimeout(() => setShareStatus('idle'), 2400)
     return () => window.clearTimeout(timeout)
   }, [shareStatus])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const threadId = params.get('thread')
+    const moodParam = params.get('prefillMood')
+    const noteParam = params.get('prefillNote')
+    if (!threadId && !moodParam && !noteParam) return
+
+    setHandoffContext({ threadId, mood: moodParam, note: noteParam })
+    if (moodParam) {
+      setGlobalMood(moodParam)
+    }
+  }, [setGlobalMood])
 
   const handlePaletteToggle = () => setIsPaletteOpen((prev) => !prev)
 
@@ -489,6 +522,13 @@ export default function Chat() {
                 </a>
               ))}
             </nav>
+            <Link
+              href={feedShareHref}
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-white transition hover:border-brand-magnolia/60"
+            >
+              <Share2 className="h-4 w-4" />
+              Share to feed
+            </Link>
             <button
               type="button"
               onClick={handlePaletteToggle}
@@ -514,6 +554,43 @@ export default function Chat() {
             </span>
           </div>
         </header>
+
+        {handoffContext ? (
+          <div className="relative -mt-4 rounded-3xl border border-white/10 bg-[#070d1b]/80 p-4 text-sm text-brand-mist/70 backdrop-blur-xl">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.35em] text-brand-mist/50">Cross-surface handoff</p>
+                <p className="mt-1 text-white">
+                  {handoffContext.threadId
+                    ? 'Continuing a feed thread without leaving the chat canvas.'
+                    : 'Imported the latest tone so your broadcast stays in sync.'}
+                </p>
+                {handoffContext.mood ? (
+                  <p className="text-xs text-brand-mist/60">
+                    Mood signal: {handoffContext.mood}
+                    {handoffContext.note ? ` • Note: ${handoffContext.note}` : ''}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.35em]">
+                {handoffContext.threadId ? (
+                  <Link
+                    href={`/feed?highlight=${handoffContext.threadId}`}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-white hover:border-brand-magnolia/60"
+                  >
+                    View feed card
+                  </Link>
+                ) : null}
+                <Link
+                  href="/feed"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-white hover:border-brand-magnolia/60"
+                >
+                  Open feed
+                </Link>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {isPaletteOpen ? (
           <div className="relative z-20 -mt-6 rounded-3xl border border-white/10 bg-[#070d1b]/95 p-5 backdrop-blur-xl">

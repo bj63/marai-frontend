@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { CheckCircle2, Clock3, Rocket } from 'lucide-react'
 import { useMemo } from 'react'
 import SentimentBadge from '@/components/business/SentimentBadge'
@@ -9,6 +10,8 @@ interface QueueTimelineProps {
   entries: AutopostQueueEntry[]
   loading?: boolean
   error?: string | null
+  onSelectEntry?: (entry: AutopostQueueEntry) => void
+  onDuplicateEntry?: (entry: AutopostQueueEntry) => void
 }
 
 const statusConfig: Record<AutopostStatus, { label: string; icon: typeof Clock3; color: string }> = {
@@ -28,7 +31,7 @@ const formatTime = (iso: string) => {
   })
 }
 
-export default function QueueTimeline({ entries, loading, error }: QueueTimelineProps) {
+export default function QueueTimeline({ entries, loading, error, onSelectEntry, onDuplicateEntry }: QueueTimelineProps) {
   const grouped = useMemo(() => {
     return entries.reduce<Record<AutopostStatus, AutopostQueueEntry[]>>(
       (acc, entry) => {
@@ -81,6 +84,10 @@ export default function QueueTimeline({ entries, loading, error }: QueueTimeline
                 )}
                 {items.map((entry) => {
                   const sentiment = entry.sentimentSignals[0]
+                  const feedTarget = entry.publishedPostId
+                    ? String(entry.publishedPostId)
+                    : entry.details?.feedHints?.campaignId || entry.feedHints?.campaignId || String(entry.id)
+                  const showFeedLink = Boolean(feedTarget)
                   return (
                     <li key={entry.id} className="rounded-xl border border-white/10 bg-white/5 p-4">
                       <p className="text-sm font-semibold text-white">
@@ -99,6 +106,35 @@ export default function QueueTimeline({ entries, loading, error }: QueueTimeline
                           CTA: {entry.details.callToAction.label}
                         </p>
                       )}
+                      {status === 'published' ? (
+                        <p className="mt-3 text-[0.65rem] uppercase tracking-[0.3em] text-emerald-200/70">
+                          Synced to feed glow
+                        </p>
+                      ) : null}
+                      <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-300">
+                        <button
+                          type="button"
+                          onClick={() => onSelectEntry?.(entry)}
+                          className="rounded-full border border-white/15 px-3 py-1 font-semibold uppercase tracking-[0.3em] text-white transition hover:border-white/40"
+                        >
+                          Preview drop
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDuplicateEntry?.(entry)}
+                          className="rounded-full border border-white/15 px-3 py-1 font-semibold uppercase tracking-[0.3em] text-white transition hover:border-white/40"
+                        >
+                          Duplicate in planner
+                        </button>
+                        {showFeedLink ? (
+                          <Link
+                            href={`/feed?highlight=${encodeURIComponent(feedTarget ?? '')}`}
+                            className="inline-flex items-center rounded-full border border-emerald-400/40 px-3 py-1 font-semibold uppercase tracking-[0.3em] text-emerald-100 transition hover:border-emerald-300/70"
+                          >
+                            Open in feed
+                          </Link>
+                        ) : null}
+                      </div>
                     </li>
                   )
                 })}
