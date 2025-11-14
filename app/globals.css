@@ -454,7 +454,7 @@
   }
 
   .site-navbar {
-    position: sticky;
+    position: relative;
     top: 0;
     z-index: 30;
     border-bottom: 1px solid color-mix(in srgb, var(--border-strong) 85%, rgba(255, 255, 255, 0.08));
