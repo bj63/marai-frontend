@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
 import Image from 'next/image'
-import { useAddress } from '@thirdweb-dev/react'
 import {
   ChevronDown,
   ImagePlus,
@@ -93,7 +92,6 @@ export default function Chat() {
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'error'>('idle')
   const { user } = useAuth()
   const { submitEmotionContext, registerInteraction } = useDesignTheme()
-  const walletAddress = useAddress()
   const federationId = useMoaStore((state) => state.federationId)
   const setFederationId = useMoaStore((state) => state.setFederationId)
   const storePersonality = useMoaStore((state) => state.personality)
@@ -326,7 +324,6 @@ export default function Chat() {
       const data = await analyzeMessage(currentInput, {
         userId: user?.id,
         federationId,
-        walletAddress: walletAddress ?? undefined,
         personality: storePersonality as unknown as Record<string, number> | undefined,
         relationshipContext: entityState?.entityId
           ? {
@@ -435,7 +432,6 @@ export default function Chat() {
           userId: user?.id ?? 'guest',
           emotion,
           entityId,
-          walletAddress: walletAddress ?? undefined,
           relationshipScore: entityState?.connectionScore ?? undefined,
         })
 

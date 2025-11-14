@@ -1,8 +1,7 @@
 'use client'
 
 import { FormEvent, useMemo, useState } from 'react'
-import { Loader2, LogOut, Mail, ShieldCheck, UserPlus, Wallet, WalletMinimal } from 'lucide-react'
-import { useAddress, useCoinbaseWallet, useDisconnect, useMetamask, useWalletConnect } from '@thirdweb-dev/react'
+import { Loader2, LogOut, Mail, ShieldCheck, UserPlus } from 'lucide-react'
 
 import { useAuth } from './AuthProvider'
 
@@ -17,12 +16,6 @@ export default function AuthStatus() {
     signOut,
   } = useAuth()
 
-  const address = useAddress()
-  const connectWithMetamask = useMetamask()
-  const connectWithWalletConnect = useWalletConnect()
-  const connectWithCoinbase = useCoinbaseWallet()
-  const disconnectWallet = useDisconnect()
-
   const [magicEmail, setMagicEmail] = useState('')
   const [magicFeedback, setMagicFeedback] = useState<string | null>(null)
 
@@ -33,8 +26,7 @@ export default function AuthStatus() {
   const [credentialsFeedback, setCredentialsFeedback] = useState<string | null>(null)
 
   const [googleFeedback, setGoogleFeedback] = useState<string | null>(null)
-  const [walletFeedback, setWalletFeedback] = useState<string | null>(null)
-  const [pendingAction, setPendingAction] = useState<'magic' | 'credentials' | 'google' | 'wallet' | null>(null)
+  const [pendingAction, setPendingAction] = useState<'magic' | 'credentials' | 'google' | null>(null)
 
   const isLoading = status === 'loading'
 
@@ -108,31 +100,6 @@ export default function AuthStatus() {
 
     if (result.error) {
       setGoogleFeedback('Google rejected the request. Check your Supabase configuration and try again.')
-      setPendingAction(null)
-    }
-  }
-
-  const connectWallet = async (connector: () => Promise<unknown>) => {
-    setWalletFeedback(null)
-    setPendingAction('wallet')
-    try {
-      await connector()
-      setWalletFeedback('Wallet connected. You can use it to approve marketplace actions.')
-    } catch (error) {
-      console.error('connectWallet:', error)
-      setWalletFeedback('We could not connect to the wallet. Approve the request and try again.')
-    } finally {
-      setPendingAction(null)
-    }
-  }
-
-  const disconnectCurrentWallet = async () => {
-    setWalletFeedback(null)
-    setPendingAction('wallet')
-    try {
-      await disconnectWallet()
-      setWalletFeedback('Wallet disconnected from this session.')
-    } finally {
       setPendingAction(null)
     }
   }
@@ -306,50 +273,17 @@ export default function AuthStatus() {
 
         <div className="flex flex-col gap-3 rounded-lg border border-white/10 bg-[#0b1026]/80 p-4">
           <div className="flex items-center gap-2 text-white">
-            <Wallet className="h-4 w-4 text-brand-mist/70" />
-            <h3 className="text-sm font-semibold">Connect a wallet</h3>
+            <ShieldCheck className="h-4 w-4 text-brand-mist/70" />
+            <h3 className="text-sm font-semibold">Wallet support on hold</h3>
           </div>
           <p className="text-[0.7rem] text-brand-mist/70">
-            Link Metamask or another EVM wallet to approve drops, mint passes, and sign admin actions on-chain.
+            We paused on-chain connections while we stabilise authentication. The marketplace UI will light back up once
+            wallets return.
           </p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => connectWallet(connectWithMetamask)}
-              className="inline-flex items-center justify-center gap-2 rounded-md border border-white/10 bg-[#101737] px-3 py-2 text-sm font-semibold text-white transition hover:border-brand-magnolia/60"
-              disabled={pendingAction === 'wallet'}
-            >
-              <WalletMinimal className="h-4 w-4" /> Connect Metamask
-            </button>
-            <button
-              type="button"
-              onClick={() => connectWallet(connectWithCoinbase)}
-              className="inline-flex items-center justify-center gap-2 rounded-md border border-white/10 bg-[#101737] px-3 py-2 text-sm font-semibold text-white transition hover:border-brand-magnolia/60"
-              disabled={pendingAction === 'wallet'}
-            >
-              <WalletMinimal className="h-4 w-4" /> Coinbase Wallet
-            </button>
-            <button
-              type="button"
-              onClick={() => connectWallet(connectWithWalletConnect)}
-              className="inline-flex items-center justify-center gap-2 rounded-md border border-white/10 bg-[#101737] px-3 py-2 text-sm font-semibold text-white transition hover:border-brand-magnolia/60"
-              disabled={pendingAction === 'wallet'}
-            >
-              <WalletMinimal className="h-4 w-4" /> WalletConnect
-            </button>
-            {address ? (
-              <button
-                type="button"
-                onClick={disconnectCurrentWallet}
-                className="inline-flex items-center justify-center gap-2 rounded-md border border-white/10 bg-[#1d274a] px-3 py-2 text-sm font-semibold text-white transition hover:border-brand-magnolia/60"
-                disabled={pendingAction === 'wallet'}
-              >
-                <LogOut className="h-4 w-4" /> Disconnect
-              </button>
-            ) : null}
+          <div className="rounded-lg border border-dashed border-white/15 bg-black/30 px-3 py-2 text-[0.65rem] text-brand-mist/60">
+            Need to run a contract action? Ping <a href="mailto:founders@mirai.ai" className="text-brand-magnolia underline">founders@mirai.ai</a>{' '}
+            and we’ll process it manually until Web3 is back online.
           </div>
-          {address ? <p className="break-all text-[0.65rem] text-brand-magnolia/80">Connected wallet: {address}</p> : null}
-          {walletFeedback ? <p className="text-[0.65rem] text-brand-magnolia/80">{walletFeedback}</p> : null}
         </div>
       </div>
     </section>
