@@ -1,7 +1,7 @@
 import './globals.css'
 import { Providers } from './providers'
 import DeploymentBanner from '@/components/system/DeploymentBanner'
-import SiteNavbar from '@/components/navigation/SiteNavbar'
+import AppChrome from '@/components/navigation/AppChrome'
 
 export const metadata = {
   title: 'Mirai Marketplace',
@@ -23,13 +23,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <div className="absolute -right-24 top-[220px] h-[320px] w-[320px] rounded-full bg-brand-gradient opacity-25 blur-3xl" />
             </div>
 
-            <SiteNavbar />
-
-            <DeploymentBanner />
-
-            <div id="main-content" role="main" className="relative z-10 flex-1 pb-12">
-              {children}
-            </div>
+            <AppChrome>
+              <DeploymentBanner />
+              <div id="main-content" role="main" className="relative z-10 flex-1 pb-12">
+                {children}
+              </div>
+            </AppChrome>
           </div>
         </Providers>
       </body>

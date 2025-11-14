@@ -520,6 +520,26 @@ export default function ProfilePage() {
         <p className="section-description text-brand-mist/70">
           Adjust the tone, colours, and voice that collaborators experience when they meet your federation.
         </p>
+        <div className="mt-4 flex flex-wrap gap-2 text-[0.65rem] uppercase tracking-[0.35em] text-brand-mist/60">
+          <Link
+            href="/chat"
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-white hover:border-brand-magnolia/40"
+          >
+            Return to chat
+          </Link>
+          <Link
+            href="/feed"
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-white hover:border-brand-magnolia/40"
+          >
+            View feed
+          </Link>
+          <Link
+            href="/avatar"
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-white hover:border-brand-magnolia/40"
+          >
+            Avatar lab
+          </Link>
+        </div>
       </header>
 
       <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.3em] text-brand-mist/60">
@@ -703,6 +723,12 @@ export default function ProfilePage() {
               emotionTone={liveTone}
               emotionIntensity={liveEmotionIntensity}
             />
+            <Link
+              href="/avatar"
+              className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-brand-mist hover:border-brand-magnolia/40 hover:text-white"
+            >
+              Preview aura in Avatar lab
+            </Link>
           </div>
         </div>
       ) : null}
