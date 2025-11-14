@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { BadgeCheck, ExternalLink, Sparkles } from 'lucide-react'
 import SentimentBadge from '@/components/business/SentimentBadge'
 import type { AutopostQueueEntry } from '@/types/business'
@@ -27,6 +28,14 @@ export default function CreativePreviewCard({ entry }: CreativePreviewCardProps)
   const details = entry.details
   const sentiment = entry.sentimentSignals[0]
   const poster = details?.posterUrl ?? entry.posterUrl ?? details?.assetUrl ?? entry.assetUrl ?? null
+  const feedShareParams = new URLSearchParams()
+  if (entry.mood ?? sentiment?.label) {
+    feedShareParams.set('prefillMood', entry.mood ?? sentiment?.label ?? 'calm')
+  }
+  if (details?.summary ?? entry.summary) {
+    feedShareParams.set('prefillNote', (details?.summary ?? entry.summary ?? '').slice(0, 200))
+  }
+  const feedPreviewHref = feedShareParams.toString().length ? `/feed?${feedShareParams.toString()}` : '/feed'
 
   return (
     <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
@@ -87,6 +96,26 @@ export default function CreativePreviewCard({ entry }: CreativePreviewCardProps)
           Open landing page
         </a>
       )}
+      <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-200">
+        <Link
+          href={feedPreviewHref}
+          className="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 font-semibold uppercase tracking-[0.3em] text-white hover:border-white/40"
+        >
+          Preview in feed glow
+        </Link>
+        <Link
+          href="/business/assets"
+          className="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 font-semibold uppercase tracking-[0.3em] text-white hover:border-white/40"
+        >
+          Open media engine
+        </Link>
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 font-semibold uppercase tracking-[0.3em] text-white hover:border-white/40"
+        >
+          Clone variant
+        </button>
+      </div>
     </div>
   )
 }
