@@ -56,7 +56,7 @@ export default function CreativePreviewCard({ entry }: CreativePreviewCardProps)
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AuthControls />
-            <span className="text-sm font-semibold text-white">{user?.user_metadata?.display_name ?? 'MarAI User'}</span>
+            <span className="text-sm font-semibold text-white">{user?.profile?.display_name ?? 'MarAI User'}</span>
           </div>
           {sentiment && <SentimentBadge label={sentiment.label} confidence={sentiment.confidence} />}
         </div>
