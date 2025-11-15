@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@sentry/nextjs": "8.50.0",
-    "@supabase/supabase-js": "2.81.0",
+    "@supabase/supabase-js": "2.81.1",
     "@thirdweb-dev/chains": "0.1.120",
     "@thirdweb-dev/react": "4.9.4",
     "@thirdweb-dev/sdk": "4.0.99",
