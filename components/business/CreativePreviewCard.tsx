@@ -2,25 +2,45 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { BadgeCheck, ExternalLink, Sparkles } from 'lucide-react'
+import { Heart, MessageCircle, Send, Sparkles, UserRound } from 'lucide-react'
+import { useAuth } from '@/components/auth/AuthProvider'
 import SentimentBadge from '@/components/business/SentimentBadge'
 import type { AutopostQueueEntry } from '@/types/business'
+import AuthControls from '@/components/navigation/AuthControls'
 
 interface CreativePreviewCardProps {
   entry: AutopostQueueEntry | null
 }
 
 export default function CreativePreviewCard({ entry }: CreativePreviewCardProps) {
+  const { user } = useAuth()
+
+  const displayName = (() => {
+    const username = user?.user_metadata?.username
+    if (typeof username === 'string' && username.trim().length > 0) {
+      return username.trim()
+    }
+
+    const fullName = user?.user_metadata?.full_name ?? user?.user_metadata?.name
+    if (typeof fullName === 'string' && fullName.trim().length > 0) {
+      return fullName.trim()
+    }
+
+    return user?.email ?? 'MarAI User'
+  })()
+
   if (!entry) {
     return (
-      <div className="rounded-3xl border border-dashed border-white/20 bg-slate-950/50 p-10 text-center text-sm text-slate-400">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/5">
-          <Sparkles className="h-6 w-6" />
+      <div className="flex h-full min-h-[480px] items-center justify-center rounded-3xl border border-dashed border-white/20 bg-slate-950/50 p-10 text-center text-sm text-slate-400">
+        <div className="mx-auto flex flex-col items-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/5">
+            <Sparkles className="h-6 w-6" />
+          </div>
+          <p className="mt-4 font-semibold text-white">Preview your AI creative</p>
+          <p className="mt-2 text-sm text-slate-400">
+            Generate a campaign brief to see copy, CTA, and metadata before it hits the queue.
+          </p>
         </div>
-        <p className="mt-4 font-semibold text-white">Preview your AI creative</p>
-        <p className="mt-2 text-sm text-slate-400">
-          Generate a campaign brief to see copy, CTA, and metadata before it hits the queue.
-        </p>
       </div>
     )
   }
@@ -38,83 +58,99 @@ export default function CreativePreviewCard({ entry }: CreativePreviewCardProps)
   const feedPreviewHref = feedShareParams.toString().length ? `/feed?${feedShareParams.toString()}` : '/feed'
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-emerald-200">
-            <BadgeCheck className="h-4 w-4" />
-            Ready for pro-mode queue
+    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-slate-950/80 shadow-2xl">
+      <div className="flex items-center justify-between gap-3 border-b border-white/5 px-4 py-3 backdrop-blur">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white">
+            <UserRound className="hidden h-5 w-5 text-white/80 sm:block" />
+            <span className="sm:hidden">{avatarLetter}</span>
           </div>
-          <h3 className="mt-2 text-xl font-semibold text-white">{details?.title ?? entry.title}</h3>
-          <p className="mt-1 text-sm text-slate-300">{details?.summary ?? entry.summary}</p>
+          <div className="flex flex-col leading-tight">
+            <span className="text-sm font-semibold text-white">{displayName}</span>
+            <span className="text-xs text-white/60">@{displayName.toLowerCase().replace(/\s+/g, '')}</span>
+          </div>
         </div>
-        {sentiment && <SentimentBadge label={sentiment.label} confidence={sentiment.confidence} />}
-      </header>
-      {poster && (
-        <div className="mt-6 overflow-hidden rounded-2xl border border-white/10">
+        <div className="flex items-center gap-3">
+          <AuthControls />
+          {sentiment && <SentimentBadge label={sentiment.label} confidence={sentiment.confidence} />}
+        </div>
+      </div>
+
+      <div className="relative aspect-[9/16] w-full overflow-hidden bg-slate-900">
+        {poster ? (
           <Image
             src={poster}
             alt={details?.title ?? 'Campaign poster'}
-            width={1200}
-            height={675}
-            className="h-60 w-full object-cover"
+            fill
+            className="object-cover"
+            priority
           />
-        </div>
-      )}
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4 text-sm text-slate-300">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Copy</p>
-          <p className="mt-2 text-sm text-white">{entry.body}</p>
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4 text-sm text-slate-300">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">CTA</p>
-          <p className="mt-2 text-sm text-white">{details?.callToAction?.label ?? entry.callToAction?.label ?? 'Set a label'}</p>
-          <p className="mt-1 text-xs text-emerald-200">{details?.callToAction?.url ?? entry.callToAction?.url ?? 'Add a destination'}</p>
-        </div>
-      </div>
-      <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-slate-400">
-        {details?.hashtags?.map((tag) => (
-          <span key={tag} className="rounded-full bg-slate-900/70 px-3 py-1 text-slate-200">
-            {tag}
-          </span>
-        ))}
-        {details?.feedHints?.campaignId && (
-          <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-slate-200">
-            {details.feedHints.campaignId}
-          </span>
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-slate-800">
+            <p className="text-sm text-slate-300">No media asset</p>
+          </div>
         )}
-        {entry.delaySeconds && (
-          <span className="rounded-full border border-white/5 px-3 py-1">Delay {Math.round(entry.delaySeconds / 60)}m</span>
-        )}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
       </div>
-      {details?.callToAction?.url && (
-        <a
-          href={details.callToAction.url}
-          className="mt-6 inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/20"
-        >
-          <ExternalLink className="h-4 w-4" />
-          Open landing page
-        </a>
-      )}
-      <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-200">
-        <Link
-          href={feedPreviewHref}
-          className="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 font-semibold uppercase tracking-[0.3em] text-white hover:border-white/40"
-        >
-          Preview in feed glow
-        </Link>
-        <Link
-          href="/business/assets"
-          className="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 font-semibold uppercase tracking-[0.3em] text-white hover:border-white/40"
-        >
-          Open media engine
-        </Link>
-        <button
-          type="button"
-          className="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 font-semibold uppercase tracking-[0.3em] text-white hover:border-white/40"
-        >
-          Clone variant
-        </button>
+
+      <div className="absolute inset-x-0 top-0 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AuthControls />
+            <span className="text-sm font-semibold text-white">{displayName}</span>
+          </div>
+          <Link
+            href="/chat"
+            className="flex items-center gap-2 rounded-full bg-indigo-500/90 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-indigo-900 transition hover:-translate-y-0.5 hover:bg-indigo-400"
+          >
+            <Sparkles className="h-4 w-4" />
+            Chat with AI
+          </Link>
+        </div>
+
+      <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+        <div className="grid gap-3">
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold">{details?.title ?? entry.title}</h3>
+            <p className="text-sm leading-relaxed text-white/90">{entry.body}</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            {details?.hashtags?.map((tag) => (
+              <span key={tag} className="rounded-full bg-white/10 px-2 py-1">
+                {tag}
+              </span>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-[1fr_auto] items-end gap-3">
+            <div className="grid grid-cols-3 gap-2 text-left text-sm">
+              <button className="group flex items-center gap-2 rounded-2xl bg-white/5 px-3 py-2 text-white/90 backdrop-blur transition hover:bg-white/10">
+                <Heart className="h-5 w-5 transition group-hover:scale-105" />
+                <span>1.2k</span>
+              </button>
+              <button className="group flex items-center gap-2 rounded-2xl bg-white/5 px-3 py-2 text-white/90 backdrop-blur transition hover:bg-white/10">
+                <MessageCircle className="h-5 w-5 transition group-hover:scale-105" />
+                <span>241</span>
+              </button>
+              <button className="group flex items-center justify-center gap-2 rounded-2xl bg-white/5 px-3 py-2 text-white/90 backdrop-blur transition hover:bg-white/10">
+                <Send className="h-5 w-5 transition group-hover:scale-105" />
+                <span>Share</span>
+              </button>
+            </div>
+
+            {details?.callToAction?.url && (
+              <a
+                href={details.callToAction.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-bold text-black shadow-lg shadow-black/30 transition hover:-translate-y-0.5 hover:bg-slate-100"
+              >
+                {details?.callToAction?.label ?? entry.callToAction?.label ?? 'Learn More'}
+              </a>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
