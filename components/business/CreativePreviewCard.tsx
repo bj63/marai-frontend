@@ -77,40 +77,47 @@ export default function CreativePreviewCard({ entry }: CreativePreviewCardProps)
       </div>
 
       <div className="absolute inset-x-0 bottom-0 p-4 text-white">
-        <h3 className="text-lg font-bold">{details?.title ?? entry.title}</h3>
-        <p className="mt-1 text-sm">{entry.body}</p>
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-          {details?.hashtags?.map((tag) => (
-            <span key={tag} className="rounded-full bg-white/10 px-2 py-1">
-              {tag}
-            </span>
-          ))}
-        </div>
-
-        <div className="mt-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button className="flex items-center gap-2">
-              <Heart className="h-6 w-6" />
-              <span className="text-sm">1.2k</span>
-            </button>
-            <button className="flex items-center gap-2">
-              <MessageCircle className="h-6 w-6" />
-              <span className="text-sm">241</span>
-            </button>
-            <button>
-              <Send className="h-6 w-6" />
-            </button>
+        <div className="grid gap-3">
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold">{details?.title ?? entry.title}</h3>
+            <p className="text-sm leading-relaxed text-white/90">{entry.body}</p>
           </div>
-          {details?.callToAction?.url && (
-            <a
-              href={details.callToAction.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full bg-white px-4 py-2 text-sm font-bold text-black"
-            >
-              {details?.callToAction?.label ?? entry.callToAction?.label ?? 'Learn More'}
-            </a>
-          )}
+
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            {details?.hashtags?.map((tag) => (
+              <span key={tag} className="rounded-full bg-white/10 px-2 py-1">
+                {tag}
+              </span>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-[1fr_auto] items-end gap-3">
+            <div className="grid grid-cols-3 gap-2 text-left text-sm">
+              <button className="group flex items-center gap-2 rounded-2xl bg-white/5 px-3 py-2 text-white/90 backdrop-blur transition hover:bg-white/10">
+                <Heart className="h-5 w-5 transition group-hover:scale-105" />
+                <span>1.2k</span>
+              </button>
+              <button className="group flex items-center gap-2 rounded-2xl bg-white/5 px-3 py-2 text-white/90 backdrop-blur transition hover:bg-white/10">
+                <MessageCircle className="h-5 w-5 transition group-hover:scale-105" />
+                <span>241</span>
+              </button>
+              <button className="group flex items-center justify-center gap-2 rounded-2xl bg-white/5 px-3 py-2 text-white/90 backdrop-blur transition hover:bg-white/10">
+                <Send className="h-5 w-5 transition group-hover:scale-105" />
+                <span>Share</span>
+              </button>
+            </div>
+
+            {details?.callToAction?.url && (
+              <a
+                href={details.callToAction.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-bold text-black shadow-lg shadow-black/30 transition hover:-translate-y-0.5 hover:bg-slate-100"
+              >
+                {details?.callToAction?.label ?? entry.callToAction?.label ?? 'Learn More'}
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </div>
