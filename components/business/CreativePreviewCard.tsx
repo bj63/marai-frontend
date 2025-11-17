@@ -29,8 +29,6 @@ export default function CreativePreviewCard({ entry }: CreativePreviewCardProps)
     return user?.email ?? 'MarAI User'
   })()
 
-  const avatarLetter = displayName.charAt(0).toUpperCase()
-
   if (!entry) {
     return (
       <div className="flex h-full min-h-[480px] items-center justify-center rounded-3xl border border-dashed border-white/20 bg-slate-950/50 p-10 text-center text-sm text-slate-400">
@@ -87,11 +85,11 @@ export default function CreativePreviewCard({ entry }: CreativePreviewCardProps)
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
       </div>
 
-      <div className="space-y-3 px-4 pb-5 pt-4 text-white">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-1">
-            <h3 className="text-lg font-bold leading-tight">{details?.title ?? entry.title}</h3>
-            <p className="text-sm leading-relaxed text-white/85">{entry.body}</p>
+      <div className="absolute inset-x-0 top-0 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AuthControls />
+            <span className="text-sm font-semibold text-white">{displayName}</span>
           </div>
           <Link
             href="/chat"
@@ -102,44 +100,48 @@ export default function CreativePreviewCard({ entry }: CreativePreviewCardProps)
           </Link>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 text-xs text-white/80">
-          {details?.hashtags?.length ? (
-            details.hashtags.map((tag) => (
-              <span key={tag} className="rounded-full bg-white/10 px-3 py-1">
-                #{tag.replace(/^#/, '')}
-              </span>
-            ))
-          ) : (
-            <span className="rounded-full bg-white/5 px-3 py-1">#marai</span>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between gap-4 border-t border-white/5 pt-3 text-sm text-white/80">
-          <div className="flex flex-1 items-center justify-around gap-2">
-            <button className="flex items-center gap-2 rounded-full px-3 py-2 transition hover:bg-white/10">
-              <Heart className="h-5 w-5" />
-              <span>1.2k</span>
-            </button>
-            <button className="flex items-center gap-2 rounded-full px-3 py-2 transition hover:bg-white/10">
-              <MessageCircle className="h-5 w-5" />
-              <span>241</span>
-            </button>
-            <button className="flex items-center gap-2 rounded-full px-3 py-2 transition hover:bg-white/10">
-              <Send className="h-5 w-5" />
-              <span>Share</span>
-            </button>
+      <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+        <div className="grid gap-3">
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold">{details?.title ?? entry.title}</h3>
+            <p className="text-sm leading-relaxed text-white/90">{entry.body}</p>
           </div>
 
-          {details?.callToAction?.url && (
-            <a
-              href={details.callToAction.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-bold text-black shadow-lg shadow-black/30 transition hover:-translate-y-0.5 hover:bg-slate-100"
-            >
-              {details?.callToAction?.label ?? entry.callToAction?.label ?? 'Open link'}
-            </a>
-          )}
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            {details?.hashtags?.map((tag) => (
+              <span key={tag} className="rounded-full bg-white/10 px-2 py-1">
+                {tag}
+              </span>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-[1fr_auto] items-end gap-3">
+            <div className="grid grid-cols-3 gap-2 text-left text-sm">
+              <button className="group flex items-center gap-2 rounded-2xl bg-white/5 px-3 py-2 text-white/90 backdrop-blur transition hover:bg-white/10">
+                <Heart className="h-5 w-5 transition group-hover:scale-105" />
+                <span>1.2k</span>
+              </button>
+              <button className="group flex items-center gap-2 rounded-2xl bg-white/5 px-3 py-2 text-white/90 backdrop-blur transition hover:bg-white/10">
+                <MessageCircle className="h-5 w-5 transition group-hover:scale-105" />
+                <span>241</span>
+              </button>
+              <button className="group flex items-center justify-center gap-2 rounded-2xl bg-white/5 px-3 py-2 text-white/90 backdrop-blur transition hover:bg-white/10">
+                <Send className="h-5 w-5 transition group-hover:scale-105" />
+                <span>Share</span>
+              </button>
+            </div>
+
+            {details?.callToAction?.url && (
+              <a
+                href={details.callToAction.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-bold text-black shadow-lg shadow-black/30 transition hover:-translate-y-0.5 hover:bg-slate-100"
+              >
+                {details?.callToAction?.label ?? entry.callToAction?.label ?? 'Learn More'}
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </div>
