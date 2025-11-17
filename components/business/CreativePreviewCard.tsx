@@ -48,6 +48,14 @@ export default function CreativePreviewCard({ entry }: CreativePreviewCardProps)
   const details = entry.details
   const sentiment = entry.sentimentSignals[0]
   const poster = details?.posterUrl ?? entry.posterUrl ?? details?.assetUrl ?? entry.assetUrl ?? null
+  const feedShareParams = new URLSearchParams()
+  if (entry.mood ?? sentiment?.label) {
+    feedShareParams.set('prefillMood', entry.mood ?? sentiment?.label ?? 'calm')
+  }
+  if (details?.summary ?? entry.summary) {
+    feedShareParams.set('prefillNote', (details?.summary ?? entry.summary ?? '').slice(0, 200))
+  }
+  const feedPreviewHref = feedShareParams.toString().length ? `/feed?${feedShareParams.toString()}` : '/feed'
 
   return (
     <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-slate-950/80 shadow-2xl">
