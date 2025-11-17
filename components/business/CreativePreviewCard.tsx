@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { Heart, MessageCircle, Send, Sparkles } from 'lucide-react'
+import { Heart, MessageCircle, Send, Sparkles, UserRound } from 'lucide-react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import SentimentBadge from '@/components/business/SentimentBadge'
 import type { AutopostQueueEntry } from '@/types/business'
@@ -50,21 +50,40 @@ export default function CreativePreviewCard({ entry }: CreativePreviewCardProps)
   const poster = details?.posterUrl ?? entry.posterUrl ?? details?.assetUrl ?? entry.assetUrl ?? null
 
   return (
-    <div className="relative aspect-[9/16] w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-slate-900 shadow-2xl">
-      {poster ? (
-        <Image
-          src={poster}
-          alt={details?.title ?? 'Campaign poster'}
-          fill
-          className="object-cover"
-        />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center bg-slate-800">
-          <p className="text-sm text-slate-400">No media asset</p>
+    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-slate-950/80 shadow-2xl">
+      <div className="flex items-center justify-between gap-3 border-b border-white/5 px-4 py-3 backdrop-blur">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white">
+            <UserRound className="hidden h-5 w-5 text-white/80 sm:block" />
+            <span className="sm:hidden">{avatarLetter}</span>
+          </div>
+          <div className="flex flex-col leading-tight">
+            <span className="text-sm font-semibold text-white">{displayName}</span>
+            <span className="text-xs text-white/60">@{displayName.toLowerCase().replace(/\s+/g, '')}</span>
+          </div>
         </div>
-      )}
+        <div className="flex items-center gap-3">
+          <AuthControls />
+          {sentiment && <SentimentBadge label={sentiment.label} confidence={sentiment.confidence} />}
+        </div>
+      </div>
 
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
+      <div className="relative aspect-[9/16] w-full overflow-hidden bg-slate-900">
+        {poster ? (
+          <Image
+            src={poster}
+            alt={details?.title ?? 'Campaign poster'}
+            fill
+            className="object-cover"
+            priority
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-slate-800">
+            <p className="text-sm text-slate-300">No media asset</p>
+          </div>
+        )}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+      </div>
 
       <div className="absolute inset-x-0 top-0 p-4">
         <div className="flex items-center justify-between">
@@ -72,9 +91,14 @@ export default function CreativePreviewCard({ entry }: CreativePreviewCardProps)
             <AuthControls />
             <span className="text-sm font-semibold text-white">{displayName}</span>
           </div>
-          {sentiment && <SentimentBadge label={sentiment.label} confidence={sentiment.confidence} />}
+          <Link
+            href="/chat"
+            className="flex items-center gap-2 rounded-full bg-indigo-500/90 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-indigo-900 transition hover:-translate-y-0.5 hover:bg-indigo-400"
+          >
+            <Sparkles className="h-4 w-4" />
+            Chat with AI
+          </Link>
         </div>
-      </div>
 
       <div className="absolute inset-x-0 bottom-0 p-4 text-white">
         <div className="grid gap-3">
