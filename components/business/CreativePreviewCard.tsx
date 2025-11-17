@@ -15,6 +15,20 @@ interface CreativePreviewCardProps {
 export default function CreativePreviewCard({ entry }: CreativePreviewCardProps) {
   const { user } = useAuth()
 
+  const displayName = (() => {
+    const username = user?.user_metadata?.username
+    if (typeof username === 'string' && username.trim().length > 0) {
+      return username.trim()
+    }
+
+    const fullName = user?.user_metadata?.full_name ?? user?.user_metadata?.name
+    if (typeof fullName === 'string' && fullName.trim().length > 0) {
+      return fullName.trim()
+    }
+
+    return user?.email ?? 'MarAI User'
+  })()
+
   if (!entry) {
     return (
       <div className="flex h-full min-h-[480px] items-center justify-center rounded-3xl border border-dashed border-white/20 bg-slate-950/50 p-10 text-center text-sm text-slate-400">
@@ -56,7 +70,7 @@ export default function CreativePreviewCard({ entry }: CreativePreviewCardProps)
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AuthControls />
-            <span className="text-sm font-semibold text-white">{user?.profile?.display_name ?? 'MarAI User'}</span>
+            <span className="text-sm font-semibold text-white">{displayName}</span>
           </div>
           {sentiment && <SentimentBadge label={sentiment.label} confidence={sentiment.confidence} />}
         </div>
