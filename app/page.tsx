@@ -38,6 +38,16 @@ const engagementDestinations = [
     href: '/feed',
   },
   {
+    heading: 'Blueprint',
+    copy: 'Track every API contract and UI checklist for shipping MarAI end-to-end.',
+    href: '/blueprint',
+  },
+  {
+    heading: 'Friends',
+    copy: 'Form mutual follows, elevate Inner Circle, and govern MarAI friend chat access.',
+    href: '/friends',
+  },
+  {
     heading: 'Chat',
     copy: 'Go deep with Amaris in real time and surface the insights that fuel your social narrative.',
     href: '/chat',
