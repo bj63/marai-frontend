@@ -1,7 +1,22 @@
+'use client'
+
+import { useState } from 'react'
+import { Video } from 'lucide-react'
+import Factime from '@/components/Factime'
 
 export default function MarAIChatInterface() {
+  const [isFactimeVisible, setIsFactimeVisible] = useState(false)
+
+  // TODO: Replace with the actual user ID from the auth context
+  const userId = 'placeholder-user-id'
+
   return (
     <div className="relative mx-auto flex h-screen max-w-md flex-col overflow-hidden bg-background-light dark:bg-background-dark">
+      {isFactimeVisible && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
+          <Factime userId={userId} onDisconnect={() => setIsFactimeVisible(false)} />
+        </div>
+      )}
       {/* Header Bar */}
       <header className="flex shrink-0 items-center justify-between border-b border-white/10 p-4">
         <button className="flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10">
@@ -17,8 +32,11 @@ export default function MarAIChatInterface() {
           ></div>
           <h1 className="text-xl font-bold text-white">MarAI</h1>
         </div>
-        <button className="flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10">
-          <span className="material-symbols-outlined text-2xl">more_vert</span>
+        <button
+          className="flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
+          onClick={() => setIsFactimeVisible(true)}
+        >
+          <Video className="h-6 w-6" />
         </button>
       </header>
       {/* Main Content Area */}
