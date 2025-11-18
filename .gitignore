@@ -26,6 +26,8 @@ contracts/node_modules/
 *.pem
 artifacts/
 cache/
+*.log
+test-results/
 
 # hardhat
 typechain/
