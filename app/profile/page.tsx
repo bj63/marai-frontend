@@ -1,815 +1,126 @@
-'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
-import { motion } from 'framer-motion'
-import { AlertCircle, CheckCircle2, Copy, Loader2, Save } from 'lucide-react'
-import { useAuth } from '@/components/auth/AuthProvider'
-import { useMoaStore, type Personality as StorePersonality } from '@/lib/store'
-import { reportError } from '@/lib/observability'
-import {
-  getFeedForUser,
-  getFollowers,
-  getFollowing,
-  getPersonality,
-  getProfile,
-  savePersonality,
-  saveProfile,
-  type FeedPostWithEngagement,
-  type FollowProfile,
-  type MiraiProfile,
-  type Personality as DbPersonality,
-  updateUserMetadata,
-} from '@/lib/supabaseApi'
-import MoodCard from '@/components/MoodCard'
-import FollowButton from '@/components/profile/FollowButton'
-import EvolutionCard, { type EmotionSnapshot } from '@/components/EvolutionCard'
-import { evolveRelationalEntity } from '@/lib/api'
-import { buildEmojiAvatar } from '@/lib/avatar'
-
-type TraitKey = keyof StorePersonality
-
-interface ProfileFormState {
-  name: string
-  avatar: string
-  color: string
-}
-
-type FeedbackState = { type: 'success' | 'error'; message: string } | null
-
-const emojiOptions = ['🐱', '🐰', '🐻', '🐉', '🦊', '🐧', '🐼']
-
-const moodToneMap: Record<string, { tone: string; intensity: number }> = {
-  happy: { tone: 'joy', intensity: 0.85 },
-  joy: { tone: 'joy', intensity: 0.88 },
-  excited: { tone: 'joy', intensity: 0.95 },
-  calm: { tone: 'calm', intensity: 0.4 },
-  curious: { tone: 'focused', intensity: 0.6 },
-  focused: { tone: 'focused', intensity: 0.65 },
-  tired: { tone: 'tired', intensity: 0.35 },
-  sad: { tone: 'sad', intensity: 0.42 },
-  angry: { tone: 'angry', intensity: 0.55 },
-  playful: { tone: 'happy', intensity: 0.75 },
-  grateful: { tone: 'grateful', intensity: 0.7 },
-  neutral: { tone: 'neutral', intensity: 0.45 },
-}
-
-const defaultTraits: StorePersonality = {
-  empathy: 0.75,
-  creativity: 0.65,
-  confidence: 0.8,
-  curiosity: 0.7,
-  humor: 0.6,
-  energy: 0.7,
-}
-
-const traitCopy: Record<TraitKey, { label: string; helper: string }> = {
-  empathy: {
-    label: 'Empathy',
-    helper: 'How present and emotionally aware your Mirai feels during sessions.',
-  },
-  creativity: {
-    label: 'Creativity',
-    helper: 'The experimental spark that drives generative leaps and sonic improvisation.',
-  },
-  confidence: {
-    label: 'Confidence',
-    helper: 'Controls how boldly Mirai presents ideas versus seeking extra validation.',
-  },
-  curiosity: {
-    label: 'Curiosity',
-    helper: 'Determines how many follow-up questions or alternate takes appear.',
-  },
-  humor: {
-    label: 'Humor',
-    helper: 'Adds levity, wit, and easter eggs throughout the experience.',
-  },
-  energy: {
-    label: 'Energy',
-    helper: 'Balances chill reflection against hype-lifting momentum.',
-  },
-}
-
-const clamp = (value: number) => Math.min(1, Math.max(0, value))
-
-function resolveTone(mood: string | null | undefined) {
-  if (!mood) {
-    return moodToneMap.neutral
-  }
-
-  const normalized = mood.toLowerCase()
-  return moodToneMap[normalized] ?? moodToneMap.neutral
-}
-
-function mapPersonality(record: DbPersonality | null): StorePersonality {
-  if (!record) return { ...defaultTraits }
-
-  return {
-    empathy: clamp(record.empathy ?? defaultTraits.empathy),
-    creativity: clamp(record.creativity ?? defaultTraits.creativity),
-    confidence: clamp(record.confidence ?? defaultTraits.confidence),
-    curiosity: clamp(record.curiosity ?? defaultTraits.curiosity),
-    humor: clamp(record.humor ?? defaultTraits.humor),
-    energy: clamp(record.energy ?? defaultTraits.energy),
-  }
-}
-
-function deriveProfileForm(profile: MiraiProfile | null, fallbackName: string): ProfileFormState {
-  return {
-    name: profile?.name ?? fallbackName,
-    avatar: profile?.avatar ?? emojiOptions[0],
-    color: profile?.color ?? '#6366F1',
-  }
-}
-
-export default function ProfilePage() {
-  const { status, user } = useAuth()
-  const federationId = useMoaStore((state) => state.federationId)
-  const storePersonality = useMoaStore((state) => state.personality)
-  const setStorePersonality = useMoaStore((state) => state.setPersonality)
-  const currentMood = useMoaStore((state) => state.mood)
-
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [copied, setCopied] = useState(false)
-  const [feedback, setFeedback] = useState<FeedbackState>(null)
-  const [evolutionNotice, setEvolutionNotice] = useState<FeedbackState>(null)
-  const [activeTab, setActiveTab] = useState<'about' | 'posts' | 'followers' | 'following'>('about')
-  const [profileForm, setProfileForm] = useState<ProfileFormState>(() => ({
-    name: '',
-    avatar: emojiOptions[0],
-    color: '#6366F1',
-  }))
-  const [traits, setTraits] = useState<StorePersonality>(() => ({
-    ...defaultTraits,
-    ...storePersonality,
-  }))
-  const [profileFeed, setProfileFeed] = useState<FeedPostWithEngagement[]>([])
-  const [followers, setFollowers] = useState<FollowProfile[]>([])
-  const [following, setFollowing] = useState<FollowProfile[]>([])
-  const [connectionsLoading, setConnectionsLoading] = useState(true)
-  const [customEvolutionImage, setCustomEvolutionImage] = useState<string | null>(null)
-  const [entityId, setEntityId] = useState<string | null>(null)
-  const [overrideEmotionScore, setOverrideEmotionScore] = useState<number | null>(null)
-  const [overrideEmotionIntensity, setOverrideEmotionIntensity] = useState<number | null>(null)
-  const [overrideTone, setOverrideTone] = useState<string | null>(null)
-  const [remoteHistory, setRemoteHistory] = useState<EmotionSnapshot[]>([])
-  const [evolving, setEvolving] = useState(false)
-
-  const founderNameFallback = useMemo(() => {
-    if (!user) return ''
-    const metadata = user.user_metadata as { username?: string; full_name?: string } | null
-    return metadata?.username || metadata?.full_name || user.email?.split('@')[0] || ''
-  }, [user])
-
-  const tabs = useMemo(
-    () => [
-      { id: 'about' as const, label: 'About' },
-      { id: 'posts' as const, label: `Posts (${profileFeed.length})` },
-      { id: 'followers' as const, label: `Followers (${followers.length})` },
-      { id: 'following' as const, label: `Following (${following.length})` },
-    ],
-    [followers.length, following.length, profileFeed.length],
-  )
-
-  useEffect(() => {
-    if (status !== 'authenticated' || !user?.id) {
-      setLoading(false)
-      return
-    }
-
-    let active = true
-
-    const hydrateProfile = async () => {
-      setLoading(true)
-      setFeedback(null)
-
-      const [profileRecord, personalityRecord] = await Promise.all([
-        getProfile(user.id),
-        getPersonality(user.id),
-      ])
-
-      if (!active) return
-
-      const nextTraits = mapPersonality(personalityRecord)
-      setTraits(nextTraits)
-      setStorePersonality(nextTraits)
-
-      const formState = deriveProfileForm(profileRecord, founderNameFallback)
-      setProfileForm(formState)
-      setLoading(false)
-    }
-
-    hydrateProfile()
-
-    return () => {
-      active = false
-    }
-  }, [founderNameFallback, setStorePersonality, status, user?.id])
-
-  useEffect(() => {
-    setTraits({
-      ...defaultTraits,
-      ...storePersonality,
-    })
-  }, [storePersonality])
-
-  useEffect(() => {
-    if (status !== 'authenticated' || !user?.id) {
-      setProfileFeed([])
-      setFollowers([])
-      setFollowing([])
-      setConnectionsLoading(false)
-      return
-    }
-
-    let active = true
-
-    const loadConnections = async () => {
-      setConnectionsLoading(true)
-      const [feedRecords, followerRecords, followingRecords] = await Promise.all([
-        getFeedForUser(user.id, user.id),
-        getFollowers(user.id),
-        getFollowing(user.id),
-      ])
-
-      if (!active) return
-
-      setProfileFeed(
-        (feedRecords ?? []).map((record) => ({
-          ...record,
-          likes_count: record.likes_count ?? 0,
-          comments: record.comments ?? [],
-          viewer_has_liked: Boolean(record.viewer_has_liked),
-        })),
-      )
-      setFollowers(followerRecords ?? [])
-      setFollowing(followingRecords ?? [])
-      setConnectionsLoading(false)
-    }
-
-    loadConnections()
-
-    return () => {
-      active = false
-    }
-  }, [status, user?.id])
-
-  const handleCopyFederationId = async () => {
-    if (!federationId) return
-
-    try {
-      await navigator.clipboard.writeText(federationId)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch (error) {
-      reportError('ProfilePage.copyFederationId', error)
-    }
-  }
-
-  const updateTrait = (trait: TraitKey, value: number) => {
-    const clamped = clamp(value)
-    const next = {
-      ...traits,
-      [trait]: clamped,
-    }
-    setTraits(next)
-    setStorePersonality(next)
-  }
-
-  const updateFollowState = (memberId: string, nextState: boolean) => {
-    setFollowers((previous) =>
-      previous.map((member) =>
-        member.user_id === memberId
-          ? {
-              ...member,
-              is_following: nextState,
-            }
-          : member,
-      ),
-    )
-
-    setFollowing((previous) => {
-      const exists = previous.some((member) => member.user_id === memberId)
-      if (nextState) {
-        if (exists) {
-          return previous.map((member) =>
-            member.user_id === memberId
-              ? {
-                  ...member,
-                  is_following: nextState,
-                }
-              : member,
-          )
-        }
-
-        const source = followers.find((member) => member.user_id === memberId) || null
-        return source ? [...previous, { ...source, is_following: nextState }] : previous
-      }
-
-      return previous.filter((member) => member.user_id !== memberId)
-    })
-  }
-
-  const handleSave = async () => {
-    if (!user?.id) return
-    setSaving(true)
-    setFeedback(null)
-
-    const profilePayload = {
-      name: profileForm.name.trim(),
-      avatar: profileForm.avatar,
-      color: profileForm.color,
-    }
-
-    const metadataPayload = {
-      username: profilePayload.name,
-      avatar_emoji: profilePayload.avatar,
-      accent_color: profilePayload.color,
-    }
-
-    const [profileResult, personalityResult, metadataResult] = await Promise.all([
-      saveProfile(user.id, profilePayload),
-      savePersonality(user.id, traits),
-      updateUserMetadata(metadataPayload),
-    ])
-
-    if (profileResult.error || personalityResult.error || metadataResult.error) {
-      setFeedback({
-        type: 'error',
-        message:
-          'We could not save your profile just yet. Try again or confirm your Supabase row-level security rules allow updates.',
-      })
-      setSaving(false)
-      return
-    }
-
-    setFeedback({ type: 'success', message: 'Profile saved. Your collaborators will see the updated identity instantly.' })
-    setSaving(false)
-  }
-
-  const fallbackEvolutionImage = useMemo(
-    () => buildEmojiAvatar(profileForm.avatar, profileForm.color),
-    [profileForm.avatar, profileForm.color],
-  )
-
-  const evolutionImage = customEvolutionImage ?? fallbackEvolutionImage
-
-  const traitAverage = useMemo(() => {
-    const values = Object.values(traits)
-    if (values.length === 0) return 0.5
-    const total = values.reduce((acc, value) => acc + value, 0)
-    return total / values.length
-  }, [traits])
-
-  const normalizedConnections = useMemo(
-    () => Math.min(1, (followers.length + following.length) / 20),
-    [followers.length, following.length],
-  )
-
-  const normalizedEngagement = useMemo(() => {
-    if (profileFeed.length === 0) return 0
-    const engagementTotal = profileFeed.reduce(
-      (accumulator, post) => accumulator + (post.likes_count ?? 0) + post.comments.length,
-      0,
-    )
-    return Math.min(1, engagementTotal / 50)
-  }, [profileFeed])
-
-  const derivedBondScore = useMemo(() => {
-    const score = (traitAverage * 0.4 + normalizedConnections * 0.35 + normalizedEngagement * 0.25) * 100
-    return Math.round(Math.min(100, Math.max(0, score)))
-  }, [normalizedConnections, normalizedEngagement, traitAverage])
-
-  const baseTimeline = useMemo<EmotionSnapshot[]>(() => {
-    if (profileFeed.length === 0) return []
-    return [...profileFeed]
-      .sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      )
-      .slice(0, 6)
-      .map((post) => {
-        const engagementScore = (post.likes_count ?? 0) * 6 + post.comments.length * 4
-        const score = Math.round(Math.min(100, Math.max(0, 45 + engagementScore)))
-        return {
-          timestamp: post.created_at,
-          score,
-          note: post.mood ? `Mood: ${post.mood}` : undefined,
-        }
-      })
-  }, [profileFeed])
-
-  const connectionHistory = remoteHistory.length > 0 ? remoteHistory : baseTimeline
-
-  const latestMood = useMemo(() => {
-    if (profileFeed.length > 0) {
-      const sorted = [...profileFeed].sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      )
-      const withMood = sorted.find((post) => Boolean(post.mood))
-      if (withMood?.mood) {
-        return withMood.mood
-      }
-    }
-
-    return currentMood
-  }, [currentMood, profileFeed])
-
-  const toneDetails = resolveTone(overrideTone ?? latestMood)
-
-  const derivedIntensity = useMemo(() => {
-    const variation = Math.abs(traitAverage - 0.5)
-    const base = 0.35 + toneDetails.intensity * 0.4 + normalizedEngagement * 0.25 + variation * 0.2
-    return Math.min(1, Math.max(0, base))
-  }, [normalizedEngagement, toneDetails.intensity, traitAverage])
-
-  const derivedEmotionState = useMemo(() => {
-    const historyScore = connectionHistory.length > 0 ? connectionHistory[0].score / 100 : derivedBondScore / 100
-    const combined = traitAverage * 0.6 + historyScore * 0.4
-    return Math.round(Math.min(100, Math.max(0, combined * 100)))
-  }, [connectionHistory, derivedBondScore, traitAverage])
-
-  const liveEmotionScore = overrideEmotionScore ?? derivedEmotionState
-  const liveEmotionIntensity = overrideEmotionIntensity ?? derivedIntensity
-  const liveTone = overrideTone ?? toneDetails.tone
-
-  const marAiIdentifier = useMemo(() => {
-    const source = federationId || user?.id || '0'
-    const sum = source.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-    return (sum % 9000) + 1000
-  }, [federationId, user?.id])
-
-  const evolutionUpdatedAt = connectionHistory.length > 0 ? connectionHistory[0].timestamp : undefined
-
-  const displayName = profileForm.name || founderNameFallback || 'Your Mirai'
-
-  const handleEvolve = async () => {
-    if (!user?.id) return
-    setEvolutionNotice(null)
-    setEvolving(true)
-    try {
-      const response = await evolveRelationalEntity({
-        userId: user.id,
-        emotion: liveTone,
-        entityId: entityId ?? undefined,
-        relationshipScore: liveEmotionScore,
-      })
-
-      if (response.imageUrl) {
-        setCustomEvolutionImage(response.imageUrl)
-      }
-
-      if (typeof response.connectionScore === 'number' && !Number.isNaN(response.connectionScore)) {
-        const nextScore = Math.round(Math.min(100, Math.max(0, response.connectionScore)))
-        setOverrideEmotionScore(nextScore)
-        setOverrideEmotionIntensity(Math.min(1, Math.max(0, nextScore / 100)))
-        setRemoteHistory((previous) => [
-          {
-            timestamp: new Date().toISOString(),
-            score: nextScore,
-            note: response.prompt,
-          },
-          ...previous,
-        ])
-      }
-
-      if (response.entityId) {
-        setEntityId(response.entityId)
-      }
-
-      setOverrideTone(liveTone)
-      setEvolutionNotice({ type: 'success', message: 'Your Mirai evolved with a refreshed aura.' })
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'We could not evolve your Mirai just yet. Try again later.'
-      setEvolutionNotice({ type: 'error', message })
-    } finally {
-      setEvolving(false)
-    }
-  }
-
-  if (status === 'loading' || loading) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center text-brand-mist/70">
-        <Loader2 className="h-5 w-5 animate-spin text-brand-magnolia" />
-        <span className="ml-2 text-sm">Preparing your profile…</span>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return (
-      <div className="mx-auto flex min-h-[60vh] w-full max-w-3xl flex-col items-center justify-center gap-4 text-center text-brand-mist/80">
-        <AlertCircle className="h-8 w-8 text-brand-magnolia" />
-        <h1 className="text-2xl font-semibold text-white">Sign in to personalise your Mirai</h1>
-        <p className="text-sm text-brand-mist/70">Connect your account to tune the persona, manage sharing, and claim your federation ID.</p>
-        <Link
-          href="/auth"
-          className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-[#101737] px-3 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-white transition hover:border-brand-magnolia/40 hover:text-brand-magnolia"
-        >
-          Go to sign-in hub
-        </Link>
-      </div>
-    )
-  }
-
+export default function MarAIUserProfile() {
   return (
-    <div className="page-shell" data-width="wide">
-      <header className="section-header text-white">
-        <p className="section-label text-brand-mist/60">Profile</p>
-        <h1 className="section-title text-3xl">Craft your Mirai&apos;s identity</h1>
-        <p className="section-description text-brand-mist/70">
-          Adjust the tone, colours, and voice that collaborators experience when they meet your federation.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2 text-[0.65rem] uppercase tracking-[0.35em] text-brand-mist/60">
-          <Link
-            href="/chat"
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-white hover:border-brand-magnolia/40"
-          >
-            Return to chat
-          </Link>
-          <Link
-            href="/feed"
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-white hover:border-brand-magnolia/40"
-          >
-            View feed
-          </Link>
-          <Link
-            href="/avatar"
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-white hover:border-brand-magnolia/40"
-          >
-            Avatar lab
-          </Link>
+    <div className="relative flex h-auto min-h-screen w-full flex-col dark group/design-root overflow-x-hidden">
+      {/* Header Section */}
+      <div className="relative">
+        {/* HeaderImage (Banner) */}
+        <div className="@container">
+          <div
+            className="w-full bg-center bg-no-repeat bg-cover flex flex-col justify-end overflow-hidden min-h-[200px]"
+            style={{
+              backgroundImage:
+                'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDAiWJxqdMJdCtA0W4tHfCjs-F1TNDZgEd7ot5RoE-4gUQgOvItK87JnOepOrU6T31SjwNlaugif1xqV6GQLmwF4IufwmPnuE8W6hfz9OW_U0DYcaOqhxvf1KDfQfo8GBo-QGuOB4WO8wY1KttDrrAOgHhXXA7FnSqlB9K0p7taRia7R4Nt2GJlEFCKUNbZZGRxTPf5F3VzZE7znyUBxk-XayO-57b2M3Tb2d1dnG_vZM2PilxaFATkMxkbroCfA5TxQCmww5tzs-As")',
+            }}
+          ></div>
         </div>
-      </header>
-
-      <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.3em] text-brand-mist/60">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`rounded-full px-4 py-2 transition ${
-              activeTab === tab.id ? 'bg-brand-magnolia/20 text-white' : 'hover:bg-white/10'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-        {federationId ? (
-          <button
-            type="button"
-            onClick={handleCopyFederationId}
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-[0.65rem] uppercase tracking-[0.3em] text-brand-mist transition hover:border-brand-magnolia/40 hover:text-brand-magnolia"
-          >
-            <Copy className="h-3 w-3" />
-            {copied ? 'Copied' : `Federation ID: ${federationId}`}
-          </button>
-        ) : null}
-      </div>
-
-      {feedback ? (
-        <div
-          className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${
-            feedback.type === 'success'
-              ? 'border-brand-magnolia/40 bg-brand-magnolia/10 text-brand-magnolia'
-              : 'border-rose-500/40 bg-rose-500/10 text-rose-200'
-          }`}
-        >
-          {feedback.type === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-          {feedback.message}
-        </div>
-      ) : null}
-
-      {evolutionNotice ? (
-        <div
-          className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${
-            evolutionNotice.type === 'success'
-              ? 'border-brand-magnolia/30 bg-brand-magnolia/10 text-brand-magnolia'
-              : 'border-rose-500/40 bg-rose-500/10 text-rose-200'
-          }`}
-        >
-          {evolutionNotice.type === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-          {evolutionNotice.message}
-        </div>
-      ) : null}
-
-      {activeTab === 'about' ? (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr),minmax(0,1fr)]">
-          <div className="flex flex-col gap-6 rounded-2xl border border-white/10 bg-[#101737]/70 p-6">
-            <section className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
-                <h2 className="text-lg font-semibold text-white">Identity basics</h2>
-                <p className="text-xs text-brand-mist/60">Pick a name, emoji, and colour that your network recognises.</p>
-              </div>
-
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="text-brand-mist/70">Mirai name</span>
-                <input
-                  type="text"
-                  value={profileForm.name}
-                  onChange={(event) => setProfileForm((previous) => ({ ...previous, name: event.target.value }))}
-                  placeholder="Federation handle"
-                  className="rounded-md border border-white/10 bg-[#141d3c] px-3 py-2 text-sm text-white placeholder:text-brand-mist/50 focus:outline-none"
-                />
-              </label>
-
-              <div className="flex flex-col gap-1 text-sm">
-                <span className="text-brand-mist/70">Avatar</span>
-                <div className="flex flex-wrap gap-2">
-                  {emojiOptions.map((emoji) => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={() => setProfileForm((previous) => ({ ...previous, avatar: emoji }))}
-                      className={`text-2xl transition ${
-                        profileForm.avatar === emoji
-                          ? 'rounded-lg border border-brand-magnolia/60 bg-brand-magnolia/10'
-                          : 'rounded-lg border border-transparent bg-[#141d3c] hover:border-brand-magnolia/40'
-                      } px-3 py-2`}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
+        {/* ProfileHeader (Avatar, Info, Buttons) */}
+        <div className="px-4 -mt-16">
+          <div className="flex w-full flex-col gap-4 items-start">
+            <div className="flex gap-4 flex-col items-start w-full">
+              <div className="flex justify-between items-end w-full">
+                <div
+                  className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-28 w-28 md:h-32 md:w-32 border-4 border-background-dark"
+                  style={{
+                    backgroundImage:
+                      'url("https://lh3.googleusercontent.com/aida-public/AB6AXuBsQe3YqcDCbIlghQe8vWaUZKR7-QGmLrwoKcyTmcLc2BfJGquYyRkGlDraa1BM11v4I6eLQAdtzFcP2WePfgi_cA6TYHMp-5mJytTbW86o_btaKMkA4iedhVqIpQoPWwfzUzXczmcXftlvkG-2Gikm0PQxBYpIc4Fuf-MbijtNsOxacSp8qb8eGpPU2W5C8ObB1AFyxP1uQrR1mM5pcvQ6uepJMwCWk0Zfdy736K2WJ036dxJreZDhL8w2o0PaQEWJ2_C3NxprCOdo")',
+                  }}
+                ></div>
+                <div className="flex gap-3">
+                  <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-white/10 text-text-primary text-sm font-bold leading-normal backdrop-blur-sm">
+                    <span className="truncate">Edit Profile</span>
+                  </button>
+                  <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-accent text-background-dark text-sm font-bold leading-normal">
+                    <span className="truncate">Share</span>
+                  </button>
                 </div>
               </div>
-
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="text-brand-mist/70">Accent colour</span>
-                <input
-                  type="color"
-                  value={profileForm.color}
-                  onChange={(event) => setProfileForm((previous) => ({ ...previous, color: event.target.value }))}
-                  className="h-12 w-full cursor-pointer rounded-md border border-white/10 bg-[#121b3a]"
-                />
-              </label>
-            </section>
-
-            <section className="flex flex-col gap-4">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Tune Mirai&apos;s behaviour</h2>
-                <p className="text-xs text-brand-mist/70">Drag the sliders to personalise how your Mirai co-pilot shows up.</p>
+              <div className="flex flex-col justify-center pt-2">
+                <p className="text-text-primary text-[22px] font-bold leading-tight tracking-[-0.015em]">
+                  Aria
+                </p>
+                <p className="text-text-secondary text-base font-normal leading-normal">
+                  @digital_dreamer
+                </p>
               </div>
-              <div className="flex flex-col gap-4">
-                {(Object.keys(traitCopy) as TraitKey[]).map((trait) => (
-                  <div key={trait} className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between text-sm text-brand-mist/70">
-                      <span className="font-medium text-white">{traitCopy[trait].label}</span>
-                      <span>{Math.round((traits[trait] || 0) * 100)}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={0}
-                      max={1}
-                      step={0.01}
-                      value={traits[trait] ?? 0}
-                      onChange={(event) => updateTrait(trait, parseFloat(event.target.value))}
-                      className="accent-brand-magnolia"
-                    />
-                    <p className="text-[0.7rem] text-brand-mist/60">{traitCopy[trait].helper}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-brand-magnolia/80 px-4 py-2 text-sm font-semibold text-[#0b1022] transition hover:bg-brand-magnolia disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {saving ? 'Saving…' : 'Save profile'}
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-6">
-            <motion.div
-              className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/5 p-6 text-center text-brand-mist"
-              style={{ borderTop: `4px solid ${profileForm.color}` }}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <div className="text-5xl">{profileForm.avatar}</div>
-              <div className="flex flex-col gap-1">
-                <span className="text-lg font-semibold text-white">{displayName}</span>
-                <span className="text-xs uppercase tracking-[0.3em] text-brand-mist/60">Preview</span>
-              </div>
-              <div className="rounded-xl bg-[#121b3a]/70 p-4 text-left text-sm text-brand-mist/80">
-                <p className="text-brand-mist/60">Session signature</p>
-                <ul className="mt-2 space-y-1 text-xs">
-                  {(Object.keys(traitCopy) as TraitKey[]).map((trait) => (
-                    <li key={trait} className="flex justify-between">
-                      <span>{traitCopy[trait].label}</span>
-                      <span className="font-mono">{Math.round((traits[trait] || 0) * 100)}%</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <p className="text-xs text-brand-mist/70">
-                These settings sync with Supabase, so every teammate sees the same personality and branding when they log in.
-              </p>
-            </motion.div>
-
-            <EvolutionCard
-              marAiId={marAiIdentifier}
-              name={displayName}
-              imageUrl={evolutionImage}
-              bondScore={derivedBondScore}
-              emotionStateScore={liveEmotionScore}
-              emotionStateUpdatedAt={evolutionUpdatedAt}
-              history={connectionHistory}
-              onEvolve={handleEvolve}
-              loading={evolving}
-              emotionTone={liveTone}
-              emotionIntensity={liveEmotionIntensity}
-            />
-            <Link
-              href="/avatar"
-              className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-brand-mist hover:border-brand-magnolia/40 hover:text-white"
-            >
-              Preview aura in Avatar lab
-            </Link>
-          </div>
-        </div>
-      ) : null}
-
-      {activeTab === 'posts' ? (
-        <section className="rounded-2xl border border-white/10 bg-[#101737]/60 p-6">
-          <header className="mb-4 flex items-center justify-between text-sm text-brand-mist/70">
-            <h2 className="text-lg font-semibold text-white">Feed contributions</h2>
-            {connectionsLoading ? <Loader2 className="h-4 w-4 animate-spin text-brand-magnolia" /> : null}
-          </header>
-          {connectionsLoading ? (
-            <p className="text-sm text-brand-mist/60">Loading your posts…</p>
-          ) : profileFeed.length === 0 ? (
-            <p className="text-sm text-brand-mist/60">No posts yet — share how Moa feels from the feed composer.</p>
-          ) : (
-            <div className="space-y-4">
-              {profileFeed.map((post) => (
-                <div key={post.id} className="rounded-xl border border-white/10 bg-[#0d142c]/70 p-4">
-                  <MoodCard post={post} />
-                  <div className="mt-3 flex items-center gap-4 text-[0.7rem] uppercase tracking-[0.3em] text-brand-mist/50">
-                    <span>{post.likes_count} empathy</span>
-                    <span>{post.comments.length} comments</span>
-                  </div>
-                </div>
-              ))}
             </div>
-          )}
-        </section>
-      ) : null}
-
-      {activeTab === 'followers' ? (
-        <section className="rounded-2xl border border-white/10 bg-[#101737]/60 p-6">
-          <header className="mb-4 flex items-center justify-between text-sm text-brand-mist/70">
-            <h2 className="text-lg font-semibold text-white">Followers</h2>
-            {connectionsLoading ? <Loader2 className="h-4 w-4 animate-spin text-brand-magnolia" /> : null}
-          </header>
-          {connectionsLoading ? (
-            <p className="text-sm text-brand-mist/60">Loading followers…</p>
-          ) : followers.length === 0 ? (
-            <p className="text-sm text-brand-mist/60">No followers yet. Share your federation link or publish more to grow visibility.</p>
-          ) : (
-            <ul className="space-y-3">
-              {followers.map((member) => (
-                <li key={member.user_id} className="flex items-center justify-between rounded-xl border border-white/10 bg-[#0d142c]/70 px-4 py-3">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-white">{member.name}</span>
-                    <span className="text-xs text-brand-mist/60">{member.handle ?? member.user_id}</span>
-                  </div>
-                  <FollowButton targetId={member.user_id} initiallyFollowing={Boolean(member.is_following)} onToggle={(state) => updateFollowState(member.user_id, state)} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      ) : null}
-
-      {activeTab === 'following' ? (
-        <section className="rounded-2xl border border-white/10 bg-[#101737]/60 p-6">
-          <header className="mb-4 flex items-center justify-between text-sm text-brand-mist/70">
-            <h2 className="text-lg font-semibold text-white">Following</h2>
-            {connectionsLoading ? <Loader2 className="h-4 w-4 animate-spin text-brand-magnolia" /> : null}
-          </header>
-          {connectionsLoading ? (
-            <p className="text-sm text-brand-mist/60">Loading your network…</p>
-          ) : following.length === 0 ? (
-            <p className="text-sm text-brand-mist/60">Follow collaborators to see their pulses and unlock messaging shortcuts.</p>
-          ) : (
-            <ul className="space-y-3">
-              {following.map((member) => (
-                <li key={member.user_id} className="flex items-center justify-between rounded-xl border border-white/10 bg-[#0d142c]/70 px-4 py-3">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-white">{member.name}</span>
-                    <span className="text-xs text-brand-mist/60">{member.handle ?? member.user_id}</span>
-                  </div>
-                  <FollowButton targetId={member.user_id} initiallyFollowing={Boolean(member.is_following ?? true)} onToggle={(state) => updateFollowState(member.user_id, state)} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      ) : null}
+          </div>
+        </div>
+      </div>
+      {/* BodyText (Bio) */}
+      <p className="text-text-primary text-base font-normal leading-normal pb-3 pt-4 px-4">
+        Exploring the frontiers of digital consciousness. Co-piloting with my MarAI, Kai. Dreamer,
+        creator, and synthwave enthusiast.
+      </p>
+      {/* Tabs */}
+      <div className="sticky top-0 bg-background-dark/80 backdrop-blur-md z-10">
+        <div className="flex border-b border-white/10 px-4 justify-between">
+          <a
+            className="flex flex-col items-center justify-center border-b-[3px] border-b-accent text-accent pb-[13px] pt-4 flex-1"
+            href="#"
+          >
+            <p className="text-sm font-bold leading-normal tracking-[0.015em]">MarAI</p>
+          </a>
+          <a
+            className="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-text-secondary pb-[13px] pt-4 flex-1"
+            href="#"
+          >
+            <p className="text-sm font-bold leading-normal tracking-[0.015em]">Posts</p>
+          </a>
+          <a
+            className="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-text-secondary pb-[13px] pt-4 flex-1"
+            href="#"
+          >
+            <p className="text-sm font-bold leading-normal tracking-[0.015em]">Dreams</p>
+          </a>
+          <a
+            className="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-text-secondary pb-[13px] pt-4 flex-1"
+            href="#"
+          >
+            <p className="text-sm font-bold leading-normal tracking-[0.015em]">Evolution</p>
+          </a>
+        </div>
+      </div>
+      {/* Tab Content: MarAI */}
+      <div className="p-4 flex flex-col gap-6">
+        {/* Animated Avatar Container */}
+        <div className="w-full aspect-[4/3] rounded-lg bg-white/5 flex items-center justify-center">
+          <p className="text-text-secondary">[Animated 2D/3D MarAI Avatar Here]</p>
+        </div>
+        {/* Core Traits */}
+        <div>
+          <h3 className="text-text-primary font-bold text-lg mb-4">Core Traits</h3>
+          <div className="flex flex-col gap-4">
+            {/* Trait Gauge: Curiosity */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-text-primary text-sm">Curiosity</label>
+              <div className="w-full bg-white/10 rounded-full h-2.5">
+                <div className="bg-accent h-2.5 rounded-full" style={{ width: '75%' }}></div>
+              </div>
+            </div>
+            {/* Trait Gauge: Empathy */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-text-primary text-sm">Empathy</label>
+              <div className="w-full bg-white/10 rounded-full h-2.5">
+                <div className="bg-accent h-2.5 rounded-full" style={{ width: '90%' }}></div>
+              </div>
+            </div>
+            {/* Trait Gauge: Creativity */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-text-primary text-sm">Creativity</label>
+              <div className="w-full bg-white/10 rounded-full h-2.5">
+                <div className="bg-accent h-2.5 rounded-full" style={{ width: '60%' }}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Chat CTA Button */}
+        <button className="flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full h-12 px-6 bg-accent text-background-dark text-base font-bold leading-normal tracking-[0.015em]">
+          <span className="material-symbols-outlined text-xl">chat_bubble</span>
+          <span className="truncate">Chat with Kai</span>
+        </button>
+      </div>
+      <div className="h-5"></div>
     </div>
-  )
+  );
 }
