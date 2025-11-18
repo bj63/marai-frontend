@@ -5,6 +5,9 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        primary: '#f425af',
+        'background-light': '#f8f5f7',
+        'background-dark': '#22101c',
         neon: '#00FFF0',
         brand: {
           magnolia: '#A47CFF',
@@ -40,6 +43,16 @@ const config: Config = {
           text: '#FFFFFF', // White
         },
       },
+      fontFamily: {
+        display: ['Space Grotesk', 'sans-serif'],
+      },
+      borderRadius: {
+        DEFAULT: '1rem',
+        lg: '2rem',
+        xl: '3rem',
+        full: '9999px',
+        brand: '12px',
+      },
       backgroundImage: {
         'brand-gradient': 'linear-gradient(135deg, #A47CFF, #3CE0B5, #FF9ECF)',
       },
@@ -48,9 +61,6 @@ const config: Config = {
         'surface-sm': '0 12px 35px rgba(8, 12, 30, 0.45)',
         surface: '0 24px 65px rgba(9, 12, 32, 0.55)',
         'surface-lg': '0 32px 80px rgba(6, 10, 28, 0.65)',
-      },
-      borderRadius: {
-        brand: '12px',
       },
       spacing: {
         gutter: '1.5rem',
