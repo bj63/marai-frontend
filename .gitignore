@@ -26,6 +26,8 @@ contracts/node_modules/
 *.pem
 artifacts/
 cache/
+.idea/
+.vscode/
 
 # hardhat
 typechain/
@@ -39,6 +41,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
 # env files (can opt-in for committing if needed)
 .env*
