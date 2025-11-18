@@ -14,6 +14,12 @@ interface AppChromeProps {
 export default function AppChrome({ children }: AppChromeProps) {
   const pathname = usePathname()
   const isAuthExperience = pathname?.startsWith('/auth')
+  const isWelcomeScreen = pathname === '/'
+  const isOnboarding = pathname?.startsWith('/onboarding')
+
+  if (isWelcomeScreen || isOnboarding) {
+    return <>{children}</>
+  }
 
   return (
     <>
