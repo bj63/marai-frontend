@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { Session, User } from '@supabase/supabase-js'
-import { supabase, getOfflineSession, supabaseRuntime } from '@/lib/supabaseClient'
-import { reportError } from '@/lib/observability'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import type { Session, User } from '@supabase/supabase-js';
+import { supabase, getOfflineSession, supabaseRuntime } from '@/lib/supabaseClient';
+import { reportError } from '@/lib/observability';
 import {
   requestMagicLink,
   signInWithGoogle,
@@ -15,71 +15,73 @@ import {
   type AuthResult,
   type UserSettings,
   type UserDesignProfile,
-} from '@/lib/supabaseApi'
+} from '@/lib/supabaseApi';
 
-export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
+export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
 interface AuthContextValue {
-  session: Session | null
-  user: User | null
-  status: AuthStatus
-  settings: UserSettings | null
-  designProfile: UserDesignProfile | null
-  accountHydrated: boolean
-  roles: string[]
-  hasRole: (role: string) => boolean
-  hasAnyRole: (roles: string[]) => boolean
-  isPro: boolean
-  refreshAccountData: () => Promise<void>
-  signInWithMagicLink: (email: string) => Promise<AuthResult>
-  signUpWithCredentials: (email: string, password: string, username: string) => Promise<AuthResult>
-  signInWithCredentials: (email: string, password: string) => Promise<AuthResult>
-  signInWithGoogle: () => Promise<AuthResult>
-  signOut: () => Promise<void>
+  session: Session | null;
+  user: User | null;
+  status: AuthStatus;
+  isReady: boolean;
+  settings: UserSettings | null;
+  designProfile: UserDesignProfile | null;
+  accountHydrated: boolean;
+  roles: string[];
+  hasRole: (role: string) => boolean;
+  hasAnyRole: (roles: string[]) => boolean;
+  isPro: boolean;
+  refreshAccountData: () => Promise<void>;
+  signInWithMagicLink: (email: string) => Promise<AuthResult>;
+  signUpWithCredentials: (email: string, password: string, username: string) => Promise<AuthResult>;
+  signInWithCredentials: (email: string, password: string) => Promise<AuthResult>;
+  signInWithGoogle: () => Promise<AuthResult>;
+  signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined)
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const normalizeRoles = (value: unknown): string[] => {
-  if (!value) return []
+  if (!value) return [];
 
-  const entries: string[] = []
+  const entries: string[] = [];
 
   if (Array.isArray(value)) {
-    entries.push(...value.map((item) => String(item)))
+    entries.push(...value.map((item) => String(item)));
   } else if (typeof value === 'string') {
-    entries.push(...value.split(',').map((item) => item.trim()))
+    entries.push(...value.split(',').map((item) => item.trim()));
   }
 
   return entries
     .map((entry) => entry.trim().toLowerCase())
-    .filter((entry, index, array) => entry.length > 0 && array.indexOf(entry) === index)
-}
+    .filter((entry, index, array) => entry.length > 0 && array.indexOf(entry) === index);
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const runtimeMode = supabaseRuntime.mode
-  const offlineSession = runtimeMode === 'offline' ? getOfflineSession() : null
-  const [session, setSession] = useState<Session | null>(offlineSession)
-  const [status, setStatus] = useState<AuthStatus>(offlineSession ? 'authenticated' : 'loading')
-  const [settings, setSettings] = useState<UserSettings | null>(null)
-  const [designProfile, setDesignProfile] = useState<UserDesignProfile | null>(null)
-  const [accountHydrated, setAccountHydrated] = useState(false)
+  const runtimeMode = supabaseRuntime.mode;
+  const offlineSession = runtimeMode === 'offline' ? getOfflineSession() : null;
+  const [session, setSession] = useState<Session | null>(offlineSession);
+  const [status, setStatus] = useState<AuthStatus>(offlineSession ? 'authenticated' : 'loading');
+  const [isReady, setIsReady] = useState(false);
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [designProfile, setDesignProfile] = useState<UserDesignProfile | null>(null);
+  const [accountHydrated, setAccountHydrated] = useState(false);
 
   const derivedRoles = useMemo(() => {
-    const user = session?.user
-    if (!user) return [] as string[]
+    const user = session?.user;
+    if (!user) return [] as string[];
 
-    const fromAppMetadata = normalizeRoles(user.app_metadata?.roles)
-    const fromUserMetadata = normalizeRoles(user.user_metadata?.roles)
+    const fromAppMetadata = normalizeRoles(user.app_metadata?.roles);
+    const fromUserMetadata = normalizeRoles(user.user_metadata?.roles);
 
-    const combined = new Set<string>([...fromAppMetadata, ...fromUserMetadata])
+    const combined = new Set<string>([...fromAppMetadata, ...fromUserMetadata]);
 
     if (user.app_metadata?.isAdmin === true || user.user_metadata?.is_admin === true) {
-      combined.add('admin')
+      combined.add('admin');
     }
 
     if (user.app_metadata?.isDeveloper === true || user.user_metadata?.is_developer === true) {
-      combined.add('developer')
+      combined.add('developer');
     }
 
     if (
@@ -87,243 +89,249 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user.user_metadata?.is_pro === true ||
       user.user_metadata?.pro_mode === true
     ) {
-      combined.add('pro')
+      combined.add('pro');
     }
 
     if (user.app_metadata?.isFounder === true || user.user_metadata?.is_founder === true) {
-      combined.add('founder')
+      combined.add('founder');
     }
 
-    return Array.from(combined)
-  }, [session?.user])
+    return Array.from(combined);
+  }, [session?.user]);
 
   const hasRole = useCallback(
     (role: string) => {
-      const normalized = role.trim().toLowerCase()
-      if (!normalized) return false
-      return derivedRoles.includes(normalized)
+      const normalized = role.trim().toLowerCase();
+      if (!normalized) return false;
+      return derivedRoles.includes(normalized);
     },
     [derivedRoles],
-  )
+  );
 
   const hasAnyRole = useCallback(
     (roles: string[]) => {
-      if (!Array.isArray(roles) || roles.length === 0) return false
-      return roles.some((role) => hasRole(role))
+      if (!Array.isArray(roles) || roles.length === 0) return false;
+      return roles.some((role) => hasRole(role));
     },
     [hasRole],
-  )
+  );
 
-  const isPro = useMemo(() => hasAnyRole(['pro', 'admin', 'developer', 'founder']), [hasAnyRole])
+  const isPro = useMemo(() => hasAnyRole(['pro', 'admin', 'developer', 'founder']), [hasAnyRole]);
 
   const hydrateForUser = useCallback(async (userId: string) => {
     try {
       const [fetchedSettings, fetchedDesignProfile] = await Promise.all([
         getUserSettings(userId),
         getUserDesignProfile(userId),
-      ])
+      ]);
 
-      setSettings(fetchedSettings)
-      setDesignProfile(fetchedDesignProfile)
-      setAccountHydrated(true)
+      setSettings(fetchedSettings);
+      setDesignProfile(fetchedDesignProfile);
+      setAccountHydrated(true);
     } catch (error) {
-      reportError('AuthProvider.hydrateForUser', error, { userId })
-      setAccountHydrated(false)
+      reportError('AuthProvider.hydrateForUser', error, { userId });
+      setAccountHydrated(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
     if (runtimeMode === 'offline') {
-      setSession(getOfflineSession())
-      setStatus('authenticated')
-      const userId = offlineSession?.user?.id
+      setSession(getOfflineSession());
+      setStatus('authenticated');
+      const userId = offlineSession?.user?.id;
       if (userId) {
         hydrateForUser(userId).catch((error) => {
-          reportError('AuthProvider.offlineHydrate', error, { userId })
-        })
+          reportError('AuthProvider.offlineHydrate', error, { userId });
+        });
       }
-      return
+      setIsReady(true);
+      return;
     }
 
     if (runtimeMode === 'disabled') {
-      setSession(null)
-      setStatus('unauthenticated')
-      setSettings(null)
-      setDesignProfile(null)
-      setAccountHydrated(false)
-      return
+      setSession(null);
+      setStatus('unauthenticated');
+      setSettings(null);
+      setDesignProfile(null);
+      setAccountHydrated(false);
+      setIsReady(true);
+      return;
     }
 
-    let active = true
+    let active = true;
 
     const resolveSession = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession()
+        const { data, error } = await supabase.auth.getSession();
 
-        if (!active) return
+        if (!active) return;
 
         if (error) {
-          reportError('AuthProvider.getSession', error)
-          setSession(null)
-          setStatus('unauthenticated')
-          return
+          reportError('AuthProvider.getSession', error);
+          setSession(null);
+          setStatus('unauthenticated');
+        } else {
+          setSession(data.session ?? null);
+          setStatus(data.session ? 'authenticated' : 'unauthenticated');
         }
-
-        setSession(data.session ?? null)
-        setStatus(data.session ? 'authenticated' : 'unauthenticated')
       } catch (error) {
-        if (!active) return
-        reportError('AuthProvider.resolveSession', error)
-        setSession(null)
-        setStatus('unauthenticated')
+        if (!active) return;
+        reportError('AuthProvider.resolveSession', error);
+        setSession(null);
+        setStatus('unauthenticated');
+      } finally {
+        if (active) {
+          setIsReady(true);
+        }
       }
-    }
+    };
 
-    resolveSession()
+    resolveSession();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (!active) return
-      setSession(nextSession)
-      setStatus(nextSession ? 'authenticated' : 'unauthenticated')
+      if (!active) return;
+      setSession(nextSession);
+      setStatus(nextSession ? 'authenticated' : 'unauthenticated');
       if (!nextSession) {
-        setSettings(null)
-        setDesignProfile(null)
-        setAccountHydrated(false)
+        setSettings(null);
+        setDesignProfile(null);
+        setAccountHydrated(false);
       }
-    })
+    });
 
     return () => {
-      active = false
-      subscription.unsubscribe()
-    }
-  }, [hydrateForUser, offlineSession, runtimeMode])
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, [hydrateForUser, offlineSession, runtimeMode]);
 
   const refreshAccountData = useCallback(async () => {
-    const userId = session?.user?.id
+    const userId = session?.user?.id;
     if (!userId) {
-      setSettings(null)
-      setDesignProfile(null)
-      setAccountHydrated(false)
-      return
+      setSettings(null);
+      setDesignProfile(null);
+      setAccountHydrated(false);
+      return;
     }
 
-    await hydrateForUser(userId)
-  }, [hydrateForUser, session?.user?.id])
+    await hydrateForUser(userId);
+  }, [hydrateForUser, session?.user?.id]);
 
   useEffect(() => {
     if (status !== 'authenticated' || !session?.user?.id) {
-      setSettings(null)
-      setDesignProfile(null)
-      setAccountHydrated(false)
-      return
+      setSettings(null);
+      setDesignProfile(null);
+      setAccountHydrated(false);
+      return;
     }
 
-    let active = true
+    let active = true;
 
     const hydrate = async () => {
       try {
-        await hydrateForUser(session.user.id)
-        if (!active) return
+        await hydrateForUser(session.user.id);
+        if (!active) return;
       } catch (error) {
-        if (!active) return
-        reportError('AuthProvider.hydrateAccount', error, { userId: session.user.id })
-        setAccountHydrated(false)
+        if (!active) return;
+        reportError('AuthProvider.hydrateAccount', error, { userId: session.user.id });
+        setAccountHydrated(false);
       }
-    }
+    };
 
-    hydrate()
+    hydrate();
 
     return () => {
-      active = false
-    }
-  }, [hydrateForUser, session?.user?.id, status])
+      active = false;
+    };
+  }, [hydrateForUser, session?.user?.id, status]);
 
   const signInWithMagicLink = useCallback(
     async (email: string) => {
-      setStatus('loading')
-      const result = await requestMagicLink(email)
-      setStatus(session ? 'authenticated' : 'unauthenticated')
-      return result
+      setStatus('loading');
+      const result = await requestMagicLink(email);
+      setStatus(session ? 'authenticated' : 'unauthenticated');
+      return result;
     },
     [session],
-  )
+  );
 
   const signUpWithCredentials = useCallback(
     async (email: string, password: string, username: string) => {
-      setStatus('loading')
-      const result = await signUpWithPassword(email, password, username)
-      setStatus(session ? 'authenticated' : 'unauthenticated')
+      setStatus('loading');
+      const result = await signUpWithPassword(email, password, username);
+      setStatus(session ? 'authenticated' : 'unauthenticated');
       if (!result.error) {
-        const { data } = await supabase.auth.getSession()
-        const userId = data.session?.user?.id
+        const { data } = await supabase.auth.getSession();
+        const userId = data.session?.user?.id;
         if (userId) {
-          await hydrateForUser(userId)
+          await hydrateForUser(userId);
         }
       }
-      return result
+      return result;
     },
     [hydrateForUser, session],
-  )
+  );
 
   const signInWithCredentials = useCallback(
     async (email: string, password: string) => {
-      setStatus('loading')
-      const result = await signInWithPassword(email, password)
+      setStatus('loading');
+      const result = await signInWithPassword(email, password);
       if (result.error) {
-        setStatus(session ? 'authenticated' : 'unauthenticated')
+        setStatus(session ? 'authenticated' : 'unauthenticated');
       } else {
-        const { data } = await supabase.auth.getSession()
-        const userId = data.session?.user?.id
+        const { data } = await supabase.auth.getSession();
+        const userId = data.session?.user?.id;
         if (userId) {
-          await hydrateForUser(userId)
+          await hydrateForUser(userId);
         }
       }
-      return result
+      return result;
     },
     [hydrateForUser, session],
-  )
+  );
 
   const signInWithGoogleAccount = useCallback(async () => {
-    setStatus('loading')
-    const result = await signInWithGoogle()
+    setStatus('loading');
+    const result = await signInWithGoogle();
     if (result.error) {
-      setStatus(session ? 'authenticated' : 'unauthenticated')
+      setStatus(session ? 'authenticated' : 'unauthenticated');
     } else {
-      const { data } = await supabase.auth.getSession()
-      const userId = data.session?.user?.id
+      const { data } = await supabase.auth.getSession();
+      const userId = data.session?.user?.id;
       if (userId) {
-        await hydrateForUser(userId)
+        await hydrateForUser(userId);
       }
     }
-    return result
-  }, [hydrateForUser, session])
+    return result;
+  }, [hydrateForUser, session]);
 
   const signOut = useCallback(async () => {
-    setStatus('loading')
+    setStatus('loading');
     if (runtimeMode === 'online') {
-      await signOutFromSupabase()
-      setSession(null)
-      setStatus('unauthenticated')
+      await signOutFromSupabase();
+      setSession(null);
+      setStatus('unauthenticated');
     } else if (runtimeMode === 'offline') {
-      const offline = getOfflineSession()
-      setSession(offline)
-      setStatus('authenticated')
+      const offline = getOfflineSession();
+      setSession(offline);
+      setStatus('authenticated');
     } else {
-      setSession(null)
-      setStatus('unauthenticated')
+      setSession(null);
+      setStatus('unauthenticated');
     }
-    setSettings(null)
-    setDesignProfile(null)
-    setAccountHydrated(false)
-  }, [runtimeMode])
+    setSettings(null);
+    setDesignProfile(null);
+    setAccountHydrated(false);
+  }, [runtimeMode]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
       user: session?.user ?? null,
       status,
+      isReady,
       settings,
       designProfile,
       accountHydrated,
@@ -350,20 +358,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       signUpWithCredentials,
       status,
+      isReady,
       derivedRoles,
       hasRole,
       hasAnyRole,
       isPro,
     ],
-  )
+  );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error('useAuth must be used within an AuthProvider');
   }
-  return context
+  return context;
 }

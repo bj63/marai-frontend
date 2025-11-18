@@ -24,6 +24,21 @@ const config: Config = {
           danger: '#FB7185',
           info: '#38BDF8',
         },
+        // MarAI Themes
+        pastel: {
+          primary: '#FFC2E2', // Light Pink
+          secondary: '#B3E8E5', // Light Teal
+          accent: '#FFD9A9', // Light Peach
+          background: '#F5F5F5', // Off-White
+          text: '#5B5B5B', // Dark Gray
+        },
+        cyberpunk: {
+          primary: '#FF00FF', // Magenta
+          secondary: '#00FFFF', // Cyan
+          accent: '#FFFF00', // Yellow
+          background: '#0D0221', // Dark Purple
+          text: '#FFFFFF', // White
+        },
       },
       backgroundImage: {
         'brand-gradient': 'linear-gradient(135deg, #A47CFF, #3CE0B5, #FF9ECF)',

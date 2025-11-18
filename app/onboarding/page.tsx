@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
-import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react'
-import { useAuth } from '@/components/auth/AuthProvider'
-import { useMoaStore, type Personality as StorePersonality } from '@/lib/store'
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { useMoaStore, type Personality as StorePersonality } from '@/lib/store';
 import {
   getOnboardingState,
   getProfile,
@@ -13,9 +13,10 @@ import {
   saveProfile,
   upsertOnboardingState,
   updateUserMetadata,
-} from '@/lib/supabaseApi'
+} from '@/lib/supabaseApi';
+import Button from '@/components/design/system/Button';
 
-const emojiOptions = ['🐱', '🐰', '🐉', '🦊', '🦋', '🐚']
+const emojiOptions = ['🐱', '🐰', '🐉', '🦊', '🦋', '🐚'];
 
 const defaultTraits: StorePersonality = {
   empathy: 0.75,
@@ -24,7 +25,7 @@ const defaultTraits: StorePersonality = {
   curiosity: 0.7,
   humor: 0.6,
   energy: 0.7,
-}
+};
 
 const traitCopy: Record<keyof StorePersonality, { label: string; helper: string }> = {
   empathy: {
@@ -51,7 +52,7 @@ const traitCopy: Record<keyof StorePersonality, { label: string; helper: string 
     label: 'Energy',
     helper: 'Balances chill reflection against hype-lifting momentum.',
   },
-}
+};
 
 const steps = [
   {
@@ -69,33 +70,33 @@ const steps = [
     title: 'Connect collaboration surfaces',
     description: 'Decide how updates, notifications, and sharing should behave.',
   },
-]
+];
 
 type OnboardingForm = {
-  name: string
-  handle: string
-  bio: string
-  avatar: string
-  color: string
-  shareActivity: boolean
-}
+  name: string;
+  handle: string;
+  bio: string;
+  avatar: string;
+  color: string;
+  shareActivity: boolean;
+};
 
-type Feedback = { type: 'success' | 'error'; message: string } | null
+type Feedback = { type: 'success' | 'error'; message: string } | null;
 
 function clamp(value: number) {
-  return Math.min(1, Math.max(0, value))
+  return Math.min(1, Math.max(0, value));
 }
 
 export default function OnboardingPage() {
-  const { status, user } = useAuth()
-  const router = useRouter()
-  const storePersonality = useMoaStore((state) => state.personality)
-  const setStorePersonality = useMoaStore((state) => state.setPersonality)
+  const { status, user, isReady } = useAuth();
+  const router = useRouter();
+  const storePersonality = useMoaStore((state) => state.personality);
+  const setStorePersonality = useMoaStore((state) => state.setPersonality);
 
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [stepIndex, setStepIndex] = useState(0)
-  const [feedback, setFeedback] = useState<Feedback>(null)
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [stepIndex, setStepIndex] = useState(0);
+  const [feedback, setFeedback] = useState<Feedback>(null);
   const [form, setForm] = useState<OnboardingForm>({
     name: '',
     handle: '',
@@ -103,36 +104,36 @@ export default function OnboardingPage() {
     avatar: emojiOptions[0],
     color: '#6366F1',
     shareActivity: true,
-  })
-  const [traits, setTraits] = useState<StorePersonality>({ ...defaultTraits })
+  });
+  const [traits, setTraits] = useState<StorePersonality>({ ...defaultTraits });
 
-  const currentStep = steps[stepIndex]
-  const hasPrevious = stepIndex > 0
-  const hasNext = stepIndex < steps.length - 1
+  const currentStep = steps[stepIndex];
+  const hasPrevious = stepIndex > 0;
+  const hasNext = stepIndex < steps.length - 1;
 
   const founderNameFallback = useMemo(() => {
-    if (!user) return ''
-    const metadata = user.user_metadata as { username?: string; full_name?: string } | null
-    return metadata?.username || metadata?.full_name || user.email?.split('@')[0] || ''
-  }, [user])
+    if (!user) return '';
+    const metadata = user.user_metadata as { username?: string; full_name?: string } | null;
+    return metadata?.username || metadata?.full_name || user.email?.split('@')[0] || '';
+  }, [user]);
 
   useEffect(() => {
-    if (status === 'loading') return
+    if (!isReady) return;
     if (!user) {
-      setLoading(false)
-      return
+      setLoading(false);
+      return;
     }
 
-    let active = true
+    let active = true;
 
     const hydrate = async () => {
-      setLoading(true)
+      setLoading(true);
       const [profileRecord, onboarding] = await Promise.all([
         getProfile(user.id),
         getOnboardingState(user.id),
-      ])
+      ]);
 
-      if (!active) return
+      if (!active) return;
 
       if (profileRecord) {
         setForm((previous) => ({
@@ -142,76 +143,76 @@ export default function OnboardingPage() {
           color: profileRecord.color || previous.color,
           handle: profileRecord.handle ? profileRecord.handle.replace(/^@+/, '@') : previous.handle,
           bio: profileRecord.bio ?? previous.bio,
-        }))
+        }));
       } else {
         setForm((previous) => ({
           ...previous,
           name: founderNameFallback,
-        }))
+        }));
       }
 
       if (onboarding?.completed) {
-        router.replace('/')
-        return
+        router.replace('/');
+        return;
       }
 
       if (storePersonality) {
-        setTraits({ ...defaultTraits, ...storePersonality })
+        setTraits({ ...defaultTraits, ...storePersonality });
       }
 
-      setLoading(false)
-    }
+      setLoading(false);
+    };
 
-    hydrate()
+    hydrate();
 
     return () => {
-      active = false
-    }
-  }, [founderNameFallback, router, status, storePersonality, user])
+      active = false;
+    };
+  }, [founderNameFallback, router, isReady, storePersonality, user]);
 
   useEffect(() => {
     setTraits((previous) => ({
       ...previous,
       ...storePersonality,
-    }))
-  }, [storePersonality])
+    }));
+  }, [storePersonality]);
 
   const updateTrait = (trait: keyof StorePersonality, value: number) => {
-    const clamped = clamp(value)
-    const next = { ...traits, [trait]: clamped }
-    setTraits(next)
-    setStorePersonality(next)
-  }
+    const clamped = clamp(value);
+    const next = { ...traits, [trait]: clamped };
+    setTraits(next);
+    setStorePersonality(next);
+  };
 
   const handleNext = async () => {
-    if (!user) return
+    if (!user) return;
 
     if (hasNext) {
-      setStepIndex((index) => index + 1)
+      setStepIndex((index) => index + 1);
       await upsertOnboardingState(user.id, {
         user_id: user.id,
         completed: false,
         current_step: steps[stepIndex + 1]?.id ?? currentStep.id,
-      })
+      });
     }
-  }
+  };
 
   const handleBack = () => {
-    if (!hasPrevious) return
-    setStepIndex((index) => index - 1)
-  }
+    if (!hasPrevious) return;
+    setStepIndex((index) => index - 1);
+  };
 
   const handleComplete = async () => {
-    if (!user) return
-    setSaving(true)
-    setFeedback(null)
+    if (!user) return;
+    setSaving(true);
+    setFeedback(null);
 
-    const normalizedHandle = form.handle.trim()
+    const normalizedHandle = form.handle.trim();
     const handleValue = normalizedHandle
       ? normalizedHandle.startsWith('@')
         ? normalizedHandle
         : `@${normalizedHandle}`
-      : null
+      : null;
 
     const profilePayload = {
       name: form.name.trim() || founderNameFallback,
@@ -219,7 +220,7 @@ export default function OnboardingPage() {
       color: form.color,
       handle: handleValue,
       bio: form.bio.trim() || null,
-    }
+    };
 
     const metadataPayload = {
       username: handleValue ?? form.name,
@@ -227,7 +228,7 @@ export default function OnboardingPage() {
       accent_color: form.color,
       avatar_emoji: form.avatar,
       share_activity: form.shareActivity,
-    }
+    };
 
     const [profileResult, personalityResult, onboardingResult, metadataResult] = await Promise.all([
       saveProfile(user.id, profilePayload),
@@ -238,43 +239,51 @@ export default function OnboardingPage() {
         completed_at: new Date().toISOString(),
       }),
       updateUserMetadata(metadataPayload),
-    ])
+    ]);
 
     if (profileResult.error || personalityResult.error || onboardingResult.error || metadataResult.error) {
       setFeedback({
         type: 'error',
         message: 'We could not save everything yet. Double-check Supabase policies and try again.',
-      })
-      setSaving(false)
-      return
+      });
+      setSaving(false);
+      return;
     }
 
     setFeedback({
       type: 'success',
       message: 'Onboarding locked in! Redirecting you to the feed…',
-    })
-    setSaving(false)
-    setTimeout(() => router.replace('/feed'), 1200)
-  }
+    });
+    setSaving(false);
+    setTimeout(() => router.replace('/feed'), 1200);
+  };
 
-  if (status === 'loading' || loading) {
+  if (!isReady || (user && loading)) {
     return (
       <div className="flex min-h-[70vh] flex-col items-center justify-center gap-4 text-brand-mist/70">
         <Loader2 className="h-6 w-6 animate-spin text-brand-magnolia" />
         Preparing your onboarding…
       </div>
-    )
+    );
   }
 
   if (!user) {
     return (
-      <div className="mx-auto flex min-h-[70vh] w-full max-w-2xl flex-col items-center justify-center gap-4 text-center text-brand-mist/80">
-        <h1 className="text-2xl font-semibold text-white">Create an account to continue</h1>
-        <p className="text-sm text-brand-mist/70">
-          Head to the authentication hub to log in or sign up. Once you&rsquo;re authenticated we&rsquo;ll walk you through setting up your Mirai identity.
-        </p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-pastel-background">
+        <div className="text-center">
+          <h1 className="text-5xl font-bold text-pastel-text">Welcome to MarAI</h1>
+          <p className="mt-4 text-lg text-pastel-text">Your personal AI companion</p>
+        </div>
+        <div className="flex mt-8 space-x-4">
+          <Button theme="pastel" variant="primary" onClick={() => router.push('/auth/register')}>
+            Get Started
+          </Button>
+          <Button theme="pastel" variant="secondary" onClick={() => router.push('/auth/login')}>
+            Login
+          </Button>
+        </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -468,5 +477,5 @@ export default function OnboardingPage() {
         )}
       </div>
     </div>
-  )
+  );
 }
