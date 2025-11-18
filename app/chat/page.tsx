@@ -50,7 +50,7 @@ export default function MarAIChatInterface() {
             <div className="flex flex-1 flex-col items-start gap-1">
               <p className="max-w-[360px] text-sm text-white/50">MarAI</p>
               <p className="flex max-w-[360px] rounded-xl rounded-bl-none bg-[#2A2A4E] px-4 py-3 text-base font-normal leading-normal text-white">
-                Hello! I&apos;m MarAI, your personal companion. Feel free to ask me anything or try one
+                Hello! I'm MarAI, your personal companion. Feel free to ask me anything or try one
                 of the actions below. How are you feeling today?
               </p>
             </div>
@@ -60,7 +60,7 @@ export default function MarAIChatInterface() {
             <div className="flex flex-1 flex-col items-end gap-1">
               <p className="max-w-[360px] text-right text-sm text-white/50">You</p>
               <p className="flex max-w-[360px] rounded-xl rounded-br-none bg-primary px-4 py-3 text-base font-normal leading-normal text-white">
-                Hey MarAI! I&apos;m doing great, thanks for asking.
+                Hey MarAI! I'm doing great, thanks for asking.
               </p>
             </div>
             <div

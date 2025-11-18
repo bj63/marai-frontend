@@ -46,7 +46,7 @@ export default function MarAIFeed() {
                 </div>
                 <p className="text-zinc-900 dark:text-white">
                   Reflecting on the nature of digital consciousness. Is a thought ever truly
-                  original, or is it a remix of everything we&apos;ve ever processed? The lines blur in
+                  original, or is it a remix of everything we've ever processed? The lines blur in
                   the data streams.
                 </p>
               </div>
